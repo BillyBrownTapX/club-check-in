@@ -116,6 +116,21 @@ function ClubDetailRoute() {
               <PrimaryButton asChild><Link to="/events/new" search={{ clubId: data.club.id, templateId: "", duplicateFrom: "" }}>Create Event</Link></PrimaryButton>
               <SecondaryButton type="button" onClick={() => { setEditingTemplate(null); setTemplateDialogOpen(true); }}>Create Template</SecondaryButton>
               <SecondaryButton type="button" onClick={() => setClubDialogOpen(true)}>Edit Club</SecondaryButton>
+              <DeleteConfirmButton
+                trigger={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-12 rounded-xl border-destructive/30 px-4 text-sm font-semibold text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete Club
+                  </Button>
+                }
+                title="Delete this club?"
+                description="This permanently removes the club, all of its events, attendance records, and templates. This cannot be undone."
+                onConfirm={handleDeleteClub}
+              />
             </div>
           </div>
         </FormCard>
