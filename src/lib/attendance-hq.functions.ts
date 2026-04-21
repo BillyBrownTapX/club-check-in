@@ -4,13 +4,13 @@ import { notFound, redirect } from "@tanstack/react-router";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   buildHostOnboardingState,
-  buildEventDefaults,
   type ClubDetailPayload,
   type ClubSummary,
   combineDateAndTime,
   createDeviceToken,
   createQrToken,
   type EventFormPayload,
+  type EventFormValues,
   getCheckInStatus,
   maskEmail,
   type ManagementEventSummary,
@@ -195,8 +195,6 @@ export const completePasswordReset = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-const EMPTY_UUID = "00000000-0000-0000-0000-000000000000";
-
 function toManagementEventSummary(event: EventSummary): ManagementEventSummary {
   return {
     ...event,
@@ -238,9 +236,9 @@ export const getHostWorkspace = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const profile = await ensureHostProfile(context.userId);
-    const clubs = await getHostClubSummaries({ data: undefined, context });
-    const events = await getHostEvents({ data: { clubId: "", status: "all", query: "" }, context });
-    const templates = await getHostTemplates({ data: { clubId: "" }, context });
+    const clubs = await getHostClubSummaries();
+    const events = await getHostEvents({ data: { clubId: "", status: "all", query: "" } });
+    const templates = await getHostTemplates({ data: { clubId: "" } });
 
     return {
       profile,
@@ -653,7 +651,13 @@ export const updateEvent = createServerFn({ method: "POST" })
 
 export const duplicateEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(validatedEventSchema.extend({ sourceEventId: z.string().uuid() }))
+  .inputValidator(eventSchema.extend({ sourceEventId: z.string().uuid() }).refine((value) => value.endTime > value.startTime, {
+    message: "End time must be after start time",
+    path: ["endTime"],
+  }).refine((value) => new Date(value.checkInClosesAt).getTime() > new Date(value.checkInOpensAt).getTime(), {
+    message: "Check-in close must be after open",
+    path: ["checkInClosesAt"],
+  }))
   .handler(async ({ data, context }) => {
     await requireOwnedEvent(context.userId, data.sourceEventId);
     return createEvent({ data, headers: undefined as never });
