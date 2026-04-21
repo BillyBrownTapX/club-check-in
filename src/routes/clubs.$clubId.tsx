@@ -162,7 +162,7 @@ function ClubDetailRoute() {
           </div>
           {data.pastEvents.length ? (
               <div className="grid gap-4">
-               {data.pastEvents.map((event: ManagementEventSummary) => <EventCard key={event.id} event={event} showClub={false} onDuplicate={(eventId) => navigate({ to: "/events/new", search: { clubId: data.club.id, templateId: "", duplicateFrom: eventId } })} />)}
+               {data.pastEvents.map((event: ManagementEventSummary) => <EventCard key={event.id} event={event} showClub={false} onDuplicate={(eventId) => navigate({ to: "/events/new", search: { clubId: data.club.id, templateId: "", duplicateFrom: eventId } })} onDelete={handleDeleteEvent} />)}
             </div>
           ) : (
             <EmptyStateBlock title="No past events" description="Past events will show here once your club starts hosting them." />
