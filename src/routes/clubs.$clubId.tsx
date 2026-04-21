@@ -84,13 +84,16 @@ function ClubDetailRoute() {
 
         <FormCard>
           <div className="flex flex-col gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <h2 className="text-xl font-semibold text-foreground">{data.club.club_name}</h2>
-                <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{data.club.is_active ? "Active" : "Inactive"}</span>
+            <div className="flex items-start gap-4">
+              <ClubHeaderLogo path={data.club.logo_url ?? null} name={data.club.club_name} />
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-xl font-semibold text-foreground">{data.club.club_name}</h2>
+                  <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{data.club.is_active ? "Active" : "Inactive"}</span>
+                </div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{data.club.universities?.name ?? "University needed"}</p>
+                <p className="text-sm text-muted-foreground">{data.club.description || "Add a short description to help your team identify this club."}</p>
               </div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{data.club.universities?.name ?? "University needed"}</p>
-              <p className="text-sm text-muted-foreground">{data.club.description || "Add a short description to help your team identify this club."}</p>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <PrimaryButton asChild><Link to="/events/new" search={{ clubId: data.club.id, templateId: "", duplicateFrom: "" }}>Create Event</Link></PrimaryButton>
