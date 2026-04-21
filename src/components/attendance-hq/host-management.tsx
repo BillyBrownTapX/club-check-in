@@ -921,7 +921,7 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
             </FormCard>
           ) : null}
           <FormCard>
-            <form className="space-y-5" onSubmit={(event) => void submit(event)}>
+            <form className="space-y-5" onSubmit={handleSubmitClick}>
               <div className="grid gap-3 sm:grid-cols-3">
                 <MetaPill label="Club" value={selectedClub?.club_name ?? "Select club"} />
                 <MetaPill label="University" value={selectedUniversity} />
@@ -934,6 +934,7 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
                   onValueChange={(value) => form.setValue("clubId", value, { shouldValidate: true })}
                   placeholder="Choose a club"
                   options={payload.clubs.map((club) => ({ value: club.id, label: club.club_name }))}
+                  error={form.formState.errors.clubId?.message}
                 />
                 <TextInput label="Event name" error={form.formState.errors.eventName?.message} {...form.register("eventName")} />
                 <div className="grid gap-4">
@@ -974,6 +975,7 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
               {form.formState.errors.checkInOpensAt?.message ? <p className="text-sm text-destructive">{form.formState.errors.checkInOpensAt.message}</p> : null}
               {form.formState.errors.checkInClosesAt?.message ? <p className="text-sm text-destructive">{form.formState.errors.checkInClosesAt.message}</p> : null}
               {error ? <p className="text-sm text-destructive">{error}</p> : null}
+              <EventFormErrorSummary errors={form.formState.errors} />
               <div className="sticky bottom-[calc(5.8rem+env(safe-area-inset-bottom))] z-20 -mx-2 rounded-[1.75rem] border border-border/90 bg-card/96 p-3 shadow-[0_24px_52px_-28px_color-mix(in_oklab,var(--color-primary)_42%,transparent)] backdrop-blur md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:shadow-none">
                 <p className="mb-3 text-sm leading-6 text-muted-foreground md:mb-2">Save when the mobile summary looks right. Updated timing takes effect immediately on the live event.</p>
                 <div className="flex flex-col gap-2 md:flex-row md:justify-end">
