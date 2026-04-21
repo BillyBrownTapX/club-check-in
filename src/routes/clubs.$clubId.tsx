@@ -78,7 +78,7 @@ function ClubDetailRoute() {
         <PageHeader
           title={title}
           description={data.club.description || "Manage upcoming events, past attendance, and recurring templates for this club."}
-          action={<PrimaryButton asChild><Link to="/events/new" search={{ clubId: data.club.id }}>Create Event</Link></PrimaryButton>}
+          action={<PrimaryButton asChild><Link to="/events/new" search={{ clubId: data.club.id, templateId: "", duplicateFrom: "" }}>Create Event</Link></PrimaryButton>}
         />
 
         <FormCard>
@@ -91,7 +91,7 @@ function ClubDetailRoute() {
               <p className="text-sm text-muted-foreground">{data.club.description || "Add a short description to help your team identify this club."}</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <PrimaryButton asChild><Link to="/events/new" search={{ clubId: data.club.id }}>Create Event</Link></PrimaryButton>
+              <PrimaryButton asChild><Link to="/events/new" search={{ clubId: data.club.id, templateId: "", duplicateFrom: "" }}>Create Event</Link></PrimaryButton>
               <SecondaryButton type="button" onClick={() => { setEditingTemplate(null); setTemplateDialogOpen(true); }}>Create Template</SecondaryButton>
               <SecondaryButton type="button" onClick={() => setClubDialogOpen(true)}>Edit Club</SecondaryButton>
             </div>
@@ -111,10 +111,10 @@ function ClubDetailRoute() {
           </div>
           {data.upcomingEvents.length ? (
             <div className="grid gap-4 lg:grid-cols-2">
-              {data.upcomingEvents.map((event: ManagementEventSummary) => <EventCard key={event.id} event={event} showClub={false} onDuplicate={(eventId) => navigate({ to: "/events/new", search: { duplicateFrom: eventId } })} />)}
+               {data.upcomingEvents.map((event: ManagementEventSummary) => <EventCard key={event.id} event={event} showClub={false} onDuplicate={(eventId) => navigate({ to: "/events/new", search: { clubId: data.club.id, templateId: "", duplicateFrom: eventId } })} />)}
             </div>
           ) : (
-            <EmptyStateBlock title="No upcoming events" description="Create your next event to start tracking attendance." action={<PrimaryButton asChild><Link to="/events/new" search={{ clubId: data.club.id }}>Create Event</Link></PrimaryButton>} />
+            <EmptyStateBlock title="No upcoming events" description="Create your next event to start tracking attendance." action={<PrimaryButton asChild><Link to="/events/new" search={{ clubId: data.club.id, templateId: "", duplicateFrom: "" }}>Create Event</Link></PrimaryButton>} />
           )}
         </section>
 
@@ -125,7 +125,7 @@ function ClubDetailRoute() {
           </div>
           {data.pastEvents.length ? (
             <div className="grid gap-4 lg:grid-cols-2">
-              {data.pastEvents.map((event: ManagementEventSummary) => <EventCard key={event.id} event={event} showClub={false} onDuplicate={(eventId) => navigate({ to: "/events/new", search: { duplicateFrom: eventId } })} />)}
+               {data.pastEvents.map((event: ManagementEventSummary) => <EventCard key={event.id} event={event} showClub={false} onDuplicate={(eventId) => navigate({ to: "/events/new", search: { clubId: data.club.id, templateId: "", duplicateFrom: eventId } })} />)}
             </div>
           ) : (
             <EmptyStateBlock title="No past events" description="Past events will show here once your club starts hosting them." />
@@ -143,7 +143,7 @@ function ClubDetailRoute() {
                 <TemplateCard
                   key={template.id}
                   template={template}
-                  onUse={(templateId) => navigate({ to: "/events/new", search: { templateId } })}
+                  onUse={(templateId) => navigate({ to: "/events/new", search: { clubId: data.club.id, templateId, duplicateFrom: "" } })}
                   onEdit={(template) => { setEditingTemplate(template); setTemplateDialogOpen(true); }}
                   onDuplicate={async (templateId) => {
                      await duplicateTemplateMutation({ data: { templateId } });

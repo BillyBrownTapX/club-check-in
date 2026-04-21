@@ -36,7 +36,7 @@ function EventsRoute() {
   const getClubs = useAuthorizedServerFn(getHostClubSummaries);
   const getEvents = useAuthorizedServerFn(getHostEvents);
   const search = Route.useSearch();
-  const navigate = useNavigate({ from: "/events" });
+  const navigate = useNavigate({ from: "/events/" });
   const [clubs, setClubs] = useState<ClubSummary[]>([]);
   const [events, setEvents] = useState<ManagementEventSummary[]>([]);
   const [fetching, setFetching] = useState(true);
@@ -79,24 +79,24 @@ function EventsRoute() {
         <PageHeader
           title="Events"
           description="View and manage upcoming and past events."
-          action={<PrimaryButton asChild><Link to="/events/new"><Plus className="h-4 w-4" />Create Event</Link></PrimaryButton>}
+          action={<PrimaryButton asChild><Link to="/events/new" search={{ clubId: "", templateId: "", duplicateFrom: "" }}><Plus className="h-4 w-4" />Create Event</Link></PrimaryButton>}
         />
         <FilterBar>
           <SelectInput
             label="Club"
             value={search.clubId}
-            onValueChange={(clubId) => navigate({ search: { ...search, clubId } })}
+            onValueChange={(clubId) => navigate({ search: (prev) => ({ ...prev, clubId }) })}
             placeholder="All Clubs"
             options={[{ value: "", label: "All Clubs" }, ...clubs.map((club: ClubSummary) => ({ value: club.id, label: club.club_name }))]}
           />
           <SelectInput
             label="Status"
             value={search.status}
-            onValueChange={(status) => navigate({ search: { ...search, status: status as EventListStatusFilter } })}
+            onValueChange={(status) => navigate({ search: (prev) => ({ ...prev, status: status as EventListStatusFilter }) })}
             placeholder="All"
             options={[{ value: "all", label: "All" }, { value: "upcoming", label: "Upcoming" }, { value: "past", label: "Past" }]}
           />
-          <SearchInput value={search.query} onChange={(query) => navigate({ search: { ...search, query } })} />
+          <SearchInput value={search.query} onChange={(query) => navigate({ search: (prev) => ({ ...prev, query }) })} />
         </FilterBar>
         {fetching ? (
           <div className="py-16 text-center text-sm text-muted-foreground">Loading your events…</div>
@@ -104,13 +104,13 @@ function EventsRoute() {
           <EventsError error={new Error(error)} />
         ) : events.length ? (
           <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-            {events.map((event: ManagementEventSummary) => <EventCard key={event.id} event={event} onDuplicate={(eventId) => navigate({ to: "/events/new", search: { duplicateFrom: eventId } })} />)}
+            {events.map((event: ManagementEventSummary) => <EventCard key={event.id} event={event} onDuplicate={(eventId) => navigate({ to: "/events/new", search: { clubId: event.club_id, templateId: "", duplicateFrom: eventId } })} />)}
           </div>
         ) : (
           <EmptyStateBlock
             title={search.clubId || search.status !== "all" || search.query ? "No matching events" : "No events yet"}
             description={search.clubId || search.status !== "all" || search.query ? "Try changing your filters." : "Create your first event to start tracking attendance."}
-            action={<PrimaryButton asChild><Link to="/events/new">Create Event</Link></PrimaryButton>}
+            action={<PrimaryButton asChild><Link to="/events/new" search={{ clubId: "", templateId: "", duplicateFrom: "" }}>Create Event</Link></PrimaryButton>}
           />
         )}
       </div>

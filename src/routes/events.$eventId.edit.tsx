@@ -63,10 +63,10 @@ function EventEditRoute() {
       title="Edit Event"
       description="Update the event details while keeping the current QR code active."
       submitLabel="Save Changes"
-      cancelAction={<SecondaryButton asChild><Link to="/events/$eventId" params={{ eventId }}>Cancel</Link></SecondaryButton>}
+      cancelAction={<SecondaryButton asChild><Link to="/events/$eventId" params={{ eventId }} search={{ created: "" }}>Cancel</Link></SecondaryButton>}
       onSubmit={async (values) => {
         const result = await updateEventMutation({ data: { ...values, eventId } });
-        navigate({ to: "/events/$eventId", params: { eventId: result.id } });
+        navigate({ to: "/events/$eventId", params: { eventId: result.id }, search: { created: "" } });
       }}
     />
   );

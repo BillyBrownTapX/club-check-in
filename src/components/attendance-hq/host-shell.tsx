@@ -37,7 +37,7 @@ export function HostAppShell({ children }: { children: React.ReactNode }) {
           </nav>
           <div className="flex items-center gap-2">
             <Button variant="outline" size="icon" className="rounded-xl md:hidden" asChild>
-              <Link to="/events/new"><Plus className="h-4 w-4" /></Link>
+              <Link to="/events/new" search={{ clubId: "", templateId: "", duplicateFrom: "" }}><Plus className="h-4 w-4" /></Link>
             </Button>
             <Button
               variant="outline"

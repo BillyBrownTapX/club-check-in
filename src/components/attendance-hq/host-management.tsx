@@ -237,7 +237,7 @@ export function ClubCard({ club }: { club: ClubSummary }) {
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
           <SecondaryButton asChild className="flex-1"><Link to="/clubs/$clubId" params={{ clubId: club.id }}>Manage Club</Link></SecondaryButton>
-          <PrimaryButton asChild className="flex-1"><Link to="/events/new" search={{ clubId: club.id }}>Create Event</Link></PrimaryButton>
+          <PrimaryButton asChild className="flex-1"><Link to="/events/new" search={{ clubId: club.id, templateId: "", duplicateFrom: "" }}>Create Event</Link></PrimaryButton>
         </div>
       </CardContent>
     </Card>
@@ -265,8 +265,8 @@ export function EventCard({ event, showClub = true, onDuplicate }: { event: Mana
           <span className="font-semibold text-foreground">{event.attendanceCount}</span>
         </div>
         <div className="grid grid-cols-3 gap-2">
-          <SecondaryButton asChild><Link to="/events/$eventId" params={{ eventId: event.id }}>Manage</Link></SecondaryButton>
-          <SecondaryButton asChild><Link to="/events/$eventId/edit" params={{ eventId: event.id }}>Edit</Link></SecondaryButton>
+          <SecondaryButton asChild><Link to="/events/$eventId" params={{ eventId: event.id }} search={{ created: "" }}>Manage</Link></SecondaryButton>
+          <SecondaryButton asChild><Link to="/events/$eventId/edit" params={{ eventId: event.id }} search={{ created: "" }}>Edit</Link></SecondaryButton>
           <SecondaryButton type="button" onClick={() => onDuplicate?.(event.id)}>Duplicate</SecondaryButton>
         </div>
       </CardContent>
@@ -598,7 +598,7 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
   return (
     <ManagementPageShell>
       <div className="space-y-6 pb-20 md:pb-0">
-        <PageHeader title={title} description={description} action={<SecondaryButton asChild><Link to="/events">Back to Events</Link></SecondaryButton>} />
+        <PageHeader title={title} description={description} action={<SecondaryButton asChild><Link to="/events" search={{ clubId: "", status: "all", query: "" }}>Back to Events</Link></SecondaryButton>} />
         <div className="space-y-4">
           {templatesForClub.length ? (
             <FormCard>
@@ -609,7 +609,7 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
                 </div>
                 <div className="flex flex-wrap gap-2">
                   {templatesForClub.slice(0, 3).map((template) => (
-                    <SecondaryButton key={template.id} type="button" onClick={() => navigate({ to: "/events/new", search: { templateId: template.id } })}>
+                    <SecondaryButton key={template.id} type="button" onClick={() => navigate({ to: "/events/new", search: { clubId: selectedClubId || "", templateId: template.id, duplicateFrom: "" } })}>
                       <WandSparkles className="h-4 w-4" />
                       {template.template_name}
                     </SecondaryButton>
@@ -648,7 +648,7 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
               <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
                 <p className="text-sm text-muted-foreground">You can edit this event later.</p>
                 <div className="flex gap-2">
-                  {cancelAction ?? <SecondaryButton asChild><Link to="/events">Cancel</Link></SecondaryButton>}
+                  {cancelAction ?? <SecondaryButton asChild><Link to="/events" search={{ clubId: "", status: "all", query: "" }}>Cancel</Link></SecondaryButton>}
                   <PrimaryButton type="submit">{submitLabel}</PrimaryButton>
                 </div>
               </div>
