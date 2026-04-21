@@ -853,15 +853,43 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
     form.setValue("checkInClosesAt", combineDateAndTime(eventDate, `${shiftTimeString(endTime, offsets.closeMinutesAfterEnd)}:00`), { shouldValidate: true });
   }, [endTime, eventDate, form, offsets.closeMinutesAfterEnd, offsets.openMinutesBeforeStart, startTime]);
 
-  const submit = form.handleSubmit(async (values) => {
-    if (form.formState.isSubmitting) return;
-    setError("");
-    try {
-      await onSubmit(values);
-    } catch (submitError) {
-      setError(getManagementErrorMessage(submitError, "Unable to save event."));
+  const submit = form.handleSubmit(
+    async (values) => {
+      if (form.formState.isSubmitting) return;
+      setError("");
+      try {
+        await onSubmit(values);
+      } catch (submitError) {
+        setError(getManagementErrorMessage(submitError, "Unable to save event."));
+      }
+    },
+    () => {
+      setError("Some fields need attention — see highlighted errors above.");
+    },
+  );
+
+  // Defensive: synchronously recompute hidden datetime fields from the latest
+  // visible inputs before submission. The useEffect above can lag behind a
+  // rapid Save click and leave checkInOpensAt / checkInClosesAt empty,
+  // which would silently fail Zod validation.
+  const handleSubmitClick = (event: React.FormEvent<HTMLFormElement>) => {
+    const currentEventDate = form.getValues("eventDate");
+    const currentStartTime = form.getValues("startTime");
+    const currentEndTime = form.getValues("endTime");
+    if (currentEventDate && currentStartTime && currentEndTime) {
+      form.setValue(
+        "checkInOpensAt",
+        combineDateAndTime(currentEventDate, `${shiftTimeString(currentStartTime, -offsets.openMinutesBeforeStart)}:00`),
+        { shouldValidate: false },
+      );
+      form.setValue(
+        "checkInClosesAt",
+        combineDateAndTime(currentEventDate, `${shiftTimeString(currentEndTime, offsets.closeMinutesAfterEnd)}:00`),
+        { shouldValidate: false },
+      );
     }
-  });
+    void submit(event);
+  };
   const isSubmitting = form.formState.isSubmitting;
 
   const selectedClubId = form.watch("clubId");
