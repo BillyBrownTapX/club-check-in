@@ -109,23 +109,29 @@ export function useAuthorizedServerFn<T extends (...args: any[]) => Promise<any>
   }, [navigate, signOut]);
 
   return (options?: Parameters<T>[0]) => {
-    const accessToken = session?.access_token;
-    if (!accessToken) {
-      // Defer the redirect to the next tick so callers can still attach
-      // their own error handling without losing the navigation.
-      void handleAuthExpired();
-      throw new Error("Your session expired. Please sign in again.");
-    }
+    const resolveAccessToken = async () => {
+      if (session?.access_token) return session.access_token;
+      const { data } = await supabase.auth.getSession();
+      return data.session?.access_token ?? null;
+    };
 
-    const nextOptions = {
-      ...options,
-      headers: {
-        ...(options && typeof options === "object" && "headers" in options && options.headers ? options.headers : {}),
-        authorization: `Bearer ${accessToken}`,
-      },
-    } as Parameters<T>[0];
+    const result = resolveAccessToken().then((accessToken) => {
+      if (!accessToken) {
+        void handleAuthExpired();
+        throw new Error("Your session expired. Please sign in again.");
+      }
 
-    const result = invoke(...([nextOptions] as unknown as Parameters<T>));
+      const nextOptions = {
+        ...options,
+        headers: {
+          ...(options && typeof options === "object" && "headers" in options && options.headers ? options.headers : {}),
+          authorization: `Bearer ${accessToken}`,
+        },
+      } as Parameters<T>[0];
+
+      return invoke(...([nextOptions] as unknown as Parameters<T>));
+    });
+
     return result.then(
       (value) => value,
       (error: unknown) => {

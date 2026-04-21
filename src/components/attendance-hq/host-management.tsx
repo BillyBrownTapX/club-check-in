@@ -361,9 +361,10 @@ export function useRequireGuestRedirect() {
   const { user, session, loading } = useAttendanceAuth();
   const resolveRedirect = useResolvePostAuthRedirect();
   const fired = useRef(false);
+  const authLoading = loading || (!!user && !session);
 
   useEffect(() => {
-    if (loading || !user || !session || fired.current) return;
+    if (authLoading || !user || !session || fired.current) return;
     fired.current = true;
     void resolveRedirect().catch(() => {
       // If the server probe fails (network, transient 5xx) we fall back to
@@ -371,9 +372,9 @@ export function useRequireGuestRedirect() {
       // there; they're not stranded on an auth page they're already past.
       fired.current = false;
     });
-  }, [loading, user, session, resolveRedirect]);
+  }, [authLoading, user, session, resolveRedirect]);
 
-  return { loading };
+  return { loading: authLoading };
 }
 
 type ClubCreateValues = z.infer<typeof clubSchema>;

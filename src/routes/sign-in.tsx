@@ -4,8 +4,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { AuthCard, AuthShell, AuthSupportLinks, EmailInput, InlineErrorMessage, PageHeadingBlock, PasswordInput, PrimaryButton, SecondaryTextLink, SuccessBanner } from "@/components/attendance-hq/host-onboarding";
-import { useRequireGuestRedirect, useResolvePostAuthRedirect } from "@/components/attendance-hq/host-management";
-import { getManagementErrorMessage } from "@/components/attendance-hq/host-management";
+import { useRequireGuestRedirect } from "@/components/attendance-hq/host-management";
 import { supabase } from "@/integrations/supabase/client";
 import { signInSchema } from "@/lib/attendance-hq-schemas";
 import { normalizeSupabaseAuthError } from "@/lib/server-errors";
@@ -40,8 +39,8 @@ function SignInRoute() {
   // auth landings.
   useRequireGuestRedirect();
   const { reason } = Route.useSearch();
-  const resolveRedirect = useResolvePostAuthRedirect();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [authSettling, setAuthSettling] = useState(false);
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { email: "", password: "" },
@@ -57,21 +56,19 @@ function SignInRoute() {
 
   const onSubmit = form.handleSubmit(async (values) => {
     setSubmitError(null);
+    setAuthSettling(false);
     const { data, error } = await supabase.auth.signInWithPassword({
       email: values.email,
       password: values.password,
     });
 
     if (error || !data.user) {
+      setAuthSettling(false);
       setSubmitError(normalizeSupabaseAuthError(error, "Unable to sign in."));
       return;
     }
 
-    try {
-      await resolveRedirect({ email: data.user.email ?? undefined });
-    } catch (resolveError) {
-      setSubmitError(getManagementErrorMessage(resolveError, "Signed in but couldn't load your workspace."));
-    }
+    setAuthSettling(true);
   });
 
   return (
@@ -83,7 +80,7 @@ function SignInRoute() {
           <EmailInput label="Email" error={form.formState.errors.email?.message} {...form.register("email")} />
           <PasswordInput label="Password" error={form.formState.errors.password?.message} {...form.register("password")} />
           <InlineErrorMessage message={submitError ?? undefined} />
-          <PrimaryButton type="submit" disabled={form.formState.isSubmitting}>Sign In</PrimaryButton>
+          <PrimaryButton type="submit" disabled={form.formState.isSubmitting || authSettling}>{authSettling ? "Signing you in..." : "Sign In"}</PrimaryButton>
         </form>
         <AuthSupportLinks
           primary={<SecondaryTextLink to="/forgot-password">Forgot password</SecondaryTextLink>}
