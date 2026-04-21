@@ -1,98 +1,113 @@
 
-Fix the false session-expired/logout race by making auth-page redirection wait for session hydration and by hardening protected server-fn invocation against a transient null auth context.
+Fix the student QR check-in experience by aligning the public route with the intended first-time registration flow and by handling blocked event windows clearly.
 
-1. Root cause confirmed from code
-- `src/routes/sign-in.tsx` calls `resolveRedirect()` immediately after `supabase.auth.signInWithPassword(...)` succeeds.
-- `src/routes/sign-up.tsx` calls `resolveRedirect()` immediately after `supabase.auth.signUp(...)` returns a live session.
-- `resolveRedirect()` in `src/components/attendance-hq/host-management.tsx` uses `useAuthorizedServerFn(getHostOnboardingState)`.
-- `useAuthorizedServerFn()` in `src/components/attendance-hq/auth-provider.tsx` reads `session?.access_token` only from React auth context and treats missing context session as expired immediately.
-- During fresh sign-in/sign-up, the auth context can still be hydrating even though auth already succeeded, which causes `signOut()` + redirect to `/sign-in?reason=expired`.
+1. What the codebase is doing right now
+- The QR code points to `/check-in/$qrToken`.
+- That route already exists and loads correctly from `src/routes/check-in.$qrToken.tsx`.
+- The student registration form already exists and asks for:
+  - first name
+  - last name
+  - student email
+  - 900 number
+- Validation is already in place in `src/lib/attendance-hq-schemas.ts`:
+  - email must be valid
+  - 900 number must be exactly 9 digits
+- The server-side public check-in handlers also already exist in `src/lib/attendance-hq.functions.ts`:
+  - `studentCheckIn`
+  - `lookupStudent`
+  - `confirmReturningStudent`
+  - `fastCheckIn`
+  - `getRememberedStudent`
 
-2. Primary fix: stop redirecting too early from auth pages
-- Update `src/routes/sign-in.tsx`:
-  - Remove the immediate `resolveRedirect(...)` call after successful sign-in.
-  - Remove the now-unused `useResolvePostAuthRedirect` / `getManagementErrorMessage` imports tied only to that flow.
-  - Add a small local pending state such as `authSettling` or `isFinishingSignIn`.
-  - On successful sign-in, set the pending state and let `useRequireGuestRedirect()` handle the redirect after session hydration.
-  - Disable the submit button while settling and change button copy to “Signing you in...” so the user is not left on a seemingly idle form.
+2. Root cause confirmed from code
+There are two separate reasons this appears “not working”:
 
-- Update `src/routes/sign-up.tsx`:
-  - Remove the immediate `resolveRedirect(...)` call when `data.session` exists.
-  - Preserve the current no-session/email-confirmation path exactly as-is.
-  - Add a local pending state such as `isFinishingSetup`.
-  - When signup returns a live session, set the pending state and let `useRequireGuestRedirect()` perform the post-auth navigation after hydration.
-  - Disable the submit button while settling and show a short status such as “Finishing setup...”.
+- The QR route does not go straight to the registration form.
+  - In `src/routes/check-in.$qrToken.tsx`, the initial screen is:
+    - `entry` when the event is available
+    - `blocked` when the event is not available
+  - The entry screen shows choices:
+    - “First time using Attendance HQ”
+    - “I’ve checked in before”
+  - So the current product behavior is not “scan QR → immediate registration form”.
+  - It is “scan QR → choose path → then see the form”.
 
-3. Keep guest redirect as the single redirect source of truth
-- Update `src/components/attendance-hq/host-management.tsx` in `useRequireGuestRedirect()`:
-  - Keep the existing `loading || !user || !session` guard so redirects do not run while auth is unresolved.
-  - Strengthen the derived readiness check to mirror `useRequireHostRedirect()` semantics:
-    - treat `loading || (!!user && !session)` as still hydrating
-    - only call `resolveRedirect()` once both `user` and `session` exist
-  - Keep the `fired` ref so the redirect cannot race itself.
-  - Preserve the current fallback behavior on server-probe failure; just do not misfire while auth is still settling.
+- The event may be blocked by the check-in window.
+  - Public access is gated by `getEventForPublicCheckInByQr()` in `src/lib/attendance-hq.functions.ts`.
+  - That function returns:
+    - `not_open_yet` if now is before `check_in_opens_at`
+    - `closed` if now is after `check_in_closes_at`, inactive, or archived
+  - The current event data shows recent events with fixed check-in windows, so if a student scans outside that window they will never reach the form.
 
-4. Secondary hardening in authorized server calls
-- Update `src/components/attendance-hq/auth-provider.tsx` in `useAuthorizedServerFn()`:
-  - Keep real 401 handling unchanged.
-  - Add a fallback path when context `session?.access_token` is missing:
-    - call `supabase.auth.getSession()`
-    - if a fresh session exists, use that access token instead of immediately forcing logout
-    - only call `handleAuthExpired()` if both context session and fresh session are absent
-  - Implement this without rebuilding the hook architecture:
-    - make the returned function async-compatible
-    - resolve the token first, then invoke the server fn with the bearer header
-  - Keep the existing dedupe behavior with `expiredRef` so simultaneous failures still redirect only once.
+3. Why the student is not being brought directly to the form
+- The current UI was built as a branching flow, not a forced first-time flow.
+- Specifically in `src/routes/check-in.$qrToken.tsx`:
+  - `const [screen, setScreen] = useState<FlowScreen>(initialBlockedState ? "blocked" : "entry");`
+- That means scanning a QR code lands on the entry-choice screen by design.
+- If the event is outside the allowed time window, it lands on a blocked state instead.
 
-5. File-by-file implementation breakdown
-- `src/routes/sign-in.tsx`
-  - Remove eager post-auth redirect call.
-  - Add local “auth settling” UI state.
-  - Let `useRequireGuestRedirect()` move authenticated users once hydration is complete.
+4. What needs to be changed
+Update the QR check-in route so first-time students are taken directly to the registration form instead of the chooser screen, while still preserving returning-student and remembered-device paths in a safe way.
 
-- `src/routes/sign-up.tsx`
-  - Remove eager post-auth redirect call only for the live-session path.
-  - Keep email-confirmation notice behavior unchanged when no session is returned.
-  - Add local “finishing setup” UI state and rely on `useRequireGuestRedirect()`.
+5. Implementation plan
+- Update `src/routes/check-in.$qrToken.tsx`
+  - Change the initial screen logic so that:
+    - blocked events still open the blocked screen
+    - remembered-device users can still be surfaced when found
+    - otherwise the default student experience opens `first-time` directly
+  - Replace or reduce the current entry-choice screen so it matches the intended product flow:
+    - default: first-time registration form
+    - secondary option: link/button for returning students
+  - Keep the existing registration form fields and zod validation unchanged.
 
-- `src/components/attendance-hq/host-management.tsx`
-  - Make `useRequireGuestRedirect()` explicitly hydration-safe and the canonical redirect path for auth pages.
+- Keep the current server-side logic in `src/lib/attendance-hq.functions.ts`
+  - The public handlers already support:
+    - new student creation
+    - returning lookup
+    - duplicate attendance protection
+    - remembered-device check-in
+  - No auth redesign is needed here.
 
-- `src/components/attendance-hq/auth-provider.tsx`
-  - Harden `useAuthorizedServerFn()` with a `supabase.auth.getSession()` fallback before treating the session as expired.
+- Improve blocked-state messaging
+  - If check-in is not open yet or is closed, keep the blocked screen but make the reason more obvious to students.
+  - This prevents “nothing happens” confusion when the real issue is timing, not form failure.
 
-6. Why this fix works
-- It removes the race-triggering protected server call from the exact moment immediately after sign-in/sign-up success.
-- It lets the existing auth provider finish hydrating the fresh session before any protected onboarding lookup runs.
-- It preserves the current onboarding routing logic because `useResolvePostAuthRedirect()` still decides the destination; it just runs at the correct time.
-- It preserves real expired-session behavior because true missing sessions and true 401s still flow through `handleAuthExpired()`.
+- Review host-side QR expectations
+  - The QR URL is generated from `window.location.origin` in:
+    - `src/routes/events.$eventId.tsx`
+    - `src/routes/events.$eventId.display.tsx`
+  - Verify the generated QR route remains correct after the public flow change.
 
-7. Remaining follow-up risk
-- Low risk: the main remaining sensitivity is any other code path that invokes `useAuthorizedServerFn()` during a fresh auth transition outside the sign-in/sign-up pages.
-- The hardening in `useAuthorizedServerFn()` reduces this risk significantly without changing the broader auth architecture.
+6. Files to update
+- `src/routes/check-in.$qrToken.tsx`
+  - main UX fix
+- Possibly `src/components/attendance-hq/public-check-in.tsx`
+  - only if copy or CTA presentation needs minor adjustment
+- No database changes required
+- No auth changes required
 
-8. Manual validation steps
-- Sign in with valid credentials:
-  - confirm no immediate logout request fires
-  - confirm no false “Your session expired” banner appears
-  - confirm redirect lands in `/onboarding/club`, `/onboarding/event`, or the correct event/workspace route
+7. Expected result after the fix
+- Student scans QR code
+- If check-in is open:
+  - student is brought directly to the form asking for:
+    - first name
+    - last name
+    - student email
+    - 900 student ID number
+- Returning students still have a visible fallback path
+- Remembered-device flow can still work when available
+- If check-in is not yet open or already closed, students see a clear blocked message instead of seeming like the page is broken
 
-- Sign up with a flow that returns a live session:
-  - confirm no bounce back to `/sign-in?reason=expired`
-  - confirm redirect proceeds correctly after hydration
-
-- Sign up with email confirmation enabled:
-  - confirm the existing “Check your inbox...” notice still appears
-  - confirm no redirect is attempted before confirmation
-
-- True expiry test:
-  - invalidate or remove the session
-  - trigger a protected page/server function
-  - confirm the user is signed out and redirected to `/sign-in?reason=expired`
-  - confirm the expired-session banner appears only in this real-expiry case
-
-9. Expected result
-- Fresh sign-in and fresh sign-up stop causing immediate logout.
-- Authenticated users are redirected only after session hydration is ready.
-- Onboarding-state routing remains intact.
-- Genuine expired sessions still sign out and redirect correctly.
+8. Validation after implementation
+- Scan/open a valid QR link during an open check-in window
+  - confirm the registration form appears immediately
+- Submit valid first-time student data
+  - confirm attendance is recorded
+- Submit invalid 900 number
+  - confirm the 9-digit validation error appears
+- Use a known returning student
+  - confirm the returning path still works
+- Open the QR link before the event opens
+  - confirm a clear “not open yet” state appears
+- Open the QR link after it closes
+  - confirm a clear “closed” state appears
