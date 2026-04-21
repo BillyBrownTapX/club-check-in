@@ -493,6 +493,12 @@ export const getHostClubSummaries = createServerFn({ method: "GET" })
     return getHostClubSummariesForUser(context.supabase, context.userId);
   });
 
+export const getUniversitiesForHost = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    return getUniversities(context.supabase);
+  });
+
 export const getHostTemplates = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { clubId?: string }) => ({ clubId: input.clubId ?? "" }))
