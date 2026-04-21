@@ -6,6 +6,8 @@ import { routeTree } from "./routeTree.gen";
 function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
 
+  if (typeof console !== "undefined") console.error("[route-error]", error?.message, error?.stack);
+
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-8">
       <div className="w-full max-w-lg overflow-hidden rounded-[2rem] border border-primary/10 bg-card/95 p-8 text-center shadow-[0_28px_72px_-36px_color-mix(in_oklab,var(--color-primary)_28%,transparent)]">
@@ -16,8 +18,8 @@ function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => vo
         </div>
         <h1 className="font-display text-3xl font-extrabold tracking-tight text-foreground">Something went wrong</h1>
         <p className="mt-2 text-sm leading-6 text-muted-foreground">An unexpected error interrupted the app. Try again or return home.</p>
-        {import.meta.env.DEV && error.message ? (
-          <pre className="mt-4 max-h-40 overflow-auto rounded-xl bg-secondary p-3 text-left font-mono text-xs text-destructive">{error.message}</pre>
+        {error?.message ? (
+          <pre className="mt-4 max-h-40 overflow-auto rounded-xl bg-secondary p-3 text-left font-mono text-xs text-destructive whitespace-pre-wrap break-words">{error.message}</pre>
         ) : null}
         <div className="mt-6 flex items-center justify-center gap-3">
           <Button
