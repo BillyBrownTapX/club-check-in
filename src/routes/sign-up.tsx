@@ -1,25 +1,13 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { AuthCard, AuthShell, AuthSupportLinks, EmailInput, InlineErrorMessage, PageHeadingBlock, PasswordInput, PrimaryButton, SecondaryTextLink, TextInput } from "@/components/attendance-hq/host-onboarding";
-import { useAttendanceAuth } from "@/components/attendance-hq/auth-provider";
+import { AuthCard, AuthShell, AuthSupportLinks, EmailInput, InlineErrorMessage, PageHeadingBlock, PasswordInput, PrimaryButton, SecondaryTextLink, SuccessBanner, TextInput } from "@/components/attendance-hq/host-onboarding";
+import { getManagementErrorMessage, useRequireGuestRedirect, useResolvePostAuthRedirect } from "@/components/attendance-hq/host-management";
 import { supabase } from "@/integrations/supabase/client";
 import { signUpSchema } from "@/lib/attendance-hq-schemas";
-import { ensureClientHostProfile, getClientOnboardingState } from "@/lib/host-onboarding-client";
-
-function navigateToNextPath(navigate: ReturnType<typeof useNavigate>, nextPath: string) {
-  if (nextPath === "/onboarding/club") {
-    navigate({ to: "/onboarding/club" });
-    return;
-  }
-  if (nextPath === "/onboarding/event") {
-    navigate({ to: "/onboarding/event" });
-    return;
-  }
-  navigate({ to: "/clubs" });
-}
+import { normalizeSupabaseAuthError } from "@/lib/server-errors";
 
 const formSchema = signUpSchema;
 type FormValues = z.infer<typeof formSchema>;
@@ -35,28 +23,18 @@ export const Route = createFileRoute("/sign-up")({
 });
 
 function SignUpRoute() {
-  const navigate = useNavigate();
-  const { user, loading } = useAttendanceAuth();
+  useRequireGuestRedirect();
+  const resolveRedirect = useResolvePostAuthRedirect();
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [confirmEmailNotice, setConfirmEmailNotice] = useState<string | null>(null);
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { fullName: "", email: "", password: "" },
   });
 
-  useEffect(() => {
-    if (!loading && user) {
-      void getClientOnboardingState(user.id).then((state) => {
-        if (state.isComplete && state.event) {
-          navigate({ to: "/events/$eventId", params: { eventId: state.event.id } });
-          return;
-        }
-        navigateToNextPath(navigate, state.nextPath);
-      }).catch(() => undefined);
-    }
-  }, [loading, navigate, user]);
-
   const onSubmit = form.handleSubmit(async (values) => {
     setSubmitError(null);
+    setConfirmEmailNotice(null);
     const { data, error } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
@@ -64,7 +42,7 @@ function SignUpRoute() {
     });
 
     if (error) {
-      setSubmitError(error.message);
+      setSubmitError(normalizeSupabaseAuthError(error, "Unable to create account."));
       return;
     }
 
@@ -73,14 +51,33 @@ function SignUpRoute() {
       return;
     }
 
-    await ensureClientHostProfile(data.user, values.fullName);
-    navigate({ to: "/onboarding/club" });
+    // When Supabase has email confirmation enabled the signUp call returns
+    // a user but no session. There's nothing to redirect to yet — the
+    // host_profile bootstrap happens server-side on first authenticated
+    // call (see getHostOnboardingState).
+    if (!data.session) {
+      setConfirmEmailNotice(
+        "Check your inbox to confirm your email, then sign in to continue setting up your club.",
+      );
+      form.reset();
+      return;
+    }
+
+    try {
+      // The fullName seed is forwarded to the server profile bootstrap so
+      // the friendly display name from the form survives — no separate
+      // client-side ensure-profile call needed.
+      await resolveRedirect({ fullName: values.fullName, email: data.user.email ?? undefined });
+    } catch (resolveError) {
+      setSubmitError(getManagementErrorMessage(resolveError, "Account created but we couldn't open your workspace."));
+    }
   });
 
   return (
     <AuthShell>
       <AuthCard>
         <PageHeadingBlock title="Create your account" description="Set up your club and start tracking attendance in minutes." />
+        {confirmEmailNotice ? <SuccessBanner message={confirmEmailNotice} /> : null}
         <form className="space-y-4" onSubmit={(event) => void onSubmit(event)}>
           <TextInput label="Full name" autoComplete="name" error={form.formState.errors.fullName?.message} {...form.register("fullName")} />
           <EmailInput label="Email" error={form.formState.errors.email?.message} {...form.register("email")} />

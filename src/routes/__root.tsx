@@ -3,6 +3,7 @@ import { HeadContent, Link, Outlet, Scripts, createRootRouteWithContext } from "
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import appCss from "../styles.css?url";
 import { AttendanceAuthProvider } from "@/components/attendance-hq/auth-provider";
+import { Toaster } from "@/components/ui/sonner";
 import { PRODUCT_NAME } from "@/lib/attendance-hq";
 
 export interface AppRouterContext {
@@ -20,6 +21,50 @@ function NotFoundComponent() {
           <Link
             to="/"
             className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Go home
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Last-chance error wall for anything that escaped a route's own
+// errorComponent — most importantly the supabase client throwing during
+// boot when SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY are missing. Without
+// this, a misconfigured deploy renders a blank screen + console stack
+// instead of an actionable message.
+function RootErrorComponent({ error }: { error: Error }) {
+  if (typeof console !== "undefined") {
+    console.error("[root-error]", error);
+  }
+  // Detect the well-known "missing env" signal so we can show config-
+  // specific copy. Anything else falls back to the generic "we hit a snag"
+  // screen — we never echo the raw .message into the page.
+  const isConfigError = /supabase environment variables/i.test(error?.message ?? "");
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+      <div className="max-w-md text-center">
+        <h1 className="text-2xl font-semibold text-foreground">
+          {isConfigError ? `${PRODUCT_NAME} isn’t configured` : "Something went wrong"}
+        </h1>
+        <p className="mt-3 text-sm text-muted-foreground">
+          {isConfigError
+            ? "The site is missing required server settings. The team has been notified — please check back shortly."
+            : "An unexpected error happened. Please refresh the page or try again in a moment."}
+        </p>
+        <div className="mt-6 flex justify-center gap-3">
+          <button
+            type="button"
+            onClick={() => { if (typeof window !== "undefined") window.location.reload(); }}
+            className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+          >
+            Reload
+          </button>
+          <Link
+            to="/"
+            className="inline-flex items-center justify-center rounded-xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
           >
             Go home
           </Link>
@@ -49,6 +94,7 @@ export const Route = createRootRouteWithContext<AppRouterContext>()({
   shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
+  errorComponent: RootErrorComponent,
 });
 
 function RootShell({ children }: { children: ReactNode }) {
@@ -77,6 +123,7 @@ function RootComponent() {
             <Outlet />
           </main>
         </div>
+        <Toaster position="top-center" richColors closeButton />
       </AttendanceAuthProvider>
     </QueryClientProvider>
   );

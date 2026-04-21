@@ -4,9 +4,10 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { FormCard, InlineErrorMessage, OnboardingShell, PageHeadingBlock, PrimaryButton, ProgressIndicator, SecondaryTextLink, TextAreaField, TextInput } from "@/components/attendance-hq/host-onboarding";
-import { useAttendanceAuth } from "@/components/attendance-hq/auth-provider";
+import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
+import { getManagementErrorMessage, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
 import { clubSchema } from "@/lib/attendance-hq-schemas";
-import { createFirstClub, ensureClientHostProfile, getClientOnboardingState } from "@/lib/host-onboarding-client";
+import { createClubManagement, getHostOnboardingState } from "@/lib/attendance-hq.functions";
 
 const formSchema = clubSchema;
 type FormValues = z.infer<typeof formSchema>;
@@ -22,53 +23,69 @@ export const Route = createFileRoute("/onboarding/club")({
 });
 
 function OnboardingClubRoute() {
+  // Same guard the management routes use — if there is no session we are
+  // bounced to /sign-in. No more inline useEffect redirect.
+  const { loading, user } = useRequireHostRedirect();
   const navigate = useNavigate();
-  const { user, loading } = useAttendanceAuth();
+  const fetchOnboardingState = useAuthorizedServerFn(getHostOnboardingState);
+  const createClub = useAuthorizedServerFn(createClubManagement);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [stateLoaded, setStateLoaded] = useState(false);
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: { clubName: "", description: "" },
   });
 
   useEffect(() => {
-    if (loading) return;
-    if (!user) {
-      navigate({ to: "/sign-in" });
-      return;
-    }
-
-    void ensureClientHostProfile(user)
-      .then(() => getClientOnboardingState(user.id))
-      .then((state) => {
-        if (state.club && !state.event) {
+    if (loading || !user) return;
+    let cancelled = false;
+    void fetchOnboardingState({ data: {} })
+      .then(({ onboarding }) => {
+        if (cancelled) return;
+        // Server-authoritative deep-link guard: if onboarding has already
+        // progressed past this step, jump forward instead of letting the
+        // user create a duplicate first club.
+        if (onboarding.club && !onboarding.event) {
           navigate({ to: "/onboarding/event" });
           return;
         }
-        if (state.isComplete && state.event) {
-          navigate({ to: "/events/$eventId", params: { eventId: state.event.id } });
+        if (onboarding.isComplete && onboarding.event) {
+          navigate({
+            to: "/events/$eventId",
+            params: { eventId: onboarding.event.id },
+            search: { created: "" },
+          });
+          return;
         }
+        setStateLoaded(true);
       })
-      .catch(() => undefined);
-  }, [loading, navigate, user]);
+      .catch((error) => {
+        if (cancelled) return;
+        setSubmitError(getManagementErrorMessage(error, "Unable to load onboarding state."));
+        setStateLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchOnboardingState, loading, navigate, user]);
 
   const onSubmit = form.handleSubmit(async (values) => {
-    if (!user) return;
     setSubmitError(null);
     try {
-      await createFirstClub(user.id, values);
+      await createClub({ data: { clubName: values.clubName, description: values.description } });
       navigate({ to: "/onboarding/event" });
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "Unable to create club.");
+      setSubmitError(getManagementErrorMessage(error, "Unable to create club."));
     }
   });
 
-  if (loading || !user) return null;
+  if (loading || !user || !stateLoaded) return null;
 
   return (
     <OnboardingShell>
       <FormCard>
         <ProgressIndicator step={1} total={2} label="Create your club" />
-        <PageHeadingBlock title="Create your first club" description="This is the club or organization you’ll use to host events and track attendance." />
+        <PageHeadingBlock title="Create your first club" description="This is the club or organization you'll use to host events and track attendance." />
         <form className="space-y-4" onSubmit={(event) => void onSubmit(event)}>
           <TextInput label="Club name" autoComplete="organization" error={form.formState.errors.clubName?.message} {...form.register("clubName")} />
           <TextAreaField label="Description" placeholder="Optional" error={form.formState.errors.description?.message} {...form.register("description")} />

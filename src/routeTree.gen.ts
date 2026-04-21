@@ -23,6 +23,7 @@ import { Route as EventsEventIdRouteImport } from './routes/events.$eventId'
 import { Route as ClubsClubIdRouteImport } from './routes/clubs.$clubId'
 import { Route as CheckInQrTokenRouteImport } from './routes/check-in.$qrToken'
 import { Route as EventsEventIdEditRouteImport } from './routes/events.$eventId.edit'
+import { Route as EventsEventIdDisplayRouteImport } from './routes/events.$eventId.display'
 
 const SignUpRoute = SignUpRouteImport.update({
   id: '/sign-up',
@@ -94,6 +95,11 @@ const EventsEventIdEditRoute = EventsEventIdEditRouteImport.update({
   path: '/edit',
   getParentRoute: () => EventsEventIdRoute,
 } as any)
+const EventsEventIdDisplayRoute = EventsEventIdDisplayRouteImport.update({
+  id: '/display',
+  path: '/display',
+  getParentRoute: () => EventsEventIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -109,6 +115,7 @@ export interface FileRoutesByFullPath {
   '/onboarding/event': typeof OnboardingEventRoute
   '/clubs/': typeof ClubsIndexRoute
   '/events/': typeof EventsIndexRoute
+  '/events/$eventId/display': typeof EventsEventIdDisplayRoute
   '/events/$eventId/edit': typeof EventsEventIdEditRoute
 }
 export interface FileRoutesByTo {
@@ -125,6 +132,7 @@ export interface FileRoutesByTo {
   '/onboarding/event': typeof OnboardingEventRoute
   '/clubs': typeof ClubsIndexRoute
   '/events': typeof EventsIndexRoute
+  '/events/$eventId/display': typeof EventsEventIdDisplayRoute
   '/events/$eventId/edit': typeof EventsEventIdEditRoute
 }
 export interface FileRoutesById {
@@ -142,6 +150,7 @@ export interface FileRoutesById {
   '/onboarding/event': typeof OnboardingEventRoute
   '/clubs/': typeof ClubsIndexRoute
   '/events/': typeof EventsIndexRoute
+  '/events/$eventId/display': typeof EventsEventIdDisplayRoute
   '/events/$eventId/edit': typeof EventsEventIdEditRoute
 }
 export interface FileRouteTypes {
@@ -160,6 +169,7 @@ export interface FileRouteTypes {
     | '/onboarding/event'
     | '/clubs/'
     | '/events/'
+    | '/events/$eventId/display'
     | '/events/$eventId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -176,6 +186,7 @@ export interface FileRouteTypes {
     | '/onboarding/event'
     | '/clubs'
     | '/events'
+    | '/events/$eventId/display'
     | '/events/$eventId/edit'
   id:
     | '__root__'
@@ -192,6 +203,7 @@ export interface FileRouteTypes {
     | '/onboarding/event'
     | '/clubs/'
     | '/events/'
+    | '/events/$eventId/display'
     | '/events/$eventId/edit'
   fileRoutesById: FileRoutesById
 }
@@ -311,14 +323,23 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EventsEventIdEditRouteImport
       parentRoute: typeof EventsEventIdRoute
     }
+    '/events/$eventId/display': {
+      id: '/events/$eventId/display'
+      path: '/display'
+      fullPath: '/events/$eventId/display'
+      preLoaderRoute: typeof EventsEventIdDisplayRouteImport
+      parentRoute: typeof EventsEventIdRoute
+    }
   }
 }
 
 interface EventsEventIdRouteChildren {
+  EventsEventIdDisplayRoute: typeof EventsEventIdDisplayRoute
   EventsEventIdEditRoute: typeof EventsEventIdEditRoute
 }
 
 const EventsEventIdRouteChildren: EventsEventIdRouteChildren = {
+  EventsEventIdDisplayRoute: EventsEventIdDisplayRoute,
   EventsEventIdEditRoute: EventsEventIdEditRoute,
 }
 

@@ -4,45 +4,56 @@ import { getRequest } from '@tanstack/react-start/server'
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from './types'
 
+// Single sanitized auth-failure response. We intentionally do NOT echo back
+// "missing header" / "wrong scheme" / "invalid token" detail strings. The
+// browser only needs one signal: status === 401. The client's
+// useAuthorizedServerFn interprets that as "session is gone" and forces a
+// sign-out + redirect to /sign-in?reason=expired. A descriptive body just
+// gives an attacker a free oracle for distinguishing failure modes.
+function unauthorized() {
+  return new Response('Unauthorized', { status: 401 });
+}
 
+// 500 for missing server-side env. Don't include the variable names in the
+// body — anyone hitting the server fn endpoint shouldn't learn our config
+// surface. The deploy logs already include the real reason.
+function envMissing() {
+  if (typeof console !== "undefined") {
+    console.error("[server-error] requireSupabaseAuth: missing SUPABASE_URL or SUPABASE_PUBLISHABLE_KEY");
+  }
+  return new Response('Service temporarily unavailable', { status: 500 });
+}
 
 export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server(
   async ({ next }) => {
-    
+
     const SUPABASE_URL = process.env.SUPABASE_URL;
     const SUPABASE_PUBLISHABLE_KEY = process.env.SUPABASE_PUBLISHABLE_KEY;
 
     if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-      throw new Response(
-        'Missing Supabase environment variables. Ensure SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY are set.',
-        { status: 500 }
-      );
+      throw envMissing();
     }
-    
+
     const request = getRequest();
 
     if (!request?.headers) {
-      throw new Response('Unauthorized: No request headers available', { status: 401 });
+      throw unauthorized();
     }
 
     const authHeader = request.headers.get('authorization');
 
-    if (!authHeader) {
-      throw new Response('Unauthorized: No authorization header provided', { status: 401 });
-    }
-
-    if (!authHeader.startsWith('Bearer ')) {
-      throw new Response('Unauthorized: Only Bearer tokens are supported', { status: 401 });
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      throw unauthorized();
     }
 
     const token = authHeader.replace('Bearer ', '');
     if (!token) {
-      throw new Response('Unauthorized: No token provided', { status: 401 });
+      throw unauthorized();
     }
 
     const supabase = createClient<Database>(
-      SUPABASE_URL!,
-      SUPABASE_PUBLISHABLE_KEY!,
+      SUPABASE_URL,
+      SUPABASE_PUBLISHABLE_KEY,
       {
         global: {
           headers: {
@@ -58,12 +69,12 @@ export const requireSupabaseAuth = createMiddleware({ type: 'function' }).server
     );
 
     const { data, error } = await supabase.auth.getClaims(token);
-    if (error || !data?.claims) {
-      throw new Response('Unauthorized: Invalid token', { status: 401 });
-    }
-
-    if (!data.claims.sub) {
-      throw new Response('Unauthorized: No user ID found in token', { status: 401 });
+    if (error || !data?.claims || !data.claims.sub) {
+      // We only log inside the server context; no detail crosses the wire.
+      if (typeof console !== "undefined") {
+        console.warn("[auth-middleware] token rejected", error?.message ?? "no claims");
+      }
+      throw unauthorized();
     }
 
     return next({

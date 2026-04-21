@@ -67,7 +67,6 @@ export type PublicBlockedState =
   | "invalid_900_number";
 
 export type PublicStudentPreview = {
-  id: string;
   firstName: string;
   lastInitial: string;
   maskedEmail: string;
@@ -116,14 +115,42 @@ export function slugifyClubName(name: string) {
     .slice(0, 60);
 }
 
-export function createQrToken() {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789abcdefghijkmnopqrstuvwxyz";
-  return Array.from({ length: 24 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
+// 64-char URL-safe alphabet. 256 % 64 === 0, so masking the byte with 0x3f
+// gives an unbiased index.
+const URL_SAFE_ALPHABET =
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+
+function getRandomBytes(length: number): Uint8Array {
+  // Available in modern Node, browsers, and Cloudflare Workers (Web Crypto).
+  const cryptoObj: Crypto | undefined =
+    typeof globalThis !== "undefined" ? (globalThis as { crypto?: Crypto }).crypto : undefined;
+  if (!cryptoObj || typeof cryptoObj.getRandomValues !== "function") {
+    throw new Error(
+      "Secure random source unavailable: globalThis.crypto.getRandomValues is required for token generation.",
+    );
+  }
+  const bytes = new Uint8Array(length);
+  cryptoObj.getRandomValues(bytes);
+  return bytes;
 }
 
+function generateSecureToken(length: number): string {
+  const bytes = getRandomBytes(length);
+  let out = "";
+  for (let i = 0; i < length; i++) {
+    out += URL_SAFE_ALPHABET[bytes[i] & 0x3f];
+  }
+  return out;
+}
+
+// 24 chars from a 64-symbol alphabet = 144 bits of entropy. URL-safe.
+export function createQrToken() {
+  return generateSecureToken(24);
+}
+
+// 36 chars from a 64-symbol alphabet = 216 bits of entropy. URL-safe.
 export function createDeviceToken() {
-  const alphabet = "abcdefghijklmnopqrstuvwxyz0123456789";
-  return Array.from({ length: 36 }, () => alphabet[Math.floor(Math.random() * alphabet.length)]).join("");
+  return generateSecureToken(36);
 }
 
 export function formatEventDate(date: string) {
@@ -284,6 +311,11 @@ export function shiftTimeString(time: string, minutes: number) {
   return `${nextHours}:${nextMinutes}`;
 }
 
+// Canonical default-event factory. Single source of truth — do NOT redefine
+// in attendance-hq.functions.ts or anywhere else. The check-in window is
+// derived from start/end via shiftTimeString so the relationship (open 15 min
+// before start, close 15 min after end) is explicit rather than encoded in
+// magic time strings that drift between copies.
 export function buildEventDefaults(date = new Date()) {
   const eventDate = date.toISOString().slice(0, 10);
   const startTime = "18:00";
@@ -292,7 +324,7 @@ export function buildEventDefaults(date = new Date()) {
     eventDate,
     startTime,
     endTime,
-    checkInOpensAt: combineDateAndTime(eventDate, "17:45:00"),
-    checkInClosesAt: combineDateAndTime(eventDate, "18:20:00"),
+    checkInOpensAt: combineDateAndTime(eventDate, `${shiftTimeString(startTime, -15)}:00`),
+    checkInClosesAt: combineDateAndTime(eventDate, `${shiftTimeString(endTime, 15)}:00`),
   };
 }

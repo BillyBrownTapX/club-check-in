@@ -32,13 +32,16 @@ import { returningLookupSchema, studentRegistrationSchema } from "@/lib/attendan
 type FlowScreen = "entry" | "first-time" | "returning" | "confirm" | "success" | "blocked";
 type ConfirmMode = "returning" | "remembered";
 
-function RouteErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
+function RouteErrorComponent({ reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
+  // Never surface raw error.message to the public flow. Server stack
+  // traces, Supabase row references, or transport errors must not be
+  // shown on a page anyone with the QR link can hit.
   return (
     <PublicCheckInShell>
       <ErrorStateCard
         title="Unable to load check-in"
-        description={error.message || "Please try again."}
+        description="Something went wrong loading this event. Please try again."
         action={<PrimaryButton onClick={() => { router.invalidate(); reset(); }}>Try again</PrimaryButton>}
       />
     </PublicCheckInShell>
@@ -75,6 +78,7 @@ export const Route = createFileRoute("/check-in/$qrToken")({
 
 function CheckInRouteComponent() {
   const { event } = Route.useLoaderData();
+  const { qrToken } = Route.useParams();
   const status = getCheckInStatus(event);
   const initialBlockedState = getPublicBlockedState(status);
   const submitStudentCheckIn = useServerFn(studentCheckIn);
@@ -86,12 +90,14 @@ function CheckInRouteComponent() {
   const [screen, setScreen] = useState<FlowScreen>(initialBlockedState ? "blocked" : "entry");
   const [blockedState, setBlockedState] = useState<PublicBlockedState | null>(initialBlockedState);
   const [pendingStudent, setPendingStudent] = useState<PublicStudentPreview | null>(null);
-  const [pendingStudentId, setPendingStudentId] = useState<string | null>(null);
+  // Pre-fix this state held a raw student UUID returned by the server. We now
+  // hold the 900 number the user just typed in, so confirm re-proves identity
+  // server-side instead of trusting a client-supplied id.
+  const [pendingNineHundredNumber, setPendingNineHundredNumber] = useState<string | null>(null);
   const [confirmMode, setConfirmMode] = useState<ConfirmMode>("returning");
   const [rememberedDeviceToken, setRememberedDeviceToken] = useState<string | null>(null);
   const [successAt, setSuccessAt] = useState<string | null>(null);
   const [rememberedStudent, setRememberedStudent] = useState<PublicStudentPreview | null>(null);
-  const [rememberedStudentId, setRememberedStudentId] = useState<string | null>(null);
   const [rememberedLoading, setRememberedLoading] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
 
@@ -117,16 +123,26 @@ function CheckInRouteComponent() {
     if (!storedDeviceToken) return;
 
     setRememberedLoading(true);
-    resolveRememberedStudent({ data: { eventId: event.id, deviceToken: storedDeviceToken } })
+    resolveRememberedStudent({ data: { qrToken, deviceToken: storedDeviceToken } })
       .then((result) => {
-        if (!result.ok) return;
+        if (!result.ok) {
+          // The remembered device peek already proved this student exists
+          // for this event. The most common non-ok state is
+          // already_checked_in — pre-fix we silently dropped that and the
+          // student was offered the entry buttons again, then bounced
+          // when they tried to check in. Surface it directly so they know
+          // they are already in.
+          if (result.state === "already_checked_in") {
+            openBlockedState(result.state);
+          }
+          return;
+        }
         setRememberedDeviceToken(storedDeviceToken);
         setRememberedStudent(result.student);
-        setRememberedStudentId(result.studentId);
       })
       .catch(() => undefined)
       .finally(() => setRememberedLoading(false));
-  }, [event.id, initialBlockedState, resolveRememberedStudent]);
+  }, [qrToken, initialBlockedState, resolveRememberedStudent]);
 
   const blockedCopy = useMemo(() => (blockedState ? getBlockedStateCopy(blockedState) : null), [blockedState]);
 
@@ -138,59 +154,93 @@ function CheckInRouteComponent() {
   const clearTransientState = () => {
     setGlobalError(null);
     setPendingStudent(null);
-    setPendingStudentId(null);
+    setPendingNineHundredNumber(null);
   };
+
+  // Single sanitized message for any thrown server-fn error in the public
+  // flow. Students must NEVER see backend strings — Supabase errors,
+  // network failures, and unexpected 5xx all collapse into the same
+  // mobile-friendly retry copy. Any logical "blocked" state (closed event,
+  // already checked in, etc.) is returned as `{ ok: false, state }` and
+  // handled separately, so this path only fires on transport / panic.
+  const PUBLIC_TRANSIENT_ERROR = "Something went wrong. Please try again.";
 
   const handleFirstTimeSubmit = registrationForm.handleSubmit(async (values) => {
     setGlobalError(null);
-    const result = await submitStudentCheckIn({ data: { ...values, eventId: event.id } });
-    if (!result.ok) {
-      if (result.state === "student_exists") {
-        setPendingStudent(result.student);
-        setPendingStudentId(result.student.id);
-        setConfirmMode("returning");
-        setScreen("confirm");
+    try {
+      const result = await submitStudentCheckIn({ data: { ...values, qrToken } });
+      if (!result.ok) {
+        if (result.state === "student_exists") {
+          setPendingStudent(result.student);
+          // Carry forward the 900 number the user just submitted so confirm
+          // can re-prove identity server-side.
+          setPendingNineHundredNumber(values.nineHundredNumber);
+          setConfirmMode("returning");
+          setScreen("confirm");
+          return;
+        }
+        openBlockedState(result.state);
         return;
       }
-      openBlockedState(result.state);
-      return;
-    }
 
-    if (typeof window !== "undefined" && result.deviceToken) {
-      window.localStorage.setItem(DEVICE_TOKEN_KEY, result.deviceToken);
+      if (typeof window !== "undefined" && result.deviceToken) {
+        window.localStorage.setItem(DEVICE_TOKEN_KEY, result.deviceToken);
+      }
+      setSuccessAt(result.attendance.checked_in_at);
+      setScreen("success");
+    } catch {
+      setGlobalError(PUBLIC_TRANSIENT_ERROR);
     }
-    setSuccessAt(result.attendance.checked_in_at);
-    setScreen("success");
   });
 
   const handleReturningSubmit = returningForm.handleSubmit(async (values) => {
     setGlobalError(null);
-    const result = await lookupReturningStudent({ data: { ...values, eventId: event.id } });
-    if (!result.ok) {
-      openBlockedState(result.state);
-      return;
-    }
+    try {
+      const result = await lookupReturningStudent({ data: { ...values, qrToken } });
+      if (!result.ok) {
+        openBlockedState(result.state);
+        return;
+      }
 
-    setPendingStudent(result.student);
-    setPendingStudentId(result.student.id);
-    setConfirmMode("returning");
-    setScreen("confirm");
+      setPendingStudent(result.student);
+      setPendingNineHundredNumber(values.nineHundredNumber);
+      setConfirmMode("returning");
+      setScreen("confirm");
+    } catch {
+      setGlobalError(PUBLIC_TRANSIENT_ERROR);
+    }
   });
 
   async function handleConfirmCheckIn() {
-    if (!pendingStudent || !pendingStudentId) return;
+    if (!pendingStudent) return;
     setGlobalError(null);
-    const result = confirmMode === "remembered" && rememberedDeviceToken
-      ? await confirmRemembered({ data: { eventId: event.id, studentId: pendingStudentId, deviceToken: rememberedDeviceToken } })
-      : await confirmReturning({ data: { eventId: event.id, studentId: pendingStudentId } });
 
-    if (!result.ok) {
-      openBlockedState(result.state);
-      return;
+    try {
+      if (confirmMode === "remembered") {
+        if (!rememberedDeviceToken) return;
+        const result = await confirmRemembered({ data: { qrToken, deviceToken: rememberedDeviceToken } });
+        if (!result.ok) {
+          openBlockedState(result.state);
+          return;
+        }
+        setSuccessAt(result.attendance.checked_in_at);
+        setScreen("success");
+        return;
+      }
+
+      if (!pendingNineHundredNumber) return;
+      const result = await confirmReturning({
+        data: { qrToken, nineHundredNumber: pendingNineHundredNumber },
+      });
+      if (!result.ok) {
+        openBlockedState(result.state);
+        return;
+      }
+      setSuccessAt(result.attendance.checked_in_at);
+      setScreen("success");
+    } catch {
+      setGlobalError(PUBLIC_TRANSIENT_ERROR);
     }
-
-    setSuccessAt(result.attendance.checked_in_at);
-    setScreen("success");
   }
 
   function renderEntryScreen() {
@@ -202,14 +252,14 @@ function CheckInRouteComponent() {
           <p className="text-sm text-muted-foreground">Choose how you’d like to continue</p>
         </section>
         <div className="space-y-3">
-          {rememberedStudent && rememberedStudentId ? (
+          {rememberedStudent && rememberedDeviceToken ? (
             <ActionChoiceCard
               title={`Check in as ${rememberedStudent.firstName} ${rememberedStudent.lastInitial}.`}
               description="Fast path on this device"
               icon={<CheckCircle2 className="h-5 w-5" />}
               onClick={() => {
                 setPendingStudent(rememberedStudent);
-                setPendingStudentId(rememberedStudentId);
+                setPendingNineHundredNumber(null);
                 setConfirmMode("remembered");
                 setScreen("confirm");
               }}
@@ -292,6 +342,7 @@ function CheckInRouteComponent() {
           <h1 className="text-[2rem] font-semibold leading-tight text-foreground">Is this you?</h1>
         </section>
         <IdentityConfirmationCard student={pendingStudent} />
+        {globalError ? <p className="px-1 text-sm font-medium text-destructive">{globalError}</p> : null}
         <div className="space-y-3">
           <PrimaryButton type="button" onClick={() => void handleConfirmCheckIn()}>Check In</PrimaryButton>
           <SecondaryTextButton type="button" onClick={() => { clearTransientState(); setScreen(confirmMode === "remembered" ? "entry" : "returning"); }}>This is not me</SecondaryTextButton>

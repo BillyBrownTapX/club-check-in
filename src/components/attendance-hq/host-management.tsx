@@ -1,11 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { CalendarDays, Clock3, Copy, MapPin, Plus, Search, WandSparkles } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
-import { useAttendanceAuth } from "@/components/attendance-hq/auth-provider";
+import { useAttendanceAuth, useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
 import { HostAppShell } from "@/components/attendance-hq/host-shell";
+import { getHostOnboardingState } from "@/lib/attendance-hq.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -42,21 +43,62 @@ export function ManagementPageShell({ children }: { children: React.ReactNode })
   return <HostAppShell>{children}</HostAppShell>;
 }
 
+// Centralized error → user message mapping for the host UI.
+//
+// Server functions in this app are expected to throw EITHER:
+//   • a Response with an HTTP status (auth middleware → 401, notFound → 404)
+//   • an Error whose .message has already been sanitized by safeMessage()
+//     (see src/lib/server-errors.ts) — these messages are safe product copy
+//
+// As a defense in depth we also drop anything that looks like a raw
+// Supabase / Postgres / JWT / fetch error string so a missed call site
+// can't silently leak internal data into the UI.
+const RAW_ERROR_PATTERNS: RegExp[] = [
+  /^[A-Z_]+:/,                                  // "PGRST301: ..." / "JWT_EXPIRED: ..."
+  /JWT|jwt/,                                    // any JWT mention
+  /supabase/i,                                  // any supabase-branded string
+  /postgres|postgrest|psql/i,                   // postgres internals
+  /failed to fetch|networkerror|load failed/i,  // raw fetch errors (client toasts these)
+  /\bduplicate key value\b/i,                   // unique_violation raw form
+  /\bviolates .* constraint\b/i,                // FK / check_violation raw form
+  /\brow level security\b/i,                    // RLS internals
+];
+
+function looksLikeRawBackendError(message: string): boolean {
+  return RAW_ERROR_PATTERNS.some((pattern) => pattern.test(message));
+}
+
 export function getManagementErrorMessage(error: unknown, fallback = "Something went wrong.") {
   if (error instanceof Response) {
     if (error.status === 401) return "Your session expired. Please sign in again.";
     if (error.status === 403) return "You do not have access to this area.";
     if (error.status === 404) return "That record could not be found.";
+    if (error.status === 429) return "Too many attempts. Please wait a moment and try again.";
+    if (error.status >= 500) return fallback;
     return fallback;
   }
 
-  if (typeof error === "object" && error !== null && "status" in error && typeof error.status === "number") {
-    if (error.status === 401) return "Your session expired. Please sign in again.";
-    if (error.status === 403) return "You do not have access to this area.";
-    if (error.status === 404) return "That record could not be found.";
+  if (typeof error === "object" && error !== null && "status" in error && typeof (error as { status?: number }).status === "number") {
+    const status = (error as { status: number }).status;
+    if (status === 401) return "Your session expired. Please sign in again.";
+    if (status === 403) return "You do not have access to this area.";
+    if (status === 404) return "That record could not be found.";
+    if (status === 429) return "Too many attempts. Please wait a moment and try again.";
+    if (status >= 500) return fallback;
   }
 
-  if (error instanceof Error && error.message) return error.message;
+  if (error instanceof Error && error.message) {
+    // Anything that smells like a raw backend leak gets dropped to the
+    // friendly fallback. The original message is logged so developers
+    // looking at devtools can still see what really happened.
+    if (looksLikeRawBackendError(error.message)) {
+      if (typeof console !== "undefined") {
+        console.warn("[ui-error] dropped raw backend message", error.message);
+      }
+      return fallback;
+    }
+    return error.message;
+  }
   return fallback;
 }
 
@@ -258,6 +300,15 @@ function MetaPill({ label, value }: { label: string; value: string | number }) {
   return <div className="rounded-xl bg-secondary px-4 py-3"><div className="text-muted-foreground">{label}</div><div className="mt-1 text-base font-semibold text-foreground">{value}</div></div>;
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Host auth guards — single source of truth for "where should this user be?"
+//
+// These three hooks replace what used to be ad-hoc useEffect blocks scattered
+// across sign-in, sign-up, reset-password, onboarding/club, onboarding/event,
+// and the management routes. Every host-side gate now flows through the same
+// helpers so refresh / direct-entry / deep-link behaviour matches everywhere.
+// ─────────────────────────────────────────────────────────────────────────────
+
 export function useRequireHostRedirect() {
   const navigate = useNavigate();
   const { user, session, loading } = useAttendanceAuth();
@@ -270,6 +321,59 @@ export function useRequireHostRedirect() {
   }, [authLoading, navigate, user]);
 
   return { user, session, loading: authLoading };
+}
+
+// Returns a function that, given the current host's session, asks the server
+// where they should land next and navigates there. Used by sign-in/sign-up/
+// reset-password and by anyone who wants to honour the canonical onboarding
+// progression. The server is the only authority on `nextPath` — clients
+// never compute it locally.
+export function useResolvePostAuthRedirect() {
+  const navigate = useNavigate();
+  const fetchOnboardingState = useAuthorizedServerFn(getHostOnboardingState);
+
+  return useCallback(
+    async (seed?: { fullName?: string; email?: string }) => {
+      const { onboarding } = await fetchOnboardingState({ data: seed ?? {} });
+      if (onboarding.isComplete && onboarding.event) {
+        navigate({
+          to: "/events/$eventId",
+          params: { eventId: onboarding.event.id },
+          search: { created: "" },
+        });
+        return;
+      }
+      if (onboarding.nextPath === "/onboarding/event") {
+        navigate({ to: "/onboarding/event" });
+        return;
+      }
+      navigate({ to: "/onboarding/club" });
+    },
+    [fetchOnboardingState, navigate],
+  );
+}
+
+// Mirror of useRequireHostRedirect for the auth pages: if a logged-in user
+// lands on /sign-in or /sign-up, push them into wherever the server says
+// they should be. Fires exactly once per mount so a slow redirect can't
+// race with itself.
+export function useRequireGuestRedirect() {
+  const { user, session, loading } = useAttendanceAuth();
+  const resolveRedirect = useResolvePostAuthRedirect();
+  const fired = useRef(false);
+
+  useEffect(() => {
+    if (loading || !user || !session || fired.current) return;
+    fired.current = true;
+    void resolveRedirect().catch(() => {
+      // If the server probe fails (network, transient 5xx) we fall back to
+      // the safest workspace entry point. The user can still navigate from
+      // there; they're not stranded on an auth page they're already past.
+      fired.current = false;
+    });
+  }, [loading, user, session, resolveRedirect]);
+
+  return { loading };
 }
 
 type ClubCreateValues = z.infer<typeof clubSchema>;
