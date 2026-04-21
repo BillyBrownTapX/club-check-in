@@ -123,6 +123,7 @@ export type Database = {
           host_id: string
           id: string
           is_active: boolean
+          university_id: string | null
           updated_at: string
         }
         Insert: {
@@ -133,6 +134,7 @@ export type Database = {
           host_id: string
           id?: string
           is_active?: boolean
+          university_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -143,6 +145,7 @@ export type Database = {
           host_id?: string
           id?: string
           is_active?: boolean
+          university_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -151,6 +154,13 @@ export type Database = {
             columns: ["host_id"]
             isOneToOne: false
             referencedRelation: "host_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clubs_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
             referencedColumns: ["id"]
           },
         ]
@@ -221,6 +231,7 @@ export type Database = {
           location: string | null
           qr_token: string
           start_time: string
+          university_id: string | null
           updated_at: string
         }
         Insert: {
@@ -238,6 +249,7 @@ export type Database = {
           location?: string | null
           qr_token: string
           start_time: string
+          university_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -255,6 +267,7 @@ export type Database = {
           location?: string | null
           qr_token?: string
           start_time?: string
+          university_id?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -270,6 +283,13 @@ export type Database = {
             columns: ["event_template_id"]
             isOneToOne: false
             referencedRelation: "event_templates"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
             referencedColumns: ["id"]
           },
         ]
@@ -344,6 +364,7 @@ export type Database = {
           last_name: string
           nine_hundred_number: string
           student_email: string
+          university_id: string | null
           updated_at: string
         }
         Insert: {
@@ -353,6 +374,7 @@ export type Database = {
           last_name: string
           nine_hundred_number: string
           student_email: string
+          university_id?: string | null
           updated_at?: string
         }
         Update: {
@@ -362,6 +384,39 @@ export type Database = {
           last_name?: string
           nine_hundred_number?: string
           student_email?: string
+          university_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "students_university_id_fkey"
+            columns: ["university_id"]
+            isOneToOne: false
+            referencedRelation: "universities"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      universities: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          slug?: string
           updated_at?: string
         }
         Relationships: []

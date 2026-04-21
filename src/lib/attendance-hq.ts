@@ -1,6 +1,7 @@
 import type { Tables } from "@/integrations/supabase/types";
 
 export type HostProfile = Tables<"host_profiles">;
+export type University = Tables<"universities">;
 export type Club = Tables<"clubs">;
 export type EventTemplate = Tables<"event_templates">;
 export type Event = Tables<"events">;
@@ -11,11 +12,17 @@ export type DeviceSession = Tables<"student_device_sessions">;
 
 export type EventSummary = Event & {
   clubs: Pick<Club, "id" | "club_name" | "club_slug"> | null;
-  attendance_records?: Pick<AttendanceRecord, "id" | "checked_in_at" | "student_id">[];
+  attendance_records?: Pick<AttendanceRecord, "id">[];
+};
+
+export type ClubWithUniversity = Club & {
+  universities: Pick<University, "id" | "name" | "slug"> | null;
 };
 
 export type EventWithClub = Event & {
-  clubs: Pick<Club, "id" | "club_name" | "club_slug" | "description"> | null;
+  clubs: (Pick<Club, "id" | "club_name" | "club_slug" | "description" | "university_id"> & {
+    universities?: Pick<University, "id" | "name" | "slug"> | null;
+  }) | null;
 };
 
 export type EventTemplateWithClub = EventTemplate & {
@@ -26,6 +33,7 @@ export type ClubSummary = Club & {
   upcomingEventsCount: number;
   pastEventsCount: number;
   totalCheckIns: number;
+  universities?: Pick<University, "id" | "name" | "slug"> | null;
 };
 
 export type ManagementEventSummary = Event & {
@@ -36,7 +44,8 @@ export type ManagementEventSummary = Event & {
 };
 
 export type ClubDetailPayload = {
-  club: Club;
+  club: ClubWithUniversity;
+  universities: University[];
   stats: {
     upcomingEvents: number;
     pastEvents: number;
@@ -131,7 +140,8 @@ export type EventFormValues = {
 };
 
 export type EventFormPayload = {
-  clubs: Club[];
+  clubs: ClubWithUniversity[];
+  universities: University[];
   templates: EventTemplateWithClub[];
   initialValues: EventFormValues;
   sourceEventId?: string;

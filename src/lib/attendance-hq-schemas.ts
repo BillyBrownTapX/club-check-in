@@ -38,6 +38,7 @@ export const resetPasswordSchema = z.object({
 });
 
 export const clubSchema = z.object({
+  universityId: z.string().uuid("Choose a university"),
   clubName: z.string().trim().min(2, "Enter a club name").max(120, "Club name is too long"),
   description: z.string().trim().max(280, "Description is too long").optional().or(z.literal("")),
 });

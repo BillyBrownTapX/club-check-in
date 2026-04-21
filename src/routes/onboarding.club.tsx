@@ -7,7 +7,8 @@ import { FormCard, InlineErrorMessage, OnboardingShell, PageHeadingBlock, Primar
 import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
 import { getManagementErrorMessage, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
 import { clubSchema } from "@/lib/attendance-hq-schemas";
-import { createClubManagement, getHostOnboardingState } from "@/lib/attendance-hq.functions";
+import { createClubManagement, getHostOnboardingState, getUniversitiesForHost } from "@/lib/attendance-hq.functions";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 const formSchema = clubSchema;
 type FormValues = z.infer<typeof formSchema>;
@@ -29,19 +30,22 @@ function OnboardingClubRoute() {
   const navigate = useNavigate();
   const fetchOnboardingState = useAuthorizedServerFn(getHostOnboardingState);
   const createClub = useAuthorizedServerFn(createClubManagement);
+  const getUniversities = useAuthorizedServerFn(getUniversitiesForHost);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [stateLoaded, setStateLoaded] = useState(false);
+  const [universities, setUniversities] = useState<Array<{ id: string; name: string }>>([]);
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { clubName: "", description: "" },
+    defaultValues: { universityId: "", clubName: "", description: "" },
   });
 
   useEffect(() => {
     if (loading || !user) return;
     let cancelled = false;
-    void fetchOnboardingState({ data: {} })
-      .then(({ onboarding }) => {
+    void Promise.all([fetchOnboardingState({ data: {} }), getUniversities()])
+      .then(([{ onboarding }, universityRows]) => {
         if (cancelled) return;
+        setUniversities(universityRows.map((row) => ({ id: row.id, name: row.name })));
         // Server-authoritative deep-link guard: if onboarding has already
         // progressed past this step, jump forward instead of letting the
         // user create a duplicate first club.
@@ -72,7 +76,7 @@ function OnboardingClubRoute() {
   const onSubmit = form.handleSubmit(async (values) => {
     setSubmitError(null);
     try {
-      await createClub({ data: { clubName: values.clubName, description: values.description } });
+      await createClub({ data: { universityId: values.universityId, clubName: values.clubName, description: values.description } });
       navigate({ to: "/onboarding/event" });
     } catch (error) {
       setSubmitError(getManagementErrorMessage(error, "Unable to create club."));
@@ -87,6 +91,14 @@ function OnboardingClubRoute() {
         <ProgressIndicator step={1} total={2} label="Create your club" />
         <PageHeadingBlock eyebrow="Setup" title="Create your first club" description="Add the club or organization you’ll manage most often so your workspace feels ready from day one." />
         <form className="space-y-4" onSubmit={(event) => void onSubmit(event)}>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-foreground">University</label>
+            <Select value={form.watch("universityId")} onValueChange={(value) => form.setValue("universityId", value, { shouldValidate: true })}>
+              <SelectTrigger className="h-12 rounded-2xl border-border/80 bg-background/90"><SelectValue placeholder="Choose a university" /></SelectTrigger>
+              <SelectContent>{universities.map((university) => <SelectItem key={university.id} value={university.id}>{university.name}</SelectItem>)}</SelectContent>
+            </Select>
+            {form.formState.errors.universityId?.message ? <p className="text-sm text-destructive">{form.formState.errors.universityId.message}</p> : null}
+          </div>
           <TextInput label="Club name" autoComplete="organization" error={form.formState.errors.clubName?.message} {...form.register("clubName")} />
           <TextAreaField label="Description" placeholder="Optional" error={form.formState.errors.description?.message} {...form.register("description")} />
           <InlineErrorMessage message={submitError ?? undefined} />
