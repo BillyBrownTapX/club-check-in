@@ -29,17 +29,9 @@ function ForgotPasswordRoute() {
 
   const onSubmit = form.handleSubmit(async (values) => {
     setSuccess(false);
-    // Always show the same neutral confirmation regardless of whether the
-    // address matches a real account. Surfacing Supabase's specific error
-    // messages here would let an attacker enumerate which emails belong to
-    // real hosts. We still log to the network so genuine infra failures
-    // (rate limiting, network errors) are visible in DevTools.
     try {
-      await supabase.auth.resetPasswordForEmail(values.email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
+      await supabase.auth.resetPasswordForEmail(values.email, { redirectTo: `${window.location.origin}/reset-password` });
     } catch {
-      // swallow — see comment above
     }
     setSuccess(true);
   });
@@ -49,7 +41,7 @@ function ForgotPasswordRoute() {
       <AuthCard>
         <PageHeadingBlock eyebrow="Account recovery" title="Reset your password" description="We’ll send a secure reset link so you can get back into your workspace quickly." />
         {success ? <SuccessBanner message="If that email matches an account, we’ve sent a reset link. Check your inbox to continue." /> : null}
-        <div className="rounded-[1.5rem] border border-border/80 bg-surface/70 px-4 py-4">
+        <div className="rounded-[1.5rem] surface-cream px-4 py-4">
           <p className="text-sm leading-6 text-foreground">Use the email tied to your host workspace and continue the reset on the same phone for the smoothest handoff.</p>
         </div>
         <form className="space-y-4" onSubmit={(event) => void onSubmit(event)}>
