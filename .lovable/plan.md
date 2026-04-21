@@ -1,56 +1,44 @@
 
 
-## Lock the bottom tab bar to the visible viewport on mobile
+## Make the "Create Event" failure visible (and fix the silent ones)
 
-### Why it moves today
+### Goal
 
-The tab bar is `position: fixed; bottom: 0`, but on mobile browsers (iOS Safari, Chrome Android) `position: fixed` is anchored to the **layout viewport**, not what the user sees. When the URL bar collapses/expands during scroll, the visible area changes height while the layout viewport doesn't — so the bar appears to slide. Two extra problems compound it:
+When a host clicks **Create Event** and nothing happens, the form must tell them exactly why. Today, validation errors on hidden or unstyled fields (`clubId`, `checkInOpensAt`, `checkInClosesAt`) silently block submission with no UI feedback, so the button briefly flips to "Saving…" and reverts.
 
-1. The nav uses inline dynamic `pb-[max(0.6rem,env(safe-area-inset-bottom))]`. On iOS the safe-area inset value itself changes as the home indicator zone is reclaimed during URL-bar transitions, so the bar's own height jumps mid-scroll.
-2. Without compositor-layer promotion, iOS repaints the bar each frame during URL-bar animation, producing the visible drift.
+### Changes
 
-### The fix
+**1. `src/components/attendance-hq/host-management.tsx` — `SelectInput` shows errors**
 
-**1. `src/routes/__root.tsx` — sync the visual viewport to a CSS variable**
+Add an optional `error?: string` prop. Render the message under the trigger using the same `text-sm text-destructive` style used by `TextInput`. Apply a `border-destructive` ring on the trigger when an error is present so it's visually obvious which select is invalid.
 
-Add a small `useEffect` in `RootComponent` that:
-- Reads `window.visualViewport` on `resize` and `scroll`.
-- Computes `offset = window.innerHeight - visualViewport.height` (how much of the layout viewport is hidden by browser chrome at the bottom).
-- Writes `--visual-bottom: {offset}px` onto `<html>` via `requestAnimationFrame`.
-- SSR-guarded; no-ops on desktop and in standalone PWA mode (where `visualViewport.height === innerHeight`).
-- Cleans up listeners on unmount.
+**2. `EventForm` — wire the new error prop and surface form-wide errors**
 
-This is the only reliable cross-browser way to keep a fixed element pinned to what the user actually sees.
+- Pass `error={form.formState.errors.clubId?.message}` to the Club `SelectInput`.
+- Add a small **form-error summary** rendered just above the sticky submit bar. It iterates `form.formState.errors` and lists any messages whose field doesn't already have an inline error rendered (covers `clubId`, `checkInOpensAt`, `checkInClosesAt`, and any future additions). Format: a single rounded destructive banner with a short heading ("Fix these before saving") and a bulleted list of messages.
+- Replace `form.handleSubmit(success)` with `form.handleSubmit(success, onError)` where `onError` sets `error` to "Some fields need attention — see highlighted errors above." so the sticky bar always shows feedback even when the success branch never fires. This is the user-facing fix for the "nothing happens" symptom.
 
-**2. `src/styles.css` — harden the tab bar**
+**3. Defensive: guarantee `checkInOpensAt`/`checkInClosesAt` are populated at submit time**
 
-- Add `:root { --visual-bottom: 0px; --tabbar-bottom-offset: env(safe-area-inset-bottom, 0px); }`.
-- Add a `.ios-tabbar-shell` rule (new wrapper class) with `position: fixed; left: 0; right: 0; bottom: var(--visual-bottom, 0px); transform: translate3d(0,0,0); -webkit-transform: translate3d(0,0,0); will-change: transform; z-index: 40;`. The `translate3d` promotes the bar to its own compositor layer so iOS stops repainting it during scroll.
-- Add `html, body { overscroll-behavior-y: none; }` (already partially present — verify and consolidate) so pull-to-refresh doesn't drag the layout.
+The current `useEffect` that derives these only runs when `eventDate`, `startTime`, and `endTime` are all set. If the user edits in an order that triggers a submit before the effect commits, the hidden fields can be empty and Zod fails silently. Inside `submit`, before calling `form.handleSubmit`, recompute and `form.setValue` both fields synchronously from the latest `eventDate`/`startTime`/`endTime`/`offsets`. This makes the timing fields always consistent with the visible inputs at submit time.
 
-**3. `src/components/attendance-hq/host-shell.tsx` — restructure the nav**
+**4. Apply the same `SelectInput` error pattern to other forms in the file**
 
-- Change the outer `<nav>` from `fixed inset-x-0 bottom-0 ... pointer-events-none` plus inline dynamic padding to use the new `.ios-tabbar-shell` class for positioning.
-- Move the safe-area padding from a Tailwind arbitrary value to a stable CSS variable: `paddingBottom: max(0.6rem, var(--tabbar-bottom-offset))` on the inner container. This stops the height-jump cause.
-- Keep all visual styling (rounded glass tab bar, grid, icons, active state) unchanged.
-- Keep `touch-action: manipulation` on the `<Link>` items.
+Update the Club form's University select and the Template form's Club select (lines ~647, template form) to pass `error={form.formState.errors.universityId?.message}` and `error={form.formState.errors.clubId?.message}` respectively. Same root cause applies there.
 
 ### Behavior after the change
 
-- Mobile browser (iOS Safari / Chrome Android): tab bar stays glued to the bottom of the visible viewport while the URL bar collapses/expands. No drift, no height jump.
-- Installed PWA: identical to today (`--visual-bottom` resolves to 0, no chrome to track).
-- Desktop: unchanged.
-- Safe area / home indicator on iPhone: still respected via `--tabbar-bottom-offset`.
+- Click **Create Event** with a missing club → red ring on the Club select, inline message under it, and a banner above the submit bar listing every blocking field. No more "nothing happens."
+- Click **Create Event** with valid input → request fires as before, redirects to the new event page.
+- All other forms using `SelectInput` (Club edit, Template edit) get the same treatment for consistency.
 
 ### Files touched
 
-- `src/routes/__root.tsx` — add visualViewport sync `useEffect`.
-- `src/styles.css` — add `--visual-bottom`, `--tabbar-bottom-offset`, `.ios-tabbar-shell` rule, overscroll lock.
-- `src/components/attendance-hq/host-shell.tsx` — swap nav positioning to `.ios-tabbar-shell`, replace inline dynamic padding with stable variable.
+- `src/components/attendance-hq/host-management.tsx` — `SelectInput` accepts `error`; `EventForm` passes errors, adds `onError`, adds form-error summary, syncs hidden datetime fields at submit time; sibling forms pass `error` to their selects.
 
 ### Out of scope
 
-- No change to tab content, icons, routing, or active-state behavior.
-- No change to top bar, page padding, screens, or PWA manifest.
-- No new dependencies.
+- No schema changes in `attendance-hq-schemas.ts`.
+- No change to server functions, routing, or the `/events/new` route file.
+- No styling overhaul — reuses existing destructive/error tokens.
 
