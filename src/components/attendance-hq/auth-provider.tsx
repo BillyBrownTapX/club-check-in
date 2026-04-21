@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 
 type AuthContextValue = {
@@ -48,4 +49,26 @@ export function useAttendanceAuth() {
   const value = useContext(AuthContext);
   if (!value) throw new Error("useAttendanceAuth must be used within AttendanceAuthProvider");
   return value;
+}
+
+export function useAuthorizedServerFn<T extends (...args: any[]) => Promise<any>>(serverFn: T) {
+  const { session } = useAttendanceAuth();
+  const invoke = useServerFn(serverFn) as (...args: Parameters<T>) => ReturnType<T>;
+
+  return (options?: Parameters<T>[0]) => {
+    const accessToken = session?.access_token;
+    if (!accessToken) {
+      throw new Error("Your session expired. Please sign in again.");
+    }
+
+    const nextOptions = {
+      ...options,
+      headers: {
+        ...(options && typeof options === "object" && "headers" in options && options.headers ? options.headers : {}),
+        authorization: `Bearer ${accessToken}`,
+      },
+    } as Parameters<T>[0];
+
+    return invoke(...([nextOptions] as unknown as Parameters<T>));
+  };
 }

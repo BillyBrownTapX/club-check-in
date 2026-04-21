@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
-import { useServerFn } from "@tanstack/react-start";
 import { EventCard, EmptyStateBlock, FilterBar, ManagementPageShell, PageHeader, PrimaryButton, SearchInput, SelectInput, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
+import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
 import { getHostClubSummaries, getHostEvents } from "@/lib/attendance-hq.functions";
 import type { ClubSummary, EventListStatusFilter, ManagementEventSummary } from "@/lib/attendance-hq";
 
@@ -33,8 +33,8 @@ export const Route = createFileRoute("/events/")({
 
 function EventsRoute() {
   const { loading, user } = useRequireHostRedirect();
-  const getClubs = useServerFn(getHostClubSummaries);
-  const getEvents = useServerFn(getHostEvents);
+  const getClubs = useAuthorizedServerFn(getHostClubSummaries);
+  const getEvents = useAuthorizedServerFn(getHostEvents);
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/events" });
   const [clubs, setClubs] = useState<ClubSummary[]>([]);
