@@ -116,13 +116,54 @@ export const studentRegistrationSchema = z.object({
   rememberDevice: z.boolean().default(true),
 });
 
+// Public check-in inputs are scoped by qr_token (the per-event capability the
+// student physically scanned), never by raw event/student UUIDs. This makes
+// every public action re-validate access against the same proof — the QR token
+// — and prevents cross-event or guessed-id attacks via the public endpoints.
+export const qrTokenSchema = z
+  .string()
+  .trim()
+  .min(16, "Invalid check-in link")
+  .max(128, "Invalid check-in link");
+
+export const studentCheckInInputSchema = studentRegistrationSchema.extend({
+  qrToken: qrTokenSchema,
+});
+
+export const returningLookupInputSchema = returningLookupSchema.extend({
+  qrToken: qrTokenSchema,
+});
+
+export const confirmReturningInputSchema = z.object({
+  qrToken: qrTokenSchema,
+  nineHundredNumber: z
+    .string()
+    .trim()
+    .refine(isValidNineHundredNumber, "Enter a valid 9-digit 900 number"),
+});
+
+export const rememberedDeviceInputSchema = z.object({
+  qrToken: qrTokenSchema,
+  deviceToken: z.string().trim().min(24).max(255),
+});
+
+// Fast check-in only takes the qr_token + the device token. The server
+// resolves the student from the device session — clients are never trusted
+// to assert which student they are.
 export const fastCheckInSchema = z.object({
-  eventId: z.string().uuid(),
-  studentId: z.string().uuid(),
-  deviceToken: z.string().min(24).max(255),
+  qrToken: qrTokenSchema,
+  deviceToken: z.string().trim().min(24).max(255),
 });
 
 export const removeAttendanceSchema = z.object({
   attendanceRecordId: z.string().uuid(),
   eventId: z.string().uuid(),
+});
+
+export const closeCheckInEarlySchema = z.object({
+  eventId: z.string().uuid(),
+});
+
+export const duplicateEventTemplateSchema = z.object({
+  templateId: z.string().uuid(),
 });

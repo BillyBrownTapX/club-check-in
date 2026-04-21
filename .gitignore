@@ -16,6 +16,12 @@ dist-ssr
 .nitro
 *.local
 
+# Environment variables — NEVER commit real secrets. Use .env.example for the
+# committed schema/template. Contributors copy it to .env locally.
+.env
+.env.*
+!.env.example
+
 # Wrangler / Cloudflare
 .wrangler/
 .dev.vars

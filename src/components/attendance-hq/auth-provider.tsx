@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { useServerFn } from "@tanstack/react-start";
+import { useNavigate } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 
 type AuthContextValue = {
@@ -18,19 +19,38 @@ export function AttendanceAuthProvider({ children }: { children: React.ReactNode
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let mounted = true;
+    let initialized = false;
+
+    // Centralized state setter so the first source of truth (whichever
+    // resolves first — getSession() or the initial onAuthStateChange event)
+    // wins, and we only flip loading=false once. Prevents the race where
+    // routes briefly see `loading=false, user=null` and bounce to /sign-in
+    // even though a valid session was about to hydrate from localStorage.
+    const applySession = (next: Session | null) => {
+      if (!mounted) return;
+      setSession(next);
+      setUser(next?.user ?? null);
+      if (!initialized) {
+        initialized = true;
+        setLoading(false);
+      }
+    };
+
+    // Subscribe BEFORE reading the persisted session so we never miss an
+    // event that fires between the two calls.
     const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
-      setLoading(false);
+      applySession(nextSession);
     });
 
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session ?? null);
-      setUser(data.session?.user ?? null);
-      setLoading(false);
+    void supabase.auth.getSession().then(({ data }) => {
+      applySession(data.session ?? null);
     });
 
-    return () => listener.subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      listener.subscription.unsubscribe();
+    };
   }, []);
 
   const value = useMemo<AuthContextValue>(() => ({
@@ -51,13 +71,49 @@ export function useAttendanceAuth() {
   return value;
 }
 
+// Detect a "session is gone" error from a server fn invocation. TanStack
+// Start serializes thrown Responses into either an actual Response on the
+// client or an Error-like object whose `.status` mirrors the HTTP status —
+// we accept both shapes here so callers don't have to special-case.
+function isAuthExpired(error: unknown): boolean {
+  if (!error) return false;
+  if (typeof Response !== "undefined" && error instanceof Response) {
+    return error.status === 401;
+  }
+  if (typeof error === "object" && error !== null && "status" in error) {
+    return (error as { status?: number }).status === 401;
+  }
+  return false;
+}
+
 export function useAuthorizedServerFn<T extends (...args: any[]) => Promise<any>>(serverFn: T) {
-  const { session } = useAttendanceAuth();
+  const { session, signOut } = useAttendanceAuth();
+  const navigate = useNavigate();
   const invoke = useServerFn(serverFn) as (...args: Parameters<T>) => ReturnType<T>;
+  // Make sure two simultaneous 401s (e.g. polling + a button click) don't
+  // race to trigger two redirects. The first one wins; the second silently
+  // continues to surface its error so callers can still toast/log if they
+  // want to.
+  const expiredRef = useRef(false);
+
+  const handleAuthExpired = useCallback(async () => {
+    if (expiredRef.current) return;
+    expiredRef.current = true;
+    try {
+      await signOut();
+    } catch {
+      // signOut failure here is non-fatal — we're about to bounce them to
+      // /sign-in anyway and the auth listener will reconcile state.
+    }
+    navigate({ to: "/sign-in", search: { reason: "expired" } });
+  }, [navigate, signOut]);
 
   return (options?: Parameters<T>[0]) => {
     const accessToken = session?.access_token;
     if (!accessToken) {
+      // Defer the redirect to the next tick so callers can still attach
+      // their own error handling without losing the navigation.
+      void handleAuthExpired();
       throw new Error("Your session expired. Please sign in again.");
     }
 
@@ -69,6 +125,15 @@ export function useAuthorizedServerFn<T extends (...args: any[]) => Promise<any>
       },
     } as Parameters<T>[0];
 
-    return invoke(...([nextOptions] as unknown as Parameters<T>));
+    const result = invoke(...([nextOptions] as unknown as Parameters<T>));
+    return result.then(
+      (value) => value,
+      (error: unknown) => {
+        if (isAuthExpired(error)) {
+          void handleAuthExpired();
+        }
+        throw error;
+      },
+    ) as ReturnType<T>;
   };
 }

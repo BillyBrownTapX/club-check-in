@@ -1,25 +1,14 @@
 import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { AuthCard, AuthShell, AuthSupportLinks, InlineErrorMessage, PageHeadingBlock, PasswordInput, PrimaryButton, SecondaryTextLink, SuccessBanner } from "@/components/attendance-hq/host-onboarding";
 import { useAttendanceAuth } from "@/components/attendance-hq/auth-provider";
+import { getManagementErrorMessage, useResolvePostAuthRedirect } from "@/components/attendance-hq/host-management";
 import { supabase } from "@/integrations/supabase/client";
 import { resetPasswordSchema } from "@/lib/attendance-hq-schemas";
-import { getClientOnboardingState } from "@/lib/host-onboarding-client";
-
-function navigateToNextPath(navigate: ReturnType<typeof useNavigate>, nextPath: string) {
-  if (nextPath === "/onboarding/club") {
-    navigate({ to: "/onboarding/club" });
-    return;
-  }
-  if (nextPath === "/onboarding/event") {
-    navigate({ to: "/onboarding/event" });
-    return;
-  }
-  navigate({ to: "/clubs" });
-}
+import { normalizeSupabaseAuthError } from "@/lib/server-errors";
 
 const formSchema = resetPasswordSchema;
 type FormValues = z.infer<typeof formSchema>;
@@ -35,8 +24,13 @@ export const Route = createFileRoute("/reset-password")({
 });
 
 function ResetPasswordRoute() {
-  const navigate = useNavigate();
+  // We intentionally do NOT use useRequireGuestRedirect here. Reset-password
+  // is reachable in two states: (a) coming back from a recovery email with
+  // type=recovery in the hash and a temporary session, (b) already signed
+  // in. Either way the user has work to do on this page (set a new
+  // password); auto-redirecting them off would defeat the point.
   const { user } = useAttendanceAuth();
+  const resolveRedirect = useResolvePostAuthRedirect();
   const [success, setSuccess] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const form = useForm<FormValues>({
@@ -45,7 +39,7 @@ function ResetPasswordRoute() {
   });
 
   useEffect(() => {
-    const hash = window.location.hash;
+    const hash = typeof window === "undefined" ? "" : window.location.hash;
     if (!hash.includes("type=recovery") && !user) {
       setSubmitError("Open this page from your reset email to choose a new password.");
     }
@@ -55,21 +49,17 @@ function ResetPasswordRoute() {
     setSubmitError(null);
     const { error } = await supabase.auth.updateUser({ password: values.password });
     if (error) {
-      setSubmitError(error.message);
+      setSubmitError(normalizeSupabaseAuthError(error, "Unable to update password."));
       return;
     }
     setSuccess(true);
-    const { data } = await supabase.auth.getUser();
-    if (data.user) {
-      const state = await getClientOnboardingState(data.user.id);
-      window.setTimeout(() => {
-        if (state.isComplete && state.event) {
-          navigate({ to: "/events/$eventId", params: { eventId: state.event.id } });
-          return;
-        }
-        navigateToNextPath(navigate, state.nextPath);
-      }, 600);
-    }
+    // Brief pause so the success banner is actually visible before the
+    // redirect helper navigates away.
+    window.setTimeout(() => {
+      void resolveRedirect().catch((resolveError) => {
+        setSubmitError(getManagementErrorMessage(resolveError, "Password updated but we couldn't open your workspace."));
+      });
+    }, 600);
   });
 
   return (

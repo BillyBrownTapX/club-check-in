@@ -46,7 +46,15 @@ function EventCreateRoute() {
 
     void loadPayload({ data: search })
       .then((nextPayload) => {
-        if (!cancelled) setPayload(nextPayload);
+        if (cancelled) return;
+        // A host can hit /events/new from the mobile + button before
+        // they've created their first club. Bounce them through onboarding
+        // instead of showing an event form with no club to attach to.
+        if (nextPayload.clubs.length === 0) {
+          navigate({ to: "/onboarding/club" });
+          return;
+        }
+        setPayload(nextPayload);
       })
       .catch((loadError) => {
         if (!cancelled) setError(getManagementErrorMessage(loadError, "Unable to load event form."));
@@ -55,7 +63,7 @@ function EventCreateRoute() {
     return () => {
       cancelled = true;
     };
-  }, [loadPayload, loading, search, user]);
+  }, [loadPayload, loading, navigate, search, user]);
 
   if (loading || !user || !payload) {
     return <ManagementPageShell><div className="py-16 text-center text-sm text-muted-foreground">Loading event form…</div></ManagementPageShell>;

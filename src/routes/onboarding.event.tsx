@@ -4,9 +4,10 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { DateInput, FormCard, InlineErrorMessage, OnboardingShell, PageHeadingBlock, PrimaryButton, ProgressIndicator, SecondaryTextLink, TextInput, TimeInput } from "@/components/attendance-hq/host-onboarding";
-import { useAttendanceAuth } from "@/components/attendance-hq/auth-provider";
+import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
+import { getManagementErrorMessage, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
 import { buildEventDefaults, combineDateAndTime, shiftTimeString } from "@/lib/attendance-hq";
-import { createFirstEvent, ensureClientHostProfile, getClientOnboardingState } from "@/lib/host-onboarding-client";
+import { createEvent, getHostOnboardingState } from "@/lib/attendance-hq.functions";
 
 const formSchema = z.object({
   eventName: z.string().trim().min(2, "Enter an event name").max(160, "Event name is too long"),
@@ -36,8 +37,10 @@ export const Route = createFileRoute("/onboarding/event")({
 });
 
 function OnboardingEventRoute() {
+  const { loading, user } = useRequireHostRedirect();
   const navigate = useNavigate();
-  const { user, loading } = useAttendanceAuth();
+  const fetchOnboardingState = useAuthorizedServerFn(getHostOnboardingState);
+  const createEventMutation = useAuthorizedServerFn(createEvent);
   const defaults = useMemo(() => buildEventDefaults(new Date()), []);
   const [clubId, setClubId] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -56,44 +59,74 @@ function OnboardingEventRoute() {
 
   const eventDate = form.watch("eventDate");
   const startTime = form.watch("startTime");
+  const endTime = form.watch("endTime");
 
   useEffect(() => {
-    if (!eventDate || !startTime) return;
-    form.setValue("checkInOpensAt", combineDateAndTime(eventDate, `${shiftTimeString(startTime, -15)}:00`), { shouldValidate: true });
-    form.setValue("checkInClosesAt", combineDateAndTime(eventDate, `${shiftTimeString(startTime, 20)}:00`), { shouldValidate: true });
-  }, [eventDate, form, startTime]);
+    if (!eventDate || !startTime || !endTime) return;
+    // Mirror the canonical buildEventDefaults() relationship:
+    //   open  = start − 15 min
+    //   close = end   + 15 min
+    form.setValue(
+      "checkInOpensAt",
+      combineDateAndTime(eventDate, `${shiftTimeString(startTime, -15)}:00`),
+      { shouldValidate: true },
+    );
+    form.setValue(
+      "checkInClosesAt",
+      combineDateAndTime(eventDate, `${shiftTimeString(endTime, 15)}:00`),
+      { shouldValidate: true },
+    );
+  }, [eventDate, endTime, form, startTime]);
 
   useEffect(() => {
-    if (loading) return;
-    if (!user) {
-      navigate({ to: "/sign-in" });
-      return;
-    }
-
-    void ensureClientHostProfile(user)
-      .then(() => getClientOnboardingState(user.id))
-      .then((state) => {
-        if (!state.club) {
+    if (loading || !user) return;
+    let cancelled = false;
+    void fetchOnboardingState({ data: {} })
+      .then(({ onboarding }) => {
+        if (cancelled) return;
+        if (!onboarding.club) {
           navigate({ to: "/onboarding/club" });
           return;
         }
-        if (state.isComplete && state.event) {
-          navigate({ to: "/events/$eventId", params: { eventId: state.event.id } });
+        if (onboarding.isComplete && onboarding.event) {
+          navigate({
+            to: "/events/$eventId",
+            params: { eventId: onboarding.event.id },
+            search: { created: "" },
+          });
           return;
         }
-        setClubId(state.club.id);
+        setClubId(onboarding.club.id);
       })
-      .catch((error) => setSubmitError(error instanceof Error ? error.message : "Unable to load onboarding state."));
-  }, [loading, navigate, user]);
+      .catch((error) => {
+        if (cancelled) return;
+        setSubmitError(getManagementErrorMessage(error, "Unable to load onboarding state."));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [fetchOnboardingState, loading, navigate, user]);
 
   const onSubmit = form.handleSubmit(async (values) => {
     if (!clubId) return;
     setSubmitError(null);
     try {
-      const event = await createFirstEvent({ clubId, ...values });
-      navigate({ to: "/events/$eventId", params: { eventId: event.id }, search: { created: "1" } });
+      const result = await createEventMutation({
+        data: {
+          clubId,
+          eventTemplateId: "",
+          eventName: values.eventName,
+          eventDate: values.eventDate,
+          startTime: values.startTime,
+          endTime: values.endTime,
+          location: values.location ?? "",
+          checkInOpensAt: values.checkInOpensAt,
+          checkInClosesAt: values.checkInClosesAt,
+        },
+      });
+      navigate({ to: "/events/$eventId", params: { eventId: result.event.id }, search: { created: "1" } });
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : "Unable to create event.");
+      setSubmitError(getManagementErrorMessage(error, "Unable to create event."));
     }
   });
 
