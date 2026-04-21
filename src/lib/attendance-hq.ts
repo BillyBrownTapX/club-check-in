@@ -21,6 +21,31 @@ export type EventTemplateWithClub = EventTemplate & {
   clubs: Pick<Club, "id" | "club_name" | "club_slug"> | null;
 };
 
+export type ClubSummary = Club & {
+  upcomingEventsCount: number;
+  pastEventsCount: number;
+  totalCheckIns: number;
+};
+
+export type ManagementEventSummary = Event & {
+  clubs: Pick<Club, "id" | "club_name" | "club_slug"> | null;
+  attendance_records?: Pick<AttendanceRecord, "id">[];
+  attendanceCount: number;
+  checkInStatus: CheckInStatus;
+};
+
+export type ClubDetailPayload = {
+  club: Club;
+  stats: {
+    upcomingEvents: number;
+    pastEvents: number;
+    totalCheckIns: number;
+  };
+  upcomingEvents: ManagementEventSummary[];
+  pastEvents: ManagementEventSummary[];
+  templates: EventTemplateWithClub[];
+};
+
 export type AttendanceRow = AttendanceRecord & {
   students: Pick<Student, "id" | "first_name" | "last_name" | "student_email" | "nine_hundred_number"> | null;
 };
@@ -54,6 +79,27 @@ export type HostOnboardingState = {
   event: Event | null;
   isComplete: boolean;
   nextPath: string;
+};
+
+export type EventListStatusFilter = "all" | "upcoming" | "past";
+
+export type EventFormValues = {
+  clubId: string;
+  eventTemplateId?: string;
+  eventName: string;
+  eventDate: string;
+  startTime: string;
+  endTime: string;
+  location?: string;
+  checkInOpensAt: string;
+  checkInClosesAt: string;
+};
+
+export type EventFormPayload = {
+  clubs: Club[];
+  templates: EventTemplateWithClub[];
+  initialValues: EventFormValues;
+  sourceEventId?: string;
 };
 
 export const PRODUCT_NAME = "Attendance HQ";
