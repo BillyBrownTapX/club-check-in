@@ -4,6 +4,7 @@ import { useAttendanceAuth } from "@/components/attendance-hq/auth-provider";
 import { HostAppShell } from "@/components/attendance-hq/host-shell";
 import { useRequireHostRedirect } from "@/components/attendance-hq/host-management";
 import { GroupedList, LargeTitleHeader, ListRow, SectionLabel } from "@/components/attendance-hq/ios";
+import { InstallButton } from "@/components/attendance-hq/install-cta";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -55,6 +56,9 @@ function SettingsRoute() {
       <GroupedList>
         <ListRow icon={Lock} label="Change password" to="/forgot-password" />
       </GroupedList>
+
+      <SectionLabel className="mt-6">App</SectionLabel>
+      <InstallButton />
 
       <SectionLabel className="mt-6">Account</SectionLabel>
       <GroupedList>
