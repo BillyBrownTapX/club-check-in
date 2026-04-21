@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
+import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
 import { EventForm, ManagementPageShell, SecondaryButton, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
 import { getEventFormPayload, updateEvent } from "@/lib/attendance-hq.functions";
 import type { EventFormPayload } from "@/lib/attendance-hq";
@@ -29,8 +29,8 @@ function EventEditRoute() {
   const { loading, user } = useRequireHostRedirect();
   const { eventId } = Route.useParams();
   const navigate = useNavigate();
-  const loadPayload = useServerFn(getEventFormPayload);
-  const updateEventMutation = useServerFn(updateEvent);
+  const loadPayload = useAuthorizedServerFn(getEventFormPayload);
+  const updateEventMutation = useAuthorizedServerFn(updateEvent);
   const [payload, setPayload] = useState<EventFormPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
 

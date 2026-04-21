@@ -53,7 +53,7 @@ export function useAttendanceAuth() {
 
 export function useAuthorizedServerFn<T extends (...args: any[]) => Promise<any>>(serverFn: T) {
   const { session } = useAttendanceAuth();
-  const invoke = useServerFn(serverFn);
+  const invoke = useServerFn(serverFn) as (...args: Parameters<T>) => ReturnType<T>;
 
   return (options?: Parameters<T>[0]) => {
     const accessToken = session?.access_token;
