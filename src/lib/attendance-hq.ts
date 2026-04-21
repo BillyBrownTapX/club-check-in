@@ -271,7 +271,7 @@ export function buildHostOnboardingState(input: {
     club,
     event,
     isComplete: true,
-    nextPath: `/events/${event.id}`,
+    nextPath: "/clubs",
   };
 }
 
