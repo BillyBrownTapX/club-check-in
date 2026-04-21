@@ -5,7 +5,10 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import {
   combineDateAndTime,
+  createDeviceToken,
   createQrToken,
+  getCheckInStatus,
+  maskEmail,
   slugifyClubName,
   type AttendanceRow,
   type Club,
@@ -13,6 +16,7 @@ import {
   type EventTemplateWithClub,
   type EventWithClub,
   type HostProfile,
+  type PublicStudentPreview,
 } from "@/lib/attendance-hq";
 import {
   clubSchema,
@@ -21,6 +25,7 @@ import {
   fastCheckInSchema,
   forgotPasswordSchema,
   removeAttendanceSchema,
+  returningLookupSchema,
   signUpSchema,
   studentRegistrationSchema,
 } from "@/lib/attendance-hq-schemas";
@@ -209,105 +214,263 @@ export const getEventOperations = createServerFn({ method: "GET" })
     return { event: event as EventWithClub, attendance: (attendance ?? []) as AttendanceRow[] };
   });
 
-export const studentCheckIn = createServerFn({ method: "POST" })
-  .inputValidator(studentRegistrationSchema.extend({ eventId: studentRegistrationSchema.shape.nineHundredNumber.transform(() => "") }).transform((value) => value as unknown as { firstName: string; lastName: string; studentEmail: string; nineHundredNumber: string; rememberDevice: boolean; eventId: string }))
-  .handler(async ({ data }) => {
-    const { data: event, error: eventError } = await supabaseAdmin.from("events").select("*").eq("id", data.eventId).maybeSingle();
-    if (eventError) throw new Error(eventError.message);
-    if (!event) throw new Error("Event not found");
+function buildStudentPreview(student: { id: string; first_name: string; last_name: string; student_email: string }): PublicStudentPreview {
+  return {
+    id: student.id,
+    firstName: student.first_name,
+    lastInitial: student.last_name.charAt(0).toUpperCase(),
+    maskedEmail: maskEmail(student.student_email),
+  };
+}
 
-    let studentId: string | null = null;
-    const { data: existingStudent } = await supabaseAdmin.from("students").select("*").eq("nine_hundred_number", data.nineHundredNumber).maybeSingle();
+async function getEventForPublicCheckIn(eventId: string) {
+  const { data: event, error } = await supabaseAdmin.from("events").select("*").eq("id", eventId).maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!event) {
+    return { ok: false as const, state: "event_not_found" as const };
+  }
+
+  const status = getCheckInStatus(event);
+  if (status === "upcoming") {
+    return { ok: false as const, state: "not_open_yet" as const, event };
+  }
+  if (status === "closed" || status === "inactive" || status === "archived") {
+    return { ok: false as const, state: "closed" as const, event };
+  }
+
+  return { ok: true as const, event };
+}
+
+async function getExistingAttendance(eventId: string, studentId: string) {
+  const { data, error } = await supabaseAdmin
+    .from("attendance_records")
+    .select("id, checked_in_at")
+    .eq("event_id", eventId)
+    .eq("student_id", studentId)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+async function createAttendanceRecord(input: {
+  eventId: string;
+  studentId: string;
+  method: "qr_scan" | "returning_lookup" | "remembered_device";
+}) {
+  const eventCheck = await getEventForPublicCheckIn(input.eventId);
+  if (!eventCheck.ok) return eventCheck;
+
+  const existingAttendance = await getExistingAttendance(input.eventId, input.studentId);
+  if (existingAttendance) {
+    return {
+      ok: false as const,
+      state: "already_checked_in" as const,
+      checkedInAt: existingAttendance.checked_in_at,
+    };
+  }
+
+  const { data: attendance, error } = await supabaseAdmin
+    .from("attendance_records")
+    .insert({
+      event_id: input.eventId,
+      student_id: input.studentId,
+      check_in_method: input.method,
+      check_in_source: "public_mobile",
+    })
+    .select("id, checked_in_at")
+    .single();
+
+  if (error || !attendance) throw new Error(error?.message ?? "Unable to record attendance");
+  return { ok: true as const, attendance };
+}
+
+export const studentCheckIn = createServerFn({ method: "POST" })
+  .inputValidator(studentRegistrationSchema.extend({ eventId: returningLookupSchema.shape.nineHundredNumber.transform(() => "") }).transform((value) => ({ ...value, eventId: String((value as { eventId?: unknown }).eventId ?? "") })))
+  .handler(async ({ data }) => {
+    const eventCheck = await getEventForPublicCheckIn(data.eventId);
+    if (!eventCheck.ok) return eventCheck;
+
+    const { data: existingStudent, error: existingStudentError } = await supabaseAdmin
+      .from("students")
+      .select("id, first_name, last_name, student_email")
+      .eq("nine_hundred_number", data.nineHundredNumber)
+      .maybeSingle();
+
+    if (existingStudentError) throw new Error(existingStudentError.message);
 
     if (existingStudent) {
-      studentId = existingStudent.id;
-    } else {
-      const { data: student, error: studentError } = await supabaseAdmin
-        .from("students")
-        .insert({
-          first_name: data.firstName.trim(),
-          last_name: data.lastName.trim(),
-          student_email: data.studentEmail,
-          nine_hundred_number: data.nineHundredNumber,
-        })
-        .select("id")
-        .single();
-      if (studentError || !student) throw new Error(studentError?.message ?? "Unable to save student");
-      studentId = student.id;
+      const existingAttendance = await getExistingAttendance(data.eventId, existingStudent.id);
+      if (existingAttendance) {
+        return {
+          ok: false as const,
+          state: "already_checked_in" as const,
+          checkedInAt: existingAttendance.checked_in_at,
+        };
+      }
+
+      return {
+        ok: false as const,
+        state: "student_exists" as const,
+        student: buildStudentPreview(existingStudent),
+      };
     }
 
-    const { data: attendance, error: attendanceError } = await supabaseAdmin
-      .from("attendance_records")
+    const { data: student, error: studentError } = await supabaseAdmin
+      .from("students")
       .insert({
-        event_id: data.eventId,
-        student_id: studentId,
-        check_in_method: "qr_scan",
-        check_in_source: "public_mobile",
+        first_name: data.firstName.trim(),
+        last_name: data.lastName.trim(),
+        student_email: data.studentEmail,
+        nine_hundred_number: data.nineHundredNumber,
       })
-      .select("*")
+      .select("id, first_name, last_name, student_email")
       .single();
 
-    if (attendanceError) throw new Error(attendanceError.message);
-    return attendance;
+    if (studentError || !student) throw new Error(studentError?.message ?? "Unable to save student");
+
+    const attendanceResult = await createAttendanceRecord({
+      eventId: data.eventId,
+      studentId: student.id,
+      method: "qr_scan",
+    });
+
+    if (!attendanceResult.ok) return attendanceResult;
+
+    let deviceToken: string | null = null;
+    if (data.rememberDevice) {
+      deviceToken = createDeviceToken();
+      const { error: sessionError } = await supabaseAdmin.from("student_device_sessions").insert({
+        student_id: student.id,
+        device_token: deviceToken,
+      });
+
+      if (sessionError) throw new Error(sessionError.message);
+    }
+
+    return {
+      ok: true as const,
+      attendance: attendanceResult.attendance,
+      deviceToken,
+      student: buildStudentPreview(student),
+    };
+  });
+
+export const getRememberedStudent = createServerFn({ method: "POST" })
+  .inputValidator((input: { eventId: string; deviceToken: string }) => input)
+  .handler(async ({ data }) => {
+    const eventCheck = await getEventForPublicCheckIn(data.eventId);
+    if (!eventCheck.ok) return eventCheck;
+
+    const { data: session, error } = await supabaseAdmin
+      .from("student_device_sessions")
+      .select("id, student_id")
+      .eq("device_token", data.deviceToken)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    if (!session) {
+      return { ok: false as const, state: "student_not_found" as const };
+    }
+
+    const { data: student, error: studentError } = await supabaseAdmin
+      .from("students")
+      .select("id, first_name, last_name, student_email")
+      .eq("id", session.student_id)
+      .maybeSingle();
+
+    if (studentError) throw new Error(studentError.message);
+    if (!student) {
+      return { ok: false as const, state: "student_not_found" as const };
+    }
+
+    const existingAttendance = await getExistingAttendance(data.eventId, session.student_id);
+    if (existingAttendance) {
+      return {
+        ok: false as const,
+        state: "already_checked_in" as const,
+        checkedInAt: existingAttendance.checked_in_at,
+      };
+    }
+
+    return {
+      ok: true as const,
+      student: buildStudentPreview(student),
+      studentId: session.student_id,
+    };
   });
 
 export const fastCheckIn = createServerFn({ method: "POST" })
   .inputValidator(fastCheckInSchema)
   .handler(async ({ data }) => {
-    const { data: session } = await supabaseAdmin
+    const { data: session, error: sessionError } = await supabaseAdmin
       .from("student_device_sessions")
-      .select("*")
+      .select("id")
       .eq("student_id", data.studentId)
       .eq("device_token", data.deviceToken)
       .maybeSingle();
 
-    if (!session) throw new Error("Remembered device not found");
+    if (sessionError) throw new Error(sessionError.message);
+    if (!session) {
+      return { ok: false as const, state: "student_not_found" as const };
+    }
 
-    const { data: attendance, error } = await supabaseAdmin
-      .from("attendance_records")
-      .insert({
-        event_id: data.eventId,
-        student_id: data.studentId,
-        check_in_method: "remembered_device",
-        check_in_source: "public_mobile",
-      })
-      .select("*")
-      .single();
+    const attendanceResult = await createAttendanceRecord({
+      eventId: data.eventId,
+      studentId: data.studentId,
+      method: "remembered_device",
+    });
 
-    if (error) throw new Error(error.message);
+    if (!attendanceResult.ok) return attendanceResult;
 
-    await supabaseAdmin
-      .from("student_device_sessions")
-      .update({ last_used_at: new Date().toISOString() })
-      .eq("id", session.id);
+    await supabaseAdmin.from("student_device_sessions").update({ last_used_at: new Date().toISOString() }).eq("id", session.id);
 
-    return attendance;
+    return { ok: true as const, attendance: attendanceResult.attendance };
   });
 
 export const confirmReturningStudent = createServerFn({ method: "POST" })
   .inputValidator((input: { eventId: string; studentId: string }) => input)
   .handler(async ({ data }) => {
-    const { data: attendance, error } = await supabaseAdmin
-      .from("attendance_records")
-      .insert({
-        event_id: data.eventId,
-        student_id: data.studentId,
-        check_in_method: "returning_lookup",
-        check_in_source: "public_mobile",
-      })
-      .select("*")
-      .single();
+    const attendanceResult = await createAttendanceRecord({
+      eventId: data.eventId,
+      studentId: data.studentId,
+      method: "returning_lookup",
+    });
 
-    if (error) throw new Error(error.message);
-    return attendance;
+    if (!attendanceResult.ok) return attendanceResult;
+    return { ok: true as const, attendance: attendanceResult.attendance };
   });
 
 export const lookupStudent = createServerFn({ method: "POST" })
-  .inputValidator((input: { nineHundredNumber: string }) => input)
+  .inputValidator(returningLookupSchema.extend({ eventId: returningLookupSchema.shape.nineHundredNumber.transform(() => "") }).transform((value) => ({ ...value, eventId: String((value as { eventId?: unknown }).eventId ?? "") })))
   .handler(async ({ data }) => {
-    const { data: student, error } = await supabaseAdmin.from("students").select("*").eq("nine_hundred_number", data.nineHundredNumber).maybeSingle();
+    const eventCheck = await getEventForPublicCheckIn(data.eventId);
+    if (!eventCheck.ok) return eventCheck;
+
+    const { data: student, error } = await supabaseAdmin
+      .from("students")
+      .select("id, first_name, last_name, student_email")
+      .eq("nine_hundred_number", data.nineHundredNumber)
+      .maybeSingle();
+
     if (error) throw new Error(error.message);
-    return student;
+    if (!student) {
+      return { ok: false as const, state: "student_not_found" as const };
+    }
+
+    const existingAttendance = await getExistingAttendance(data.eventId, student.id);
+    if (existingAttendance) {
+      return {
+        ok: false as const,
+        state: "already_checked_in" as const,
+        checkedInAt: existingAttendance.checked_in_at,
+      };
+    }
+
+    return {
+      ok: true as const,
+      student: buildStudentPreview(student),
+    };
   });
 
 export const removeAttendance = createServerFn({ method: "POST" })

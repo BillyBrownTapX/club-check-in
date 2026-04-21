@@ -32,6 +32,22 @@ export type CheckInStatus =
   | "inactive"
   | "archived";
 
+export type PublicBlockedState =
+  | "invalid_link"
+  | "event_not_found"
+  | "not_open_yet"
+  | "closed"
+  | "already_checked_in"
+  | "student_not_found"
+  | "invalid_900_number";
+
+export type PublicStudentPreview = {
+  id: string;
+  firstName: string;
+  lastInitial: string;
+  maskedEmail: string;
+};
+
 export const PRODUCT_NAME = "Attendance HQ";
 export const PRODUCT_DOMAIN = "attendance-hq.com";
 export const HOST_REDIRECT_KEY = "attendance-hq-auth-redirect";
@@ -107,6 +123,52 @@ export function maskEmail(email: string) {
 export function getStudentShortName(student: Pick<Student, "first_name" | "last_name">) {
   const initial = student.last_name.charAt(0).toUpperCase();
   return `${student.first_name} ${initial}.`;
+}
+
+export function getPublicBlockedState(status: CheckInStatus): Extract<PublicBlockedState, "not_open_yet" | "closed"> | null {
+  if (status === "upcoming") return "not_open_yet";
+  if (status === "closed" || status === "inactive" || status === "archived") return "closed";
+  return null;
+}
+
+export function getBlockedStateCopy(state: PublicBlockedState) {
+  switch (state) {
+    case "invalid_link":
+      return {
+        title: "Invalid check-in link",
+        description: "This link is invalid or no longer available.",
+      };
+    case "event_not_found":
+      return {
+        title: "Event not found",
+        description: "We couldn’t find this event.",
+      };
+    case "not_open_yet":
+      return {
+        title: "Check-in not open yet",
+        description: "Check-in is not open for this event yet.",
+      };
+    case "closed":
+      return {
+        title: "Check-in closed",
+        description: "Check-in is closed for this event.",
+      };
+    case "already_checked_in":
+      return {
+        title: "Already checked in",
+        description: "You have already checked in for this event.",
+      };
+    case "student_not_found":
+      return {
+        title: "Student not found",
+        description: "We couldn’t find a student with that 900 number.",
+      };
+    case "invalid_900_number":
+      return {
+        title: "Invalid 900 number",
+        description: "Enter a valid 9-digit 900 number.",
+      };
+  }
 }
 
 export function combineDateAndTime(date: string, time: string) {
