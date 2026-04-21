@@ -51,13 +51,11 @@ export function useAttendanceAuth() {
   return value;
 }
 
-type ServerFnCallOptions<T extends (...args: any[]) => Promise<any>> = Parameters<T>[0];
-
 export function useAuthorizedServerFn<T extends (...args: any[]) => Promise<any>>(serverFn: T) {
   const { session } = useAttendanceAuth();
   const invoke = useServerFn(serverFn);
 
-  return (options?: ServerFnCallOptions<T>) => {
+  return (options?: Parameters<T>[0]) => {
     const accessToken = session?.access_token;
     if (!accessToken) {
       throw new Error("Your session expired. Please sign in again.");
@@ -69,6 +67,6 @@ export function useAuthorizedServerFn<T extends (...args: any[]) => Promise<any>
         ...(options && typeof options === "object" && "headers" in options && options.headers ? options.headers : {}),
         authorization: `Bearer ${accessToken}`,
       },
-    } as ServerFnCallOptions<T>);
+    } as Parameters<T>[0]);
   };
 }

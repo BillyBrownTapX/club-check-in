@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { CalendarDays, Copy, Plus } from "lucide-react";
-import { useServerFn } from "@tanstack/react-start";
+import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
 import { ClubDialog, EmptyStateBlock, ManagementPageShell, PageHeader, PrimaryButton, SecondaryButton, StatsCard, TemplateCard, TemplateDialog, EventCard, FormCard, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
 import { createEventTemplate, duplicateEventTemplate, getClubDetail, updateClub, updateEventTemplate } from "@/lib/attendance-hq.functions";
 import type { EventTemplateWithClub, ManagementEventSummary } from "@/lib/attendance-hq";
@@ -30,11 +30,11 @@ function ClubDetailRoute() {
   const { loading, user } = useRequireHostRedirect();
   const { clubId } = Route.useParams();
   const navigate = useNavigate();
-  const getClub = useServerFn(getClubDetail);
-  const updateClubMutation = useServerFn(updateClub);
-  const createTemplateMutation = useServerFn(createEventTemplate);
-  const updateTemplateMutation = useServerFn(updateEventTemplate);
-  const duplicateTemplateMutation = useServerFn(duplicateEventTemplate);
+  const getClub = useAuthorizedServerFn(getClubDetail);
+  const updateClubMutation = useAuthorizedServerFn(updateClub);
+  const createTemplateMutation = useAuthorizedServerFn(createEventTemplate);
+  const updateTemplateMutation = useAuthorizedServerFn(updateEventTemplate);
+  const duplicateTemplateMutation = useAuthorizedServerFn(duplicateEventTemplate);
   const [clubDialogOpen, setClubDialogOpen] = useState(false);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<EventTemplateWithClub | null>(null);

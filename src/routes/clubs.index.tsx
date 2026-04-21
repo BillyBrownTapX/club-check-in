@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import { ClubCard, ClubDialog, EmptyStateBlock, ManagementPageShell, PageHeader, PrimaryButton, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
+import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
 import type { ClubSummary } from "@/lib/attendance-hq";
 import { getHostClubSummaries, createClubManagement } from "@/lib/attendance-hq.functions";
 import { useServerFn } from "@tanstack/react-start";
@@ -27,8 +28,8 @@ export const Route = createFileRoute("/clubs/")({
 
 function ClubsRoute() {
   const { loading, user } = useRequireHostRedirect();
-  const getClubs = useServerFn(getHostClubSummaries);
-  const createClub = useServerFn(createClubManagement);
+  const getClubs = useAuthorizedServerFn(getHostClubSummaries);
+  const createClub = useAuthorizedServerFn(createClubManagement);
   const router = useInvalidateRouter();
   const [open, setOpen] = useState(false);
   const [clubs, setClubs] = useState<ClubSummary[]>([]);
