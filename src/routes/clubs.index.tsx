@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { createFileRoute } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import { ClubCard, ClubDialog, EmptyStateBlock, ManagementPageShell, PageHeader, PrimaryButton, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
 import type { ClubSummary } from "@/lib/attendance-hq";
@@ -16,9 +16,6 @@ function ClubsError({ error }: { error: Error }) {
 }
 
 export const Route = createFileRoute("/clubs/")({
-  loader: async () => getHostClubSummaries(),
-  errorComponent: ClubsError,
-  notFoundComponent: ClubsNotFound,
   head: () => ({
     meta: [
       { title: "Clubs — Attendance HQ" },
@@ -30,12 +27,38 @@ export const Route = createFileRoute("/clubs/")({
 
 function ClubsRoute() {
   const { loading, user } = useRequireHostRedirect();
-  const clubs = Route.useLoaderData();
+  const getClubs = useServerFn(getHostClubSummaries);
   const createClub = useServerFn(createClubManagement);
   const router = useInvalidateRouter();
   const [open, setOpen] = useState(false);
+  const [clubs, setClubs] = useState<ClubSummary[]>([]);
+  const [fetching, setFetching] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (loading || !user) return null;
+  useEffect(() => {
+    if (loading || !user) return;
+    let cancelled = false;
+
+    const load = async () => {
+      setFetching(true);
+      setError(null);
+      try {
+        const nextClubs = await getClubs();
+        if (!cancelled) setClubs(nextClubs);
+      } catch (loadError) {
+        if (!cancelled) setError(loadError instanceof Error ? loadError.message : "Unable to load clubs.");
+      } finally {
+        if (!cancelled) setFetching(false);
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [getClubs, loading, user]);
+
+  if (loading || !user) return <ManagementPageShell><div className="py-16 text-center text-sm text-muted-foreground">Loading your clubs…</div></ManagementPageShell>;
 
   return (
     <ManagementPageShell>
@@ -45,7 +68,11 @@ function ClubsRoute() {
           description="Manage the clubs and organizations you use to host events."
           action={<PrimaryButton type="button" onClick={() => setOpen(true)}><Plus className="h-4 w-4" />Create Club</PrimaryButton>}
         />
-        {clubs.length ? (
+        {fetching ? (
+          <div className="py-16 text-center text-sm text-muted-foreground">Loading your clubs…</div>
+        ) : error ? (
+          <ClubsError error={new Error(error)} />
+        ) : clubs.length ? (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {clubs.map((club: ClubSummary) => <ClubCard key={club.id} club={club} />)}
           </div>
@@ -64,6 +91,7 @@ function ClubsRoute() {
           onSubmit={async (values) => {
             await createClub({ data: values as never });
             await router.invalidate({ sync: true });
+            setClubs(await getClubs());
           }}
         />
       </div>
