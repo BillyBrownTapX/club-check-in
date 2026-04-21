@@ -82,8 +82,14 @@ export const validatedEventSchema = eventSchema.refine((value) => value.endTime 
   path: ["checkInClosesAt"],
 });
 
-export const eventUpdateSchema = validatedEventSchema.extend({
+export const eventUpdateSchema = eventSchema.extend({
   eventId: z.string().uuid(),
+}).refine((value) => value.endTime > value.startTime, {
+  message: "End time must be after start time",
+  path: ["endTime"],
+}).refine((value) => new Date(value.checkInClosesAt).getTime() > new Date(value.checkInOpensAt).getTime(), {
+  message: "Check-in close must be after open",
+  path: ["checkInClosesAt"],
 });
 
 export const eventListFilterSchema = z.object({
