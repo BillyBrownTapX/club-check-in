@@ -14,7 +14,7 @@ function ClubsError({ error }: { error: Error }) {
   return <ManagementPageShell><div className="py-16 text-center text-sm text-muted-foreground">{error.message}</div></ManagementPageShell>;
 }
 
-export const Route = createFileRoute("/clubs")({
+export const Route = createFileRoute("/clubs/")({
   loader: async () => getHostClubSummaries(),
   errorComponent: ClubsError,
   notFoundComponent: ClubsNotFound,

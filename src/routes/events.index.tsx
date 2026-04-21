@@ -11,7 +11,7 @@ function EventsError({ error }: { error: Error }) {
   return <ManagementPageShell><div className="py-16 text-center text-sm text-muted-foreground">{error.message}</div></ManagementPageShell>;
 }
 
-export const Route = createFileRoute("/events")({
+export const Route = createFileRoute("/events/")({
   validateSearch: (search: Record<string, unknown>) => ({
     clubId: typeof search.clubId === "string" ? search.clubId : "",
     status: search.status === "upcoming" || search.status === "past" ? search.status : "all",
