@@ -567,6 +567,11 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, title,
           </div>
         </DialogHeader>
         <form className="space-y-4 px-6 pb-6 pt-2" onSubmit={(event) => void submit(event)}>
+          <ClubLogoField
+            value={(form.watch("logoPath") as string | null | undefined) ?? null}
+            onChange={(path) => form.setValue("logoPath", path as never, { shouldDirty: true })}
+            clubId={initialValues?.clubId}
+          />
           <SelectInput label="University" value={form.watch("universityId") as string} onValueChange={(value) => form.setValue("universityId", value as never, { shouldValidate: true })} placeholder="Choose a university" options={universities.map((university) => ({ value: university.id, label: university.name }))} />
           <TextInput label="Club name" error={form.formState.errors.clubName?.message} {...form.register("clubName")} />
           <TextAreaInput label="Description" error={form.formState.errors.description?.message} {...form.register("description")} />
