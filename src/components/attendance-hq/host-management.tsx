@@ -987,7 +987,7 @@ function EventFormErrorSummary({ errors }: { errors: Record<string, { message?: 
   );
 }
 
-export function EventForm({ payload, title, description, submitLabel, onSubmit, cancelAction }: { payload: EventFormPayload; title: string; description: string; submitLabel: string; onSubmit: (values: EventValues | EventUpdateValues) => Promise<void>; cancelAction?: React.ReactNode }) {
+export function EventForm({ payload, title, description, submitLabel, onSubmit, cancelAction, secondaryAction }: { payload: EventFormPayload; title: string; description: string; submitLabel: string; onSubmit: (values: EventValues | EventUpdateValues) => Promise<void>; cancelAction?: React.ReactNode; secondaryAction?: React.ReactNode }) {
   const navigate = useNavigate();
   const form = useForm<EventFormValues>({
     resolver: zodResolver(validatedEventSchema),
@@ -1061,97 +1061,130 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
   const selectedClub = useMemo(() => payload.clubs.find((club) => club.id === selectedClubId), [payload.clubs, selectedClubId]);
   const selectedUniversity = selectedClub?.universities?.name ?? "University needed";
 
+  const cancelLink = cancelAction ?? (
+    <Link to="/events" search={{ clubId: "", status: "all", query: "" }} className="text-[14px] font-semibold text-primary">
+      Cancel
+    </Link>
+  );
+
   return (
-    <ManagementPageShell>
-      <div className="space-y-5 pb-20 md:pb-0">
-        <PageHeader title={title} description={description} action={<SecondaryButton asChild><Link to="/events" search={{ clubId: "", status: "all", query: "" }}>Back to Events</Link></SecondaryButton>} />
-        <div className="space-y-4">
-          {templatesForClub.length ? (
-            <FormCard>
-              <div className="flex flex-col gap-4">
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Start from template</p>
-                  <p className="text-sm leading-6 text-muted-foreground">Use a recurring setup without rebuilding the form from scratch.</p>
-                </div>
-                <div className="flex snap-x gap-2 overflow-x-auto pb-1">
-                  {templatesForClub.slice(0, 3).map((template) => (
-                    <SecondaryButton key={template.id} type="button" className="min-w-fit snap-start" onClick={() => navigate({ to: "/events/new", search: { clubId: selectedClubId || "", templateId: template.id, duplicateFrom: "" } })}>
-                      <WandSparkles className="h-4 w-4" />
-                      {template.template_name}
-                    </SecondaryButton>
-                  ))}
-                </div>
-              </div>
-            </FormCard>
-          ) : null}
-          <FormCard>
-            <form className="space-y-5" onSubmit={handleSubmitClick}>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <MetaPill label="Club" value={selectedClub?.club_name ?? "Select club"} />
-                <MetaPill label="University" value={selectedUniversity} />
-                <MetaPill label="Check-in plan" value={`${offsets.openMinutesBeforeStart} / ${offsets.closeMinutesAfterEnd} min`} />
-              </div>
-              <FormSection title="Event basics" description="Name the meeting, attach it to the right club, and make the setup obvious at a glance.">
-                <SelectInput
-                  label="Club"
-                  value={form.watch("clubId")}
-                  onValueChange={(value) => form.setValue("clubId", value, { shouldValidate: true })}
-                  placeholder="Choose a club"
-                  options={payload.clubs.map((club) => ({ value: club.id, label: club.club_name }))}
-                  error={form.formState.errors.clubId?.message}
-                />
-                <TextInput label="Event name" error={form.formState.errors.eventName?.message} {...form.register("eventName")} />
-                <div className="grid gap-4">
-                  <DateInput label="Event date" error={form.formState.errors.eventDate?.message} {...form.register("eventDate")} />
-                  <TextInput label="Location" error={form.formState.errors.location?.message} {...form.register("location")} />
-                </div>
-              </FormSection>
-              <FormSection title="Schedule" description="Keep the meeting window easy to scan and comfortable to edit on a phone.">
-                <div className="grid gap-4">
-                  <TimeInput label="Start time" error={form.formState.errors.startTime?.message} {...form.register("startTime")} />
-                  <TimeInput label="End time" error={form.formState.errors.endTime?.message} {...form.register("endTime")} />
-                </div>
-              </FormSection>
-              <FormSection title="Check-in timing" description="Tune early access, walk-in handling, and post-event cleanup without losing clarity.">
-                <div className="grid gap-4">
-                  <TextInput
-                    type="number"
-                    min={0}
-                    label="Open minutes before start"
-                    value={String(offsets.openMinutesBeforeStart)}
-                    onChange={(event) => setOffsets((prev) => ({ ...prev, openMinutesBeforeStart: Math.max(0, Number(event.target.value || 0)) }))}
-                  />
-                  <TextInput
-                    type="number"
-                    min={0}
-                    label="Close minutes after end"
-                    value={String(offsets.closeMinutesAfterEnd)}
-                    onChange={(event) => setOffsets((prev) => ({ ...prev, closeMinutesAfterEnd: Math.max(0, Number(event.target.value || 0)) }))}
-                  />
-                </div>
-                <input type="hidden" {...form.register("checkInOpensAt")} />
-                <input type="hidden" {...form.register("checkInClosesAt")} />
-                <div className="grid gap-4">
-                  <DateTimeReadonly label="Check-in opens" value={form.watch("checkInOpensAt")} />
-                  <DateTimeReadonly label="Check-in closes" value={form.watch("checkInClosesAt")} />
-                </div>
-              </FormSection>
-              {form.formState.errors.checkInOpensAt?.message ? <p className="text-sm text-destructive">{form.formState.errors.checkInOpensAt.message}</p> : null}
-              {form.formState.errors.checkInClosesAt?.message ? <p className="text-sm text-destructive">{form.formState.errors.checkInClosesAt.message}</p> : null}
-              {error ? <p className="text-sm text-destructive">{error}</p> : null}
-              <EventFormErrorSummary errors={form.formState.errors} />
-              <div className="sticky bottom-[calc(5.8rem+env(safe-area-inset-bottom))] z-20 -mx-2 rounded-[1.75rem] border border-border/90 bg-card/96 p-3 shadow-[0_24px_52px_-28px_color-mix(in_oklab,var(--color-primary)_42%,transparent)] backdrop-blur md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:shadow-none">
-                <p className="mb-3 text-sm leading-6 text-muted-foreground md:mb-2">Save when the mobile summary looks right. Updated timing takes effect immediately on the live event.</p>
-                <div className="flex flex-col gap-2 md:flex-row md:justify-end">
-                  {cancelAction ?? <SecondaryButton asChild><Link to="/events" search={{ clubId: "", status: "all", query: "" }}>Cancel</Link></SecondaryButton>}
-                  <PrimaryButton type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving…" : submitLabel}</PrimaryButton>
-                </div>
-              </div>
-            </form>
-          </FormCard>
+    <ManagementPageShell hideTabBar>
+      <LargeTitleHeader
+        title={title}
+        subtitle={description}
+        trailing={
+          <Link
+            to="/events"
+            search={{ clubId: "", status: "all", query: "" }}
+            aria-label="Back to events"
+            className="ios-press inline-flex h-10 w-10 items-center justify-center rounded-full bg-muted text-foreground"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+        }
+      />
+
+      <form className="space-y-5 pb-2" onSubmit={handleSubmitClick}>
+        {templatesForClub.length ? (
+          <div className="ios-card rounded-2xl p-4">
+            <p className="text-[14px] font-semibold text-foreground">Start from template</p>
+            <p className="mt-0.5 text-[12.5px] leading-snug text-muted-foreground">Use a recurring setup without rebuilding the form from scratch.</p>
+            <div className="mt-3 -mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
+              {templatesForClub.slice(0, 3).map((template) => (
+                <button
+                  key={template.id}
+                  type="button"
+                  onClick={() => navigate({ to: "/events/new", search: { clubId: selectedClubId || "", templateId: template.id, duplicateFrom: "" } })}
+                  className="ios-press inline-flex min-w-fit shrink-0 snap-start items-center gap-1.5 rounded-full bg-muted px-3 py-2 text-[13px] font-semibold text-foreground"
+                >
+                  <WandSparkles className="h-4 w-4 text-primary" />
+                  {template.template_name}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        <div className="ios-card rounded-2xl p-4">
+          <div className="grid grid-cols-2 gap-3">
+            <SummaryPill label="Club" value={selectedClub?.club_name ?? "—"} />
+            <SummaryPill label="University" value={selectedUniversity} />
+          </div>
+          <div className="mt-3">
+            <SummaryPill label="Check-in window" value={`-${offsets.openMinutesBeforeStart} / +${offsets.closeMinutesAfterEnd} min`} full />
+          </div>
         </div>
-      </div>
+
+        <FormSection title="Event basics" description="Name the meeting and attach it to the right club.">
+          <SelectInput
+            label="Club"
+            value={form.watch("clubId")}
+            onValueChange={(value) => form.setValue("clubId", value, { shouldValidate: true })}
+            placeholder="Choose a club"
+            options={payload.clubs.map((club) => ({ value: club.id, label: club.club_name }))}
+            error={form.formState.errors.clubId?.message}
+          />
+          <TextInput label="Event name" error={form.formState.errors.eventName?.message} {...form.register("eventName")} />
+          <DateInput label="Event date" error={form.formState.errors.eventDate?.message} {...form.register("eventDate")} />
+          <TextInput label="Location" error={form.formState.errors.location?.message} {...form.register("location")} />
+        </FormSection>
+
+        <FormSection title="Schedule" description="Set the meeting window.">
+          <TimeInput label="Start time" error={form.formState.errors.startTime?.message} {...form.register("startTime")} />
+          <TimeInput label="End time" error={form.formState.errors.endTime?.message} {...form.register("endTime")} />
+        </FormSection>
+
+        <FormSection title="Check-in timing" description="Tune early access and post-event cleanup.">
+          <TextInput
+            type="number"
+            min={0}
+            label="Open minutes before start"
+            value={String(offsets.openMinutesBeforeStart)}
+            onChange={(event) => setOffsets((prev) => ({ ...prev, openMinutesBeforeStart: Math.max(0, Number(event.target.value || 0)) }))}
+          />
+          <TextInput
+            type="number"
+            min={0}
+            label="Close minutes after end"
+            value={String(offsets.closeMinutesAfterEnd)}
+            onChange={(event) => setOffsets((prev) => ({ ...prev, closeMinutesAfterEnd: Math.max(0, Number(event.target.value || 0)) }))}
+          />
+          <input type="hidden" {...form.register("checkInOpensAt")} />
+          <input type="hidden" {...form.register("checkInClosesAt")} />
+          <DateTimeReadonly label="Check-in opens" value={form.watch("checkInOpensAt")} />
+          <DateTimeReadonly label="Check-in closes" value={form.watch("checkInClosesAt")} />
+        </FormSection>
+
+        {form.formState.errors.checkInOpensAt?.message ? <p className="text-sm text-destructive">{form.formState.errors.checkInOpensAt.message}</p> : null}
+        {form.formState.errors.checkInClosesAt?.message ? <p className="text-sm text-destructive">{form.formState.errors.checkInClosesAt.message}</p> : null}
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        <EventFormErrorSummary errors={form.formState.errors} />
+
+        {secondaryAction ? <div className="flex justify-center pt-1">{secondaryAction}</div> : null}
+        <div className="flex items-center justify-center gap-4 pt-1">
+          {cancelLink}
+        </div>
+
+        <StickyCtaBar>
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="h-12 w-full rounded-2xl bg-primary text-[15px] font-bold text-primary-foreground"
+          >
+            {isSubmitting ? "Saving…" : submitLabel}
+          </Button>
+        </StickyCtaBar>
+      </form>
     </ManagementPageShell>
+  );
+}
+
+function SummaryPill({ label, value, full }: { label: string; value: string; full?: boolean }) {
+  return (
+    <div className={cn("rounded-xl bg-muted/70 px-3 py-2", full && "w-full")}>
+      <div className="text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="mt-0.5 truncate text-[13.5px] font-semibold text-foreground">{value}</div>
+    </div>
   );
 }
 
