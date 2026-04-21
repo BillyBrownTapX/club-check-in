@@ -44,10 +44,22 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-ring-offset-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-foreground: var(--surface-foreground);
+  --color-surface-strong: var(--surface-strong);
+  --color-panel: var(--panel);
+  --color-panel-foreground: var(--panel-foreground);
+  --color-app-shell: var(--app-shell);
+  --color-app-shell-foreground: var(--app-shell-foreground);
+  --color-app-tint: var(--app-tint);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -65,77 +77,101 @@
 
 :root {
   --radius: 1.25rem;
-  --background: oklch(0.98 0.008 250);
-  --foreground: oklch(0.23 0.04 256);
-  --card: oklch(0.995 0.004 250);
-  --card-foreground: oklch(0.23 0.04 256);
-  --popover: oklch(0.995 0.004 250);
-  --popover-foreground: oklch(0.23 0.04 256);
-  --primary: oklch(0.38 0.16 254);
-  --primary-foreground: oklch(0.99 0.003 250);
-  --secondary: oklch(0.94 0.014 244);
-  --secondary-foreground: oklch(0.26 0.048 255);
-  --muted: oklch(0.955 0.01 248);
-  --muted-foreground: oklch(0.52 0.035 253);
-  --accent: oklch(0.82 0.14 88);
-  --accent-foreground: oklch(0.25 0.03 82);
+  --background: oklch(0.965 0.01 250);
+  --foreground: oklch(0.21 0.03 257);
+  --card: oklch(0.992 0.004 250);
+  --card-foreground: oklch(0.21 0.03 257);
+  --popover: oklch(0.992 0.004 250);
+  --popover-foreground: oklch(0.21 0.03 257);
+  --primary: oklch(0.34 0.15 255);
+  --primary-foreground: oklch(0.985 0.003 250);
+  --secondary: oklch(0.92 0.018 248);
+  --secondary-foreground: oklch(0.25 0.04 255);
+  --muted: oklch(0.935 0.014 248);
+  --muted-foreground: oklch(0.43 0.03 252);
+  --accent: oklch(0.79 0.12 86);
+  --accent-foreground: oklch(0.24 0.03 82);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.984 0.003 247.858);
-  --success: oklch(0.69 0.15 156);
+  --success: oklch(0.63 0.15 156);
   --success-foreground: oklch(0.17 0.03 156);
-  --border: oklch(0.9 0.015 248);
-  --input: oklch(0.9 0.015 248);
-  --ring: oklch(0.62 0.08 252);
-  --chart-1: oklch(0.38 0.16 254);
+  --warning: oklch(0.76 0.14 76);
+  --warning-foreground: oklch(0.23 0.03 74);
+  --info: oklch(0.65 0.11 242);
+  --info-foreground: oklch(0.18 0.03 242);
+  --border: oklch(0.85 0.018 248);
+  --input: oklch(0.87 0.018 248);
+  --ring: oklch(0.55 0.1 252);
+  --surface: oklch(0.984 0.006 250);
+  --surface-foreground: oklch(0.21 0.03 257);
+  --surface-strong: oklch(0.948 0.018 248);
+  --panel: oklch(0.95 0.015 248);
+  --panel-foreground: oklch(0.23 0.03 257);
+  --app-shell: oklch(0.945 0.013 248);
+  --app-shell-foreground: oklch(0.2 0.03 257);
+  --app-tint: oklch(0.58 0.1 252);
+  --chart-1: oklch(0.34 0.15 255);
   --chart-2: oklch(0.82 0.14 88);
   --chart-3: oklch(0.69 0.15 156);
-  --chart-4: oklch(0.61 0.11 222);
+  --chart-4: oklch(0.6 0.11 222);
   --chart-5: oklch(0.74 0.08 34);
-  --sidebar: oklch(0.985 0.004 250);
-  --sidebar-foreground: oklch(0.23 0.04 256);
-  --sidebar-primary: oklch(0.38 0.16 254);
-  --sidebar-primary-foreground: oklch(0.99 0.003 250);
-  --sidebar-accent: oklch(0.94 0.014 244);
-  --sidebar-accent-foreground: oklch(0.26 0.048 255);
-  --sidebar-border: oklch(0.9 0.015 248);
-  --sidebar-ring: oklch(0.62 0.08 252);
+  --sidebar: oklch(0.978 0.006 250);
+  --sidebar-foreground: oklch(0.21 0.03 257);
+  --sidebar-primary: oklch(0.34 0.15 255);
+  --sidebar-primary-foreground: oklch(0.985 0.003 250);
+  --sidebar-accent: oklch(0.92 0.018 248);
+  --sidebar-accent-foreground: oklch(0.25 0.04 255);
+  --sidebar-border: oklch(0.85 0.018 248);
+  --sidebar-ring: oklch(0.55 0.1 252);
 }
 
 .dark {
-  --background: oklch(0.17 0.028 255);
-  --foreground: oklch(0.97 0.004 250);
-  --card: oklch(0.23 0.03 255);
-  --card-foreground: oklch(0.97 0.004 250);
-  --popover: oklch(0.23 0.03 255);
-  --popover-foreground: oklch(0.97 0.004 250);
-  --primary: oklch(0.74 0.1 250);
-  --primary-foreground: oklch(0.21 0.03 255);
-  --secondary: oklch(0.28 0.022 255);
-  --secondary-foreground: oklch(0.97 0.004 250);
-  --muted: oklch(0.28 0.022 255);
-  --muted-foreground: oklch(0.76 0.024 248);
-  --accent: oklch(0.8 0.12 88);
+  --background: oklch(0.16 0.024 257);
+  --foreground: oklch(0.968 0.004 250);
+  --card: oklch(0.215 0.024 257);
+  --card-foreground: oklch(0.968 0.004 250);
+  --popover: oklch(0.215 0.024 257);
+  --popover-foreground: oklch(0.968 0.004 250);
+  --primary: oklch(0.72 0.11 250);
+  --primary-foreground: oklch(0.2 0.03 255);
+  --secondary: oklch(0.255 0.022 257);
+  --secondary-foreground: oklch(0.968 0.004 250);
+  --muted: oklch(0.255 0.022 257);
+  --muted-foreground: oklch(0.8 0.02 248);
+  --accent: oklch(0.81 0.11 88);
   --accent-foreground: oklch(0.23 0.03 80);
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: oklch(0.984 0.003 247.858);
-  --success: oklch(0.76 0.14 156);
+  --success: oklch(0.74 0.14 156);
   --success-foreground: oklch(0.18 0.03 156);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 12%);
-  --ring: oklch(0.74 0.07 250);
-  --chart-1: oklch(0.74 0.1 250);
-  --chart-2: oklch(0.8 0.12 88);
-  --chart-3: oklch(0.76 0.14 156);
+  --warning: oklch(0.78 0.13 76);
+  --warning-foreground: oklch(0.18 0.03 74);
+  --info: oklch(0.76 0.08 242);
+  --info-foreground: oklch(0.18 0.03 242);
+  --border: oklch(1 0 0 / 14%);
+  --input: oklch(1 0 0 / 16%);
+  --ring: oklch(0.72 0.08 250);
+  --surface: oklch(0.19 0.022 257);
+  --surface-foreground: oklch(0.968 0.004 250);
+  --surface-strong: oklch(0.24 0.022 257);
+  --panel: oklch(0.23 0.022 257);
+  --panel-foreground: oklch(0.968 0.004 250);
+  --app-shell: oklch(0.14 0.022 257);
+  --app-shell-foreground: oklch(0.968 0.004 250);
+  --app-tint: oklch(0.72 0.08 250);
+  --chart-1: oklch(0.72 0.11 250);
+  --chart-2: oklch(0.81 0.11 88);
+  --chart-3: oklch(0.74 0.14 156);
   --chart-4: oklch(0.68 0.09 220);
   --chart-5: oklch(0.72 0.08 34);
-  --sidebar: oklch(0.2 0.028 255);
-  --sidebar-foreground: oklch(0.97 0.004 250);
-  --sidebar-primary: oklch(0.74 0.1 250);
-  --sidebar-primary-foreground: oklch(0.21 0.03 255);
-  --sidebar-accent: oklch(0.28 0.022 255);
-  --sidebar-accent-foreground: oklch(0.97 0.004 250);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.74 0.07 250);
+  --sidebar: oklch(0.18 0.024 257);
+  --sidebar-foreground: oklch(0.968 0.004 250);
+  --sidebar-primary: oklch(0.72 0.11 250);
+  --sidebar-primary-foreground: oklch(0.2 0.03 255);
+  --sidebar-accent: oklch(0.255 0.022 257);
+  --sidebar-accent-foreground: oklch(0.968 0.004 250);
+  --sidebar-border: oklch(1 0 0 / 14%);
+  --sidebar-ring: oklch(0.72 0.08 250);
 }
 
 @layer base {
@@ -155,9 +191,11 @@
 
   body {
     min-height: 100vh;
-    background-color: var(--color-background);
-    color: var(--color-foreground);
-    background-image: radial-gradient(circle at top, color-mix(in oklab, var(--color-primary) 10%, transparent) 0%, transparent 36%), linear-gradient(180deg, color-mix(in oklab, var(--color-background) 92%, white) 0%, var(--color-background) 100%);
+    background-color: var(--color-app-shell);
+    color: var(--color-app-shell-foreground);
+    background-image:
+      radial-gradient(circle at top, color-mix(in oklab, var(--color-app-tint) 16%, transparent) 0%, transparent 34%),
+      linear-gradient(180deg, color-mix(in oklab, var(--color-background) 84%, white) 0%, var(--color-app-shell) 100%);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     overscroll-behavior-y: none;
@@ -168,8 +206,10 @@
     position: fixed;
     inset: 0;
     pointer-events: none;
-    background: linear-gradient(180deg, color-mix(in oklab, var(--color-primary) 2%, transparent), transparent 22%);
-    opacity: 0.8;
+    background:
+      linear-gradient(180deg, color-mix(in oklab, var(--color-primary) 5%, transparent), transparent 24%),
+      radial-gradient(circle at center top, color-mix(in oklab, var(--color-accent) 8%, transparent), transparent 44%);
+    opacity: 0.95;
   }
 
   button,
@@ -182,5 +222,9 @@
   #app,
   #root {
     min-height: 100vh;
+  }
+
+  .app-shell {
+    background-color: var(--color-app-shell);
   }
 }
