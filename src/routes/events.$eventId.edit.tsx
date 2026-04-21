@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
-import { EventForm, ManagementPageShell, SecondaryButton, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
+import { EventForm, ManagementPageShell, SecondaryButton, getManagementErrorMessage, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
 import { getEventFormPayload, updateEvent } from "@/lib/attendance-hq.functions";
 import type { EventFormPayload } from "@/lib/attendance-hq";
 
@@ -43,7 +43,7 @@ function EventEditRoute() {
         if (!cancelled) setPayload(nextPayload);
       })
       .catch((loadError) => {
-        if (!cancelled) setError(loadError instanceof Error ? loadError.message : "Unable to load event.");
+        if (!cancelled) setError(getManagementErrorMessage(loadError, "Unable to load event."));
       });
 
     return () => {
