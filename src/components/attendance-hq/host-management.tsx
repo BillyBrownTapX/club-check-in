@@ -9,7 +9,7 @@ import { useForm } from "react-hook-form";
 import type { z } from "zod";
 import { useAttendanceAuth, useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
 import { HostAppShell } from "@/components/attendance-hq/host-shell";
-import { getHostOnboardingState } from "@/lib/attendance-hq.functions";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -387,26 +387,12 @@ export function useRequireHostRedirect() {
 // never compute it locally.
 export function useResolvePostAuthRedirect() {
   const navigate = useNavigate();
-  const fetchOnboardingState = useAuthorizedServerFn(getHostOnboardingState);
 
   return useCallback(
-    async (seed?: { fullName?: string; email?: string }) => {
-      const { onboarding } = await fetchOnboardingState({ data: seed ?? {} });
-      if (onboarding.isComplete && onboarding.event) {
-        navigate({
-          to: "/events/$eventId",
-          params: { eventId: onboarding.event.id },
-          search: { created: "" },
-        });
-        return;
-      }
-      if (onboarding.nextPath === "/onboarding/event") {
-        navigate({ to: "/onboarding/event" });
-        return;
-      }
-      navigate({ to: "/onboarding/club" });
+    async (_seed?: { fullName?: string; email?: string }) => {
+      navigate({ to: "/home" });
     },
-    [fetchOnboardingState, navigate],
+    [navigate],
   );
 }
 
