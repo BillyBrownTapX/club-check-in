@@ -1,77 +1,42 @@
 
 
-## Add club logo upload to Club creation
+## Fix duplicate club creation on submit
 
-Let hosts attach a logo when creating a club — both in the `/clubs` "New Club" dialog and in the `/onboarding/club` first-run screen — with the upload field placed above the University selector as requested.
+### Root cause
 
-## What you'll see
+The Create Club form has no submit guard. The network log shows two POST `createClubManagement` calls ~1 second apart (16:30:26 and 16:30:27), creating `sales-club-rhfy` and `sales-club-s8cp` with identical payloads. This is a classic double-submit — a second click, Enter press, or fast retry fires before the first request finishes, and both succeed.
 
-**In the Create Club dialog and the onboarding club step:**
-1. **Club logo** (new, at the top) — square dropzone showing a preview, with "Upload logo" / "Replace" / "Remove" actions. Optional field.
-2. University (existing)
-3. Club name (existing)
-4. Description (existing)
+`ClubDialog.submit` in `src/components/attendance-hq/host-management.tsx` awaits `onSubmit(values)` but the button stays enabled the whole time, and there's no in-flight flag.
 
-**On club cards / club detail header:** the uploaded logo replaces the default initials avatar.
+### What I'll change
 
-## Technical approach
+**1. Block the double-submit at the form layer (primary fix).**
 
-### 1. Database
-Add an optional `logo_url` column to `public.clubs` to mirror what `host_profiles` already does. It stores the storage object path (not a public URL), so we keep the bucket private and serve via signed URLs.
+In `ClubDialog` (`src/components/attendance-hq/host-management.tsx`):
+- Track an `isSubmitting` state (or use `form.formState.isSubmitting`).
+- Disable the "Create Club" / "Save Club" button while a submission is in flight.
+- Early-return from `submit` if it's already running, so rapid Enter + click can't queue two calls.
+- Show a subtle spinner/label change ("Creating…") so the user gets feedback.
 
-```sql
-alter table public.clubs add column logo_url text;
-```
+Apply the same guard to `TemplateDialog`, `EventDialog`, and any other dialogs in this file that take an async `onSubmit` — this is a general class of bug, not just clubs.
 
-No RLS changes — existing "Hosts can manage own clubs" policy already covers updates to this column.
+**2. Clean up the duplicate clubs that already exist.**
 
-### 2. Storage
-Reuse the existing private `host-logos` bucket with a path convention:
-- Host logos: `{userId}/logo-{ts}.{ext}` (unchanged)
-- Club logos: `{userId}/clubs/{clubId-or-draft}/logo-{ts}.{ext}`
+The account currently has two "Sales Club" rows pointing at the same logo path (`sales-club-rhfy` and `sales-club-s8cp`) from the duplicate submit, plus older `SalesClub` / `SalesCLub` from earlier testing. I'll delete `sales-club-s8cp` (the second of the duplicate pair) via a scoped migration so the list looks correct immediately. I'll leave the earlier test clubs alone unless you want those cleared too.
 
-Scoping every path under `{userId}/` means the existing bucket policies (host owns its folder) keep working without new policies. For the **create** flow, the clubId doesn't exist yet, so we upload to a `draft-{random}` subfolder first and write `logo_url` on insert.
+**3. No schema or server changes.**
 
-Add storage RLS policies (if not already in place) to allow the owner to `insert/select/update/delete` objects under their own `{auth.uid()}/...` prefix in `host-logos`. I'll verify and add any missing policies in the migration.
+I considered adding a DB-level unique constraint on `(host_id, club_name, university_id)`, but clubs legitimately can share names across universities and hosts may want two clubs with similar names. A client-side submit guard is the correct fix; a DB constraint would cause false errors.
 
-### 3. Schema and server
-- `clubSchema` and `clubUpdateSchema` in `src/lib/attendance-hq-schemas.ts` get an optional `logoPath: string | null`.
-- `createClubManagement` writes `logo_url` on insert.
-- `updateClub` writes `logo_url` on update (null clears it).
-- `Club` type already comes from generated Supabase types and will include `logo_url` automatically after the migration.
+### Files touched
 
-### 4. UI
+- `src/components/attendance-hq/host-management.tsx` — add `isSubmitting` guard + disabled button state to `ClubDialog`; same treatment for `TemplateDialog` and `EventDialog` submit handlers.
+- `supabase/migrations/<new>.sql` — delete the duplicate `sales-club-s8cp` row for the current host.
 
-**New component** `ClubLogoField` in `host-management.tsx` (mirrors the pattern in `AttendanceLogo` but is a controlled form field, not a profile-bound uploader):
-- Accepts `value` (storage path) + `onChange`.
-- Internally uploads to `host-logos` via the browser Supabase client, returns the path, and shows a signed-URL preview.
-- Validates: image/*, ≤ 3 MB.
-- Shows spinner, error toast on failure, "Remove" to clear.
+### What you'll see after
 
-**Wire it into both surfaces:**
-- `ClubDialog` — render `ClubLogoField` as the first form row, above the University `SelectInput`.
-- `src/routes/onboarding.club.tsx` — render the same field above the University `Select`, included in the `createClub` payload.
-
-**Display the logo where the club appears:**
-- `ClubRowCard` in `src/routes/clubs.index.tsx` — if `club.logo_url` is set, show the signed image instead of the initials gradient tile.
-- Club detail header in `src/routes/clubs.$clubId.tsx` — small logo next to the club name.
-
-A tiny hook `useSignedLogoUrl(path)` (new, in `primitives.tsx` or a new `hooks/use-signed-logo.ts`) centralizes signed-URL resolution with caching, so `ClubRowCard` isn't hammering storage per render.
-
-## Files changed
-
-- `supabase/migrations/<new>.sql` — add `logo_url` column, add any missing `host-logos` storage policies.
-- `src/lib/attendance-hq-schemas.ts` — add optional `logoPath` to `clubSchema` / `clubUpdateSchema`.
-- `src/lib/attendance-hq.functions.ts` — write `logo_url` in `createClubManagement` and `updateClub`.
-- `src/components/attendance-hq/host-management.tsx` — new `ClubLogoField`; `ClubDialog` renders it above University.
-- `src/routes/onboarding.club.tsx` — render `ClubLogoField` above the University select; pass `logoPath` to `createClub`.
-- `src/routes/clubs.index.tsx` — `ClubRowCard` renders the uploaded logo when present.
-- `src/routes/clubs.$clubId.tsx` — show logo in the club detail header.
-- (optional) `src/hooks/use-signed-logo.ts` — small signed-URL hook with in-memory cache.
-
-## Out of scope
-
-- No changes to the public check-in page's logo (that's the host profile logo, already handled).
-- No bulk logo migration or cropping/resizing UI — file is uploaded as-is (with size cap) and rendered `object-cover`.
-- No change to host profile logo behavior.
+- Creating a club produces exactly one row, even with a double-click or Enter-then-click.
+- The button shows "Creating…" and is disabled until the server responds.
+- The stray duplicate on your `/clubs` list is gone.
+- Edit, template, and event dialogs get the same protection, so this doesn't resurface elsewhere.
 
