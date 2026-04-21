@@ -3,29 +3,21 @@
   "name": "tanstack-start-app",
   "compatibility_date": "2025-09-24",
   "compatibility_flags": ["nodejs_compat"],
-  "main": "@tanstack/react-start/server-entry"
+  "main": "@tanstack/react-start/server-entry",
 
   // ───────────────────────────────────────────────────────────────────────
-  // Required runtime environment variables (see .env.example for the full
-  // template). The app will throw at server boot if any of these are unset.
+  // Public (non-secret) backend configuration. These are safe to commit —
+  // the publishable/anon key is designed to be exposed to browsers and is
+  // protected by Row Level Security on the database.
   //
-  // PUBLIC values (safe to commit; configure under `vars` here per env, or
-  // override at deploy time):
-  //   SUPABASE_URL                  used by client.server.ts + auth middleware
-  //   SUPABASE_PUBLISHABLE_KEY      used by auth middleware (anon key)
-  //   VITE_SUPABASE_URL             baked into the browser bundle by Vite
-  //   VITE_SUPABASE_PUBLISHABLE_KEY baked into the browser bundle by Vite
-  //   VITE_SUPABASE_PROJECT_ID      baked into the browser bundle by Vite
-  //
-  // SECRET values (NEVER commit; set per environment with `wrangler secret`):
-  //   SUPABASE_SERVICE_ROLE_KEY     used by client.server.ts (admin client) —
-  //                                 required by the public check-in flow,
-  //                                 attendance audit log, close-check-in-early,
-  //                                 etc. Server boot fails without it.
-  //
-  // To configure for production:
-  //   wrangler secret put SUPABASE_SERVICE_ROLE_KEY
-  //   # then either: wrangler secret put SUPABASE_URL etc.
-  //   # or:          add a `vars: { ... }` block here per environment.
+  // SECRET values (NEVER commit; set with `wrangler secret put`):
+  //   SUPABASE_SERVICE_ROLE_KEY  required by server-side admin client
   // ───────────────────────────────────────────────────────────────────────
+  "vars": {
+    "SUPABASE_URL": "https://ikmxrbgsbdxettetvqiw.supabase.co",
+    "SUPABASE_PUBLISHABLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlrbXhyYmdzYmR4ZXR0ZXR2cWl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3MTUwNTksImV4cCI6MjA5MjI5MTA1OX0.wjRklP1me6RJiGoYDqcDlDxUijk-90XB0efprPEpwF4",
+    "VITE_SUPABASE_URL": "https://ikmxrbgsbdxettetvqiw.supabase.co",
+    "VITE_SUPABASE_PUBLISHABLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlrbXhyYmdzYmR4ZXR0ZXR2cWl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3MTUwNTksImV4cCI6MjA5MjI5MTA1OX0.wjRklP1me6RJiGoYDqcDlDxUijk-90XB0efprPEpwF4",
+    "VITE_SUPABASE_PROJECT_ID": "ikmxrbgsbdxettetvqiw"
+  }
 }
