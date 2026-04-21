@@ -645,7 +645,7 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, onDele
             onChange={(path) => form.setValue("logoPath", path as never, { shouldDirty: true })}
             clubId={initialValues?.clubId}
           />
-          <SelectInput label="University" value={form.watch("universityId") as string} onValueChange={(value) => form.setValue("universityId", value as never, { shouldValidate: true })} placeholder="Choose a university" options={universities.map((university) => ({ value: university.id, label: university.name }))} />
+          <SelectInput label="University" value={form.watch("universityId") as string} onValueChange={(value) => form.setValue("universityId", value as never, { shouldValidate: true })} placeholder="Choose a university" options={universities.map((university) => ({ value: university.id, label: university.name }))} error={(form.formState.errors as Record<string, { message?: string } | undefined>).universityId?.message} />
           <TextInput label="Club name" error={form.formState.errors.clubName?.message} {...form.register("clubName")} />
           <TextAreaInput label="Description" error={form.formState.errors.description?.message} {...form.register("description")} />
           {isEdit ? (
