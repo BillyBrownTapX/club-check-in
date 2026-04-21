@@ -9,7 +9,21 @@ import { buildEventDefaults, combineDateAndTime, shiftTimeString } from "@/lib/a
 import { eventSchema } from "@/lib/attendance-hq-schemas";
 import { createFirstEvent, ensureClientHostProfile, getClientOnboardingState } from "@/lib/host-onboarding-client";
 
-const formSchema = eventSchema.omit({ clubId: true, eventTemplateId: true });
+const formSchema = z.object({
+  eventName: z.string().trim().min(2, "Enter an event name").max(160, "Event name is too long"),
+  eventDate: z.string().min(1, "Choose a date"),
+  startTime: z.string().min(1, "Choose a start time"),
+  endTime: z.string().min(1, "Choose an end time"),
+  location: z.string().trim().max(160, "Location is too long").optional().or(z.literal("")),
+  checkInOpensAt: z.string().min(1, "Choose when check-in opens"),
+  checkInClosesAt: z.string().min(1, "Choose when check-in closes"),
+}).refine((value) => value.endTime > value.startTime, {
+  message: "End time must be after start time",
+  path: ["endTime"],
+}).refine((value) => new Date(value.checkInClosesAt).getTime() > new Date(value.checkInOpensAt).getTime(), {
+  message: "Check-in close must be after open",
+  path: ["checkInClosesAt"],
+});
 type FormValues = z.infer<typeof formSchema>;
 
 export const Route = createFileRoute("/onboarding/event")({
