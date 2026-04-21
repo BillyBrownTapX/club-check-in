@@ -44,16 +44,15 @@ function NotFoundComponent() {
 
 function RootErrorComponent({ error }: { error: Error }) {
   if (typeof console !== "undefined") console.error("[root-error]", error?.message, error?.stack);
-  const isConfigError = /supabase environment variables/i.test(error?.message ?? "");
 
   return (
     <FallbackShell>
       <div className="flex flex-col items-center text-center">
         <BrandMark size="md" />
         <span className="mt-7 inline-flex rounded-full bg-destructive/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-destructive">Attention</span>
-        <h1 className="mt-4 ios-screen-title">{isConfigError ? "App isn't configured" : "Something went wrong"}</h1>
+        <h1 className="mt-4 ios-screen-title">Something went wrong</h1>
         <p className="mt-2.5 max-w-sm text-[14px] leading-6 text-muted-foreground">
-          {isConfigError ? "The app is missing required backend settings. Please check back shortly." : "An unexpected error interrupted the page. Refresh and try again."}
+          An unexpected error interrupted the page. Refresh and try again.
         </p>
         <div className="mt-6 flex w-full flex-col gap-2.5">
           <Button type="button" variant="hero" size="lg" onClick={() => { if (typeof window !== "undefined") window.location.reload(); }}>Reload</Button>
