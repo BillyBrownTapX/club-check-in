@@ -33,10 +33,10 @@ const statusToneMap: Record<CheckInStatus, string> = {
 
 export function PublicCheckInShell({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-app-shell">
       <div className="mx-auto flex min-h-screen w-full max-w-[28rem] flex-col px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:px-6 sm:pt-8">
         <div className="mb-5 flex items-center gap-3 px-1">
-          <div className="flex h-11 w-11 items-center justify-center rounded-[1.3rem] bg-primary text-primary-foreground shadow-[0_12px_24px_-16px_color-mix(in_oklab,var(--color-primary)_75%,transparent)]">
+          <div className="flex h-11 w-11 items-center justify-center rounded-[1.3rem] bg-primary text-primary-foreground shadow-[0_18px_36px_-20px_color-mix(in_oklab,var(--color-primary)_75%,transparent)]">
             <QrCode className="h-5 w-5" />
           </div>
           <div>
@@ -56,7 +56,7 @@ export function StatusBadge({ status }: { status: CheckInStatus }) {
 
 export function EventInfoCard({ event, status }: { event: EventWithClub; status: CheckInStatus }) {
   return (
-    <Card className="rounded-[2rem] border-border/70 bg-card/95 shadow-[0_18px_42px_-28px_color-mix(in_oklab,var(--color-primary)_38%,transparent)]">
+    <Card className="rounded-[2rem] border-border/90 bg-card/95 shadow-[0_24px_56px_-34px_color-mix(in_oklab,var(--color-primary)_42%,transparent)]">
       <CardHeader className="space-y-4 p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -87,10 +87,10 @@ export function ActionChoiceCard({
   onClick: () => void;
 }) {
   return (
-    <button
+      <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center gap-4 rounded-[1.75rem] border border-border/70 bg-card/95 p-5 text-left shadow-[0_16px_36px_-26px_color-mix(in_oklab,var(--color-primary)_30%,transparent)] transition-transform duration-150 hover:-translate-y-0.5"
+        className="flex w-full items-center gap-4 rounded-[1.75rem] border border-border/90 bg-card/95 p-5 text-left shadow-[0_20px_44px_-28px_color-mix(in_oklab,var(--color-primary)_34%,transparent)] transition-transform duration-150 hover:-translate-y-0.5"
     >
       <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground">{icon}</div>
       <div className="min-w-0 flex-1">
@@ -103,7 +103,7 @@ export function ActionChoiceCard({
 }
 
 export function CheckInFormCard({ children }: { children: ReactNode }) {
-  return <Card className="rounded-[2rem] border-border/70 bg-card/95 shadow-[0_18px_42px_-28px_color-mix(in_oklab,var(--color-primary)_38%,transparent)]"><CardContent className="space-y-4 p-5 pt-5">{children}</CardContent></Card>;
+  return <Card className="rounded-[2rem] border-border/90 bg-card/95 shadow-[0_24px_56px_-34px_color-mix(in_oklab,var(--color-primary)_42%,transparent)]"><CardContent className="space-y-4 p-5 pt-5">{children}</CardContent></Card>;
 }
 
 export function IdentityConfirmationCard({ student }: { student: PublicStudentPreview }) {
@@ -160,7 +160,7 @@ export function ErrorStateCard({ title, description, marker = <ShieldAlert class
 }
 
 export function PrimaryButton(props: React.ComponentProps<typeof Button>) {
-  return <Button {...props} className={cn("h-13 w-full rounded-2xl text-base font-semibold", props.className)} />;
+  return <Button {...props} className={cn("h-13 w-full rounded-2xl text-base font-semibold shadow-[0_18px_36px_-22px_color-mix(in_oklab,var(--color-primary)_58%,transparent)]", props.className)} />;
 }
 
 export function SecondaryTextButton(props: React.ComponentProps<typeof Button>) {
