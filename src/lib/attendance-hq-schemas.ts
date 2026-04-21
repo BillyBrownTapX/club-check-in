@@ -63,7 +63,9 @@ export const eventSchema = z.object({
   location: z.string().trim().max(160, "Location is too long").optional().or(z.literal("")),
   checkInOpensAt: z.string().min(1, "Choose when check-in opens"),
   checkInClosesAt: z.string().min(1, "Choose when check-in closes"),
-}).refine((value) => value.endTime > value.startTime, {
+});
+
+export const validatedEventSchema = eventSchema.refine((value) => value.endTime > value.startTime, {
   message: "End time must be after start time",
   path: ["endTime"],
 }).refine((value) => new Date(value.checkInClosesAt).getTime() > new Date(value.checkInOpensAt).getTime(), {

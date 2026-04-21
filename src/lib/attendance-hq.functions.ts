@@ -36,6 +36,7 @@ import {
   signInSchema,
   signUpSchema,
   studentRegistrationSchema,
+  validatedEventSchema,
 } from "@/lib/attendance-hq-schemas";
 
 async function ensureHostProfile(userId: string, fallback?: { fullName?: string | null; email?: string | null }) {
@@ -275,7 +276,7 @@ export const createEventTemplate = createServerFn({ method: "POST" })
 
 export const createEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(eventSchema)
+  .inputValidator(validatedEventSchema)
   .handler(async ({ data, context }) => {
     const { data: club } = await (await getSupabaseAdmin()).from("clubs").select("id").eq("id", data.clubId).eq("host_id", context.userId).maybeSingle();
     if (!club) throw new Error("Club not found");
