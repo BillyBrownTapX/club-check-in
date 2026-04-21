@@ -1,185 +1,175 @@
 
-Transform the app into a stronger mobile-first enterprise product system, keeping the existing functionality intact while rebuilding the visual hierarchy, surface contrast, and interaction structure around iPhone-sized screens.
+Upgrade Attendance HQ so student identity is scoped to the university inherited from each event’s club, while keeping the current product structure intact and making the public check-in flow much faster on mobile.
 
-1. Rebuild the global visual system for stronger enterprise framing
-- Update `src/styles.css` to move from soft/light mobile polish to a more defined enterprise system:
-  - deeper UNG-inspired blue primary
-  - restrained gold accent for highlights only
-  - stronger neutral steps for canvas, elevated cards, grouped panels, borders, and muted zones
-  - more visible status colors for success, warning, info, and destructive states
-- Tighten the typography scale for serious software:
-  - stronger page titles
-  - more prominent section labels
-  - clearer metric/value sizing
-  - better contrast for support text
-- Add reusable app-surface tokens for:
-  - page canvas
-  - elevated cards
-  - tinted operational panels
-  - sticky bars
-  - docked action trays
-  - high-visibility CTA states
-- Improve global depth and hierarchy:
-  - more visible borders
-  - cleaner shadows
-  - less washed-out backgrounds
-  - more deliberate separation between sections
+1. Database and relationship rebuild
+- Add a new `universities` table with:
+  - `id`
+  - `name`
+  - `slug`
+  - `created_at`
+  - `updated_at`
+- Add `university_id` to:
+  - `clubs` as required after backfill
+  - `students` as required after backfill
+  - `events` as required after backfill for simpler public check-in queries
+- Add foreign keys:
+  - `clubs.university_id -> universities.id`
+  - `students.university_id -> universities.id`
+  - `events.university_id -> universities.id`
+- Keep `events.club_id` as the primary ownership link and treat `events.university_id` as a persisted derived value.
+- Replace the current global student uniqueness with university-scoped uniqueness:
+  - remove the old unique behavior on `students.nine_hundred_number`
+  - add `unique(university_id, nine_hundred_number)`
+- Keep or confirm `unique(event_id, student_id)` on `attendance_records` to prevent duplicate check-ins.
+- Add indexes for:
+  - `clubs.university_id`
+  - `events.university_id`
+  - `students.university_id`
+  - `students(university_id, nine_hundred_number)`
 
-2. Strengthen the root app shell and mobile framing
-- Refine `src/routes/__root.tsx` so the whole app feels like premium mobile software:
-  - stronger app background framing
-  - tighter content width logic for phone-first layouts
-  - better safe-area behavior
-  - improved error and not-found surfaces so even failure states feel product-grade
-- Keep the current app-shell architecture, but shift it visually from “website page” to “software canvas.”
+2. Safe migration and backfill strategy
+- Create a migration that preserves existing data and backfills in phases.
+- Since the chosen approach is “best effort + review”:
+  - create a placeholder university record for unresolved legacy data only if needed to preserve app function
+  - backfill `events.university_id` from their club when a club can be resolved
+  - backfill `students.university_id` from attendance/event/club relationships when determinable
+- For clubs/events/students that cannot be resolved confidently:
+  - mark them for manual review through nullable interim migration steps
+  - only enforce `NOT NULL` after backfill completes
+- Update generated types through the normal backend tooling after migration.
 
-3. Rebuild the host shell into a more commanding mobile control layer
-- Refactor `src/components/attendance-hq/host-shell.tsx` into a more operational shell:
-  - stronger sticky top bar with clearer page context
-  - more defined bottom navigation styling
-  - more visible active states
-  - better spacing around the floating create action
-  - cleaner sign-out/action treatment
-- Preserve the existing navigation structure, but make it feel like serious operational software instead of a light mobile wrapper.
-- Ensure the uploaded logo experience remains intact and visually integrated in the shell header.
+3. RLS and security updates
+- Add RLS for `universities` appropriate to current host ownership patterns.
+- Update club/event visibility and management logic to respect university linkage while preserving host ownership checks.
+- Update any helper SQL functions that infer student visibility to work through:
+  - `attendance_records -> events -> clubs -> host`
+  - and/or `students.university_id`
+- Keep roles in the separate `user_roles` table as-is.
 
-4. Upgrade shared host management primitives before touching screens
-- Refactor shared patterns in `src/components/attendance-hq/host-management.tsx`:
-  - `PageHeader`
-  - `FormCard`
-  - `StatsCard`
-  - buttons
-  - filter bars
-  - text inputs
-  - event/club/template cards
-- Make each primitive more visually dominant and enterprise-ready:
-  - stronger container framing
-  - better card segmentation
-  - larger, clearer action areas
-  - more structured metadata presentation
-  - stronger CTA hierarchy
-- Replace weak “flat card” moments with clearer primary/secondary surface layering.
+4. Shared domain type updates
+- Update `src/lib/attendance-hq.ts` to add:
+  - `University` type
+  - university-aware `Club`, `Event`, and `Student` payloads
+  - event payloads that include the club’s university for host screens and public check-in
+- Extend summary/detail types so club and event UIs can display the linked university cleanly.
 
-5. Convert modal and sheet patterns into stronger mobile overlays
-- Rework `ClubDialog`, `TemplateDialog`, and manual/event action overlays in `src/components/attendance-hq/host-management.tsx` and `src/routes/events.$eventId.tsx`:
-  - more native mobile sheet behavior
-  - stronger headers
-  - better internal sectioning
-  - clearer submit zones
-  - more substantial confirmation dialogs
-- Keep the current logic and actions, but make overlays feel like enterprise mobile workflows rather than generic dialogs.
+5. Validation schema changes
+- Update `src/lib/attendance-hq-schemas.ts`:
+  - `clubSchema` and `clubUpdateSchema` must require `universityId`
+  - keep event validation focused on `clubId`, with university resolved server-side from the selected club
+  - keep student public validation minimal:
+    - first name
+    - last name
+    - student email
+    - 900 number
+- Preserve existing 900-number and email validation behavior.
 
-6. Redesign the events index into a true mobile operations hub
-- Refactor `src/routes/events.index.tsx` around clearer mobile scanning:
-  - stronger top summary/header treatment
-  - more structured filter controls
-  - better grouping for open, upcoming, review, and archived events
-  - improved card sizing and action prominence
-- Replace any remaining dashboard-like layout leftovers with tighter, stacked operational sections.
-- Make event cards feel faster to scan and more valuable:
-  - stronger status treatment
-  - clearer metrics
-  - more obvious next actions
+6. Backend logic refactor for clubs and events
+- Update club create/edit server functions so clubs cannot be saved without a university.
+- Update event create/edit/duplicate logic so:
+  - selected club is verified as owned by the host
+  - `events.university_id` is always derived from the selected club on write
+  - changing an event’s club also refreshes the event’s university
+- Update event form payload loaders so club selections can expose university context to hosts.
 
-7. Re-architect the event detail page as the flagship enterprise mobile screen
-- Refine `src/routes/events.$eventId.tsx` into a more powerful command-center experience:
-  - stronger event header
-  - more visible metrics
-  - clearer live-state framing
-  - improved action grouping for edit, duplicate, display, manual, export, archive, and close
-- Redesign the live roster area for better phone scanning:
-  - clearer search/filter/sort controls
-  - more structured roster rows/cards
-  - stronger separation between identity, timestamp, and destructive actions
-- Improve supporting panels:
-  - recent arrivals
-  - restore removed
-  - post-event review
-  - recent actions
-- Use more deliberate hierarchy so the event screen feels fast, powerful, and executive-grade on a 390px viewport.
+7. University-scoped student lookup and check-in backend
+- Refactor the public check-in server functions in `src/lib/attendance-hq.functions.ts` so every public flow first resolves:
+  - event by `qr_token`
+  - event’s club/university context
+- Replace all student lookup queries from:
+  - `nine_hundred_number = ?`
+  to:
+  - `university_id = scopedUniversityId`
+  - `nine_hundred_number = submitted900`
+- Update these functions:
+  - `getPublicEventByQr`
+  - `studentCheckIn`
+  - `lookupStudent`
+  - `confirmReturningStudent`
+  - `getRememberedStudent`
+  - `fastCheckIn`
+- Ensure first-time creation inserts `students.university_id`.
+- Handle concurrent first-time submissions safely:
+  - rely on `unique(university_id, nine_hundred_number)`
+  - if insert collides, re-read the student and continue gracefully
+- Keep duplicate attendance protection:
+  - if `(event_id, student_id)` already exists, return a friendly already-checked-in state
 
-8. Upgrade event create/edit flows into stronger guided mobile forms
-- Refine `EventForm` and the routes that use it:
+8. Remembered-device behavior update
+- Keep remembered-device support, but make it university-safe by ensuring:
+  - the device session’s student belongs to the scoped event university before returning a preview or recording attendance
+- Preserve the current security improvement where the client never submits arbitrary student IDs.
+
+9. Public student check-in UX rebuild
+- Rework `src/routes/check-in.$qrToken.tsx` and `src/components/attendance-hq/public-check-in.tsx` into a progressive mobile flow:
+  - State 1: 900 number lookup only
+  - State 2A: returning student confirmation
+  - State 2B: first-time creation form with prefilled 900 number
+  - State 3: success / already checked in
+- Remove the current “first-time form first, returning second” structure.
+- Make the default entry screen:
+  - event header
+  - club name
+  - one 900 number field
+  - strong “Find my account” CTA
+- If lookup fails:
+  - route directly into the short first-time form
+  - keep the 900 number filled in
+  - show concise copy like “We couldn’t find your account”
+- If lookup succeeds:
+  - show welcome-back confirmation with masked reassurance details
+  - strong “Check me in” CTA
+- If already checked in:
+  - show a success-style confirmation instead of a harsh error wall
+
+10. Club management UX updates
+- Update club creation/edit flows in:
+  - `src/routes/onboarding.club.tsx`
+  - `src/routes/clubs.index.tsx`
+  - `src/routes/clubs.$clubId.tsx`
+  - `src/components/attendance-hq/host-management.tsx`
+- Add a required university selector to club forms and dialogs.
+- Show the selected university in club cards/details so hosts can verify context quickly.
+- Add clear empty/loading/error states if no universities exist yet.
+
+11. Event UX updates
+- Update event forms and event detail context so hosts can see the inherited university without editing it directly.
+- In:
   - `src/routes/events.new.tsx`
   - `src/routes/events.$eventId.edit.tsx`
   - `src/routes/onboarding.event.tsx`
-- Improve the form system with:
-  - clearer grouping
-  - stronger section titles
-  - better timing controls
-  - more readable computed check-in timing blocks
-  - more premium sticky action area
-- Remove any remaining “long generic form” feel and make the flow feel intentional and structured.
+  - `src/components/attendance-hq/host-management.tsx`
+- When a host selects a club, show the resolved university as read-only context.
+- Prevent any event flow from drifting out of sync with its club’s university.
 
-9. Redesign auth and onboarding with stronger enterprise trust signals
-- Refactor `src/components/attendance-hq/host-onboarding.tsx` plus:
-  - `src/routes/sign-in.tsx`
-  - `src/routes/sign-up.tsx`
-  - `src/routes/forgot-password.tsx`
-  - `src/routes/reset-password.tsx`
-  - `src/routes/onboarding.club.tsx`
-  - `src/routes/onboarding.event.tsx`
-- Strengthen these screens with:
-  - more premium framing
-  - stronger visual emphasis on titles and next steps
-  - more visible form containers
-  - improved helper/success/error presentation
-  - better bottom spacing and button prominence
-- Keep the auth logic unchanged while making the experience feel more credible and high-value.
+12. Operational review flow for unresolved legacy mappings
+- Add a lightweight host-facing review path for clubs needing university assignment after migration.
+- At minimum:
+  - block saving/updating affected clubs until a university is selected
+  - surface missing-university messaging in club/event management and onboarding
+- If needed, route hosts with unresolved clubs into the correct edit/setup step rather than letting downstream flows fail silently.
 
-10. Refine the student check-in flow into a stronger, more visible mobile product experience
-- Rework `src/components/attendance-hq/public-check-in.tsx` and `src/routes/check-in.$qrToken.tsx`:
-  - larger, more defined event info framing
-  - more visible state badges
-  - stronger action choice cards
-  - clearer input blocks
-  - improved success and blocked states
-- Make first-time, returning, remembered-device, confirm, and success states feel more operational and trustworthy.
-- Ensure the public flow still feels clean and fast, but no longer soft or visually weak.
+13. Technical implementation notes
+- Use a migration for schema changes only.
+- Keep all backend logic in TanStack server functions; do not move this to separate edge tooling.
+- Preserve current mobile enterprise styling direction while simplifying the student flow.
+- Do not expose technical database language on student-facing screens.
+- Do not ask students to choose a university anywhere.
 
-11. Redesign the QR display screen for stronger presentation and host confidence
-- Refine `src/routes/events.$eventId.display.tsx`:
-  - more premium stage-like framing
-  - stronger metric contrast
-  - cleaner top controls
-  - more authoritative attendance count presentation
-  - better proportioning between QR, event context, and live count
-- Keep the live polling behavior intact while making the screen feel presentation-ready and enterprise-grade.
-
-12. Refresh landing and brand entry surfaces
-- Update `src/routes/index.tsx` and shared primitives in `src/components/attendance-hq/primitives.tsx` so the first impression matches the upgraded product standard.
-- Keep the logo upload/render behavior working, but visually integrate it better across public and authenticated shells.
-- Strengthen marketing/entry surfaces so the app feels like premium software from the first screen.
-
-13. Implementation order
-- Apply the redesign in this order so the visual system stays coherent:
-  1. global tokens and root shell
-  2. host shell
-  3. shared host management primitives
-  4. event detail
-  5. events index
-  6. event create/edit/onboarding event
-  7. auth + onboarding
-  8. public student check-in
-  9. QR display
-  10. landing/primitives cleanup
-- Avoid backend changes unless the redesign exposes a genuine product gap.
-
-14. Technical details
-- Keep TanStack routing and current server/backend behavior unchanged.
-- Preserve the existing uploaded-logo behavior and storage-backed rendering.
-- Stay single-column first at 390px, then enhance upward.
-- Favor stronger surface definition over gimmicky effects.
-- Use more visible contrast, borders, and elevation, but keep motion restrained and product-like.
-
-15. Validation after implementation
-- Check all major flows at 390px wide first:
-  - sign in / sign up / reset password
-  - onboarding club / onboarding event
-  - events list / event detail / create / edit
-  - manual check-in / remove / restore / export / archive / close
-  - QR display
-  - student first-time / returning / remembered / blocked / success
-- Verify touch targets, bottom nav comfort, sticky bars, safe-area padding, and CTA clarity.
-- Test the uploaded logo flow end-to-end to confirm the new shell still uploads, persists, and renders correctly.
-- Verify tablet and desktop still scale gracefully without reintroducing desktop-first visual structure.
+14. Validation and QA after implementation
+- Verify host flows:
+  - create club with university
+  - edit club university
+  - create event from club and confirm inherited university
+  - edit event club and confirm university updates
+- Verify public check-in flows:
+  - returning student in same university succeeds with 900 lookup
+  - unknown 900 routes to first-time form
+  - first-time student is created once per university
+  - same 900 in a different university is treated as a different student
+  - already checked in returns friendly confirmation
+  - remembered device only works for the correct university-scoped student
+- Verify data integrity:
+  - no duplicate student rows for the same university and 900 number
+  - no duplicate attendance rows for the same event and student
+  - legacy data remains accessible and unresolved records are reviewable
