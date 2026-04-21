@@ -263,7 +263,7 @@ export function ClubCard({ club }: { club: ClubSummary }) {
   );
 }
 
-export function EventCard({ event, showClub = true, onDuplicate }: { event: ManagementEventSummary; showClub?: boolean; onDuplicate?: (eventId: string) => void }) {
+export function EventCard({ event, showClub = true, onDuplicate, onDelete }: { event: ManagementEventSummary; showClub?: boolean; onDuplicate?: (eventId: string) => void; onDelete?: (eventId: string) => Promise<void> }) {
   const statusLabel = event.checkInStatus === "open"
     ? "Open"
     : event.checkInStatus === "upcoming"
@@ -309,6 +309,23 @@ export function EventCard({ event, showClub = true, onDuplicate }: { event: Mana
           <SecondaryButton asChild><Link to="/events/$eventId/edit" params={{ eventId: event.id }} search={{ created: "" }}>Edit</Link></SecondaryButton>
           <SecondaryButton type="button" onClick={() => onDuplicate?.(event.id)}>Duplicate</SecondaryButton>
         </div>
+        {onDelete ? (
+          <DeleteConfirmButton
+            trigger={
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 w-full rounded-xl border-destructive/30 text-sm font-semibold text-destructive hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete Event
+              </Button>
+            }
+            title="Delete this event?"
+            description="This permanently removes the event, its attendance records, and action history. This cannot be undone."
+            onConfirm={() => onDelete(event.id)}
+          />
+        ) : null}
       </CardContent>
     </Card>
   );
