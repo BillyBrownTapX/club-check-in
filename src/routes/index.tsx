@@ -1,5 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { Link, createFileRoute } from "@tanstack/react-router";
 import { AttendanceLogo, LandingHighlights } from "@/components/attendance-hq/primitives";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -17,6 +18,9 @@ function Index() {
       <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-4 py-8 sm:px-6 lg:px-8">
         <header className="flex items-center justify-between py-4">
           <AttendanceLogo />
+          <Button asChild>
+            <Link to="/sign-in">Sign in</Link>
+          </Button>
         </header>
         <main className="flex flex-1 flex-col justify-center py-12">
           <div className="max-w-2xl">
