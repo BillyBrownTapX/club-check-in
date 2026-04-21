@@ -30,12 +30,20 @@ type Tab = "upcoming" | "live" | "past";
 function EventsRoute() {
   const { loading, user } = useRequireHostRedirect();
   const getEvents = useAuthorizedServerFn(getHostEvents);
+  const deleteEventMutation = useAuthorizedServerFn(deleteEvent);
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/events/" });
   const [events, setEvents] = useState<ManagementEventSummary[]>([]);
   const [fetching, setFetching] = useState(true);
   const [query, setQuery] = useState(search.query);
   const [tab, setTab] = useState<Tab>(search.status === "upcoming" ? "upcoming" : search.status === "active" ? "live" : search.status === "past" ? "past" : "upcoming");
+
+  const handleDelete = async (eventId: string) => {
+    await deleteEventMutation({ data: { eventId } });
+    toast.success("Event deleted");
+    const next = await getEvents({ data: { clubId: "", status: "all", query: "" } });
+    setEvents(next);
+  };
 
   useEffect(() => {
     if (loading || !user) return;
