@@ -4,11 +4,17 @@ import { notFound, redirect } from "@tanstack/react-router";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   buildHostOnboardingState,
+  buildEventDefaults,
+  type ClubDetailPayload,
+  type ClubSummary,
   combineDateAndTime,
   createDeviceToken,
   createQrToken,
+  type EventFormPayload,
   getCheckInStatus,
   maskEmail,
+  type ManagementEventSummary,
+  shiftTimeString,
   slugifyClubName,
   type AttendanceRow,
   type Club,
@@ -26,8 +32,12 @@ async function getSupabaseAdmin() {
 
 import {
   clubSchema,
+  clubUpdateSchema,
   eventSchema,
+  eventListFilterSchema,
   eventTemplateSchema,
+  eventTemplateUpdateSchema,
+  eventUpdateSchema,
   fastCheckInSchema,
   forgotPasswordSchema,
   removeAttendanceSchema,
@@ -38,6 +48,7 @@ import {
   studentRegistrationSchema,
   validatedEventSchema,
 } from "@/lib/attendance-hq-schemas";
+import { z } from "zod";
 
 async function ensureHostProfile(userId: string, fallback?: { fullName?: string | null; email?: string | null }) {
   const { data: existingProfile, error: existingError } = await (await getSupabaseAdmin())
