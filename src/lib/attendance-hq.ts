@@ -237,3 +237,16 @@ export function shiftTimeString(time: string, minutes: number) {
   const nextMinutes = String(wrapped % 60).padStart(2, "0");
   return `${nextHours}:${nextMinutes}`;
 }
+
+export function buildEventDefaults(date = new Date()) {
+  const eventDate = date.toISOString().slice(0, 10);
+  const startTime = "18:00";
+  const endTime = "19:00";
+  return {
+    eventDate,
+    startTime,
+    endTime,
+    checkInOpensAt: combineDateAndTime(eventDate, "17:45:00"),
+    checkInClosesAt: combineDateAndTime(eventDate, "18:20:00"),
+  };
+}
