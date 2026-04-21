@@ -107,10 +107,10 @@ export function getManagementErrorMessage(error: unknown, fallback = "Something 
 
 export function PageHeader({ title, description, action }: { title: string; description: string; action?: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-5 rounded-[2rem] border border-border/90 bg-card/95 px-5 py-5 shadow-[0_24px_60px_-34px_color-mix(in_oklab,var(--color-primary)_46%,transparent)] backdrop-blur sm:px-6 sm:py-6">
+    <div className="flex flex-col gap-5 overflow-hidden rounded-[2rem] border border-primary/10 bg-card/95 px-5 py-5 shadow-[0_26px_64px_-36px_color-mix(in_oklab,var(--color-primary)_24%,transparent)] backdrop-blur sm:px-6 sm:py-6">
       <div className="space-y-3">
-        <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Attendance HQ</p>
-        <h1 className="text-[2.15rem] font-semibold tracking-tight text-foreground sm:text-[2.45rem]">{title}</h1>
+        <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-primary/70">Attendance HQ</p>
+        <h1 className="font-display text-[2.15rem] font-extrabold tracking-tight text-foreground sm:text-[2.55rem]">{title}</h1>
         <p className="max-w-2xl text-sm leading-6 text-muted-foreground sm:text-[0.98rem]">{description}</p>
       </div>
       {action ? <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">{action}</div> : null}
@@ -119,15 +119,15 @@ export function PageHeader({ title, description, action }: { title: string; desc
 }
 
 export function FormCard({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <Card className={cn("rounded-[2rem] border-border/90 bg-card/95 shadow-[0_24px_56px_-34px_color-mix(in_oklab,var(--color-primary)_42%,transparent)]", className)}><CardContent className="p-5 sm:p-6">{children}</CardContent></Card>;
+  return <Card className={cn("rounded-[2rem] border border-primary/10 bg-card/95 shadow-[0_24px_56px_-34px_color-mix(in_oklab,var(--color-primary)_22%,transparent)]", className)}><CardContent className="p-5 sm:p-6">{children}</CardContent></Card>;
 }
 
 export function StatsCard({ label, value, hint }: { label: string; value: string | number; hint: string }) {
   return (
-    <Card className="rounded-[1.75rem] border-border/90 bg-card/95 shadow-[0_22px_48px_-34px_color-mix(in_oklab,var(--color-primary)_34%,transparent)]">
+    <Card className="rounded-[1.75rem] border border-primary/10 bg-card/95 shadow-[0_22px_48px_-34px_color-mix(in_oklab,var(--color-primary)_20%,transparent)]">
       <CardContent className="space-y-3 p-5">
         <p className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
-        <p className="text-[2rem] font-semibold tracking-tight text-foreground sm:text-[2.2rem]">{value}</p>
+        <p className="font-display text-[2rem] font-extrabold tracking-tight text-foreground sm:text-[2.2rem]">{value}</p>
         <p className="text-sm leading-6 text-muted-foreground">{hint}</p>
       </CardContent>
     </Card>
@@ -138,7 +138,7 @@ export function StatusBadge({ active, activeLabel = "Active", inactiveLabel = "I
   return (
     <span className={cn(
       "inline-flex min-h-8 items-center rounded-full border px-3 py-1 text-xs font-semibold",
-      active ? "border-primary/15 bg-primary/10 text-primary" : "border-border/80 bg-secondary text-muted-foreground",
+      active ? "border-primary/15 bg-primary/10 text-primary" : "border-border/80 bg-secondary/80 text-muted-foreground",
     )}>
       {active ? activeLabel : inactiveLabel}
     </span>
@@ -146,18 +146,18 @@ export function StatusBadge({ active, activeLabel = "Active", inactiveLabel = "I
 }
 
 export function PrimaryButton(props: React.ComponentProps<typeof Button>) {
-  return <Button {...props} className={cn("h-12 rounded-2xl px-4 text-sm font-semibold shadow-[0_18px_36px_-20px_color-mix(in_oklab,var(--color-primary)_64%,transparent)]", props.className)} />;
+  return <Button {...props} className={cn("h-12 rounded-xl px-5 text-sm font-bold shadow-[0_18px_36px_-20px_color-mix(in_oklab,var(--color-primary)_36%,transparent)]", props.className)} />;
 }
 
 export function SecondaryButton(props: React.ComponentProps<typeof Button>) {
-  return <Button variant="outline" {...props} className={cn("h-12 rounded-2xl border-border/90 bg-surface px-4 text-sm font-semibold", props.className)} />;
+  return <Button variant={props.variant ?? "outline"} {...props} className={cn("h-12 rounded-xl px-4 text-sm font-semibold", props.className)} />;
 }
 
 export function TextInput({ label, error, className, ...props }: React.ComponentProps<typeof Input> & { label: string; error?: string }) {
   return (
     <div className="space-y-2">
       <Label className="text-sm font-semibold text-foreground">{label}</Label>
-      <Input {...props} className={cn("h-12 rounded-2xl border-border/80 bg-background/90 px-4 text-base", className)} />
+      <Input {...props} className={cn("h-12 rounded-xl border-primary/10 bg-background/90 px-4 text-base", className)} />
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </div>
   );
@@ -167,7 +167,7 @@ export function TextAreaInput({ label, error, className, ...props }: React.Compo
   return (
     <div className="space-y-2">
       <Label className="text-sm font-semibold text-foreground">{label}</Label>
-      <Textarea {...props} className={cn("min-h-28 rounded-2xl border-border/80 bg-background/90 px-4 py-3 text-base", className)} />
+      <Textarea {...props} className={cn("min-h-28 rounded-xl border-primary/10 bg-background/90 px-4 py-3 text-base", className)} />
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </div>
   );
@@ -210,9 +210,9 @@ export function SelectInput({ label, value, onValueChange, placeholder, options 
 
 export function EmptyStateBlock({ title, description, action }: { title: string; description: string; action?: React.ReactNode }) {
   return (
-    <Card className="rounded-[1.75rem] border-dashed border-border/80 bg-card/80 shadow-none">
+    <Card className="rounded-[1.75rem] border-dashed border-primary/15 bg-card/80 shadow-none">
       <CardContent className="flex flex-col items-center justify-center gap-3 p-8 text-center">
-        <div className="text-xl font-semibold text-foreground">{title}</div>
+        <div className="font-display text-xl font-extrabold text-foreground">{title}</div>
         <div className="max-w-md text-sm leading-6 text-muted-foreground">{description}</div>
         {action}
       </CardContent>
@@ -221,17 +221,17 @@ export function EmptyStateBlock({ title, description, action }: { title: string;
 }
 
 export function FilterBar({ children }: { children: React.ReactNode }) {
-  return <div className="flex flex-col gap-3 rounded-[1.8rem] border border-border/90 bg-card/95 p-4 shadow-[0_20px_44px_-32px_color-mix(in_oklab,var(--color-primary)_30%,transparent)] sm:flex-row sm:flex-wrap sm:items-end">{children}</div>;
+  return <div className="flex flex-col gap-3 rounded-[1.8rem] border border-primary/10 bg-card/95 p-4 shadow-[0_20px_44px_-32px_color-mix(in_oklab,var(--color-primary)_18%,transparent)] sm:flex-row sm:flex-wrap sm:items-end">{children}</div>;
 }
 
 export function ClubCard({ club }: { club: ClubSummary }) {
   return (
-    <Card className="rounded-[1.9rem] border-border/90 bg-card/95 shadow-[0_24px_52px_-34px_color-mix(in_oklab,var(--color-primary)_42%,transparent)]">
+    <Card className="rounded-[1.9rem] border border-primary/10 bg-card/95 shadow-[0_24px_52px_-34px_color-mix(in_oklab,var(--color-primary)_20%,transparent)]">
       <CardContent className="space-y-5 p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1">
-            <h2 className="text-xl font-semibold text-foreground">{club.club_name}</h2>
-            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{club.universities?.name ?? "University needed"}</p>
+            <h2 className="font-display text-xl font-extrabold text-foreground">{club.club_name}</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-primary/70">{club.universities?.name ?? "University needed"}</p>
             <p className="text-sm leading-6 text-muted-foreground">{club.description || "No description added yet."}</p>
           </div>
           <StatusBadge active={club.is_active} />
@@ -271,7 +271,7 @@ export function EventCard({ event, showClub = true, onDuplicate }: { event: Mana
           : "Review and export attendance";
 
   return (
-    <Card className="rounded-[1.9rem] border-border/90 bg-card/95 shadow-[0_24px_52px_-34px_color-mix(in_oklab,var(--color-primary)_42%,transparent)]">
+    <Card className="rounded-[1.9rem] border border-primary/10 bg-card/95 shadow-[0_24px_52px_-34px_color-mix(in_oklab,var(--color-primary)_20%,transparent)]">
       <CardContent className="space-y-4 p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1 min-w-0">
@@ -302,7 +302,7 @@ export function EventCard({ event, showClub = true, onDuplicate }: { event: Mana
 
 export function TemplateCard({ template, onUse, onEdit, onDuplicate }: { template: EventTemplateWithClub; onUse: (templateId: string) => void; onEdit: (template: EventTemplateWithClub) => void; onDuplicate: (templateId: string) => void }) {
   return (
-    <Card className="rounded-[1.75rem] border-border/90 bg-card/95 shadow-[0_20px_48px_-32px_color-mix(in_oklab,var(--color-primary)_32%,transparent)]">
+    <Card className="rounded-[1.75rem] border border-primary/10 bg-card/95 shadow-[0_20px_48px_-32px_color-mix(in_oklab,var(--color-primary)_18%,transparent)]">
       <CardContent className="space-y-4 p-5">
         <div className="space-y-1">
           <h3 className="text-base font-semibold text-foreground">{template.template_name}</h3>
@@ -323,7 +323,7 @@ export function TemplateCard({ template, onUse, onEdit, onDuplicate }: { templat
 }
 
 function MetaPill({ label, value }: { label: string; value: string | number }) {
-  return <div className="rounded-2xl border border-border/70 bg-secondary/70 px-4 py-3"><div className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{label}</div><div className="mt-1 text-base font-semibold text-foreground">{value}</div></div>;
+  return <div className="rounded-xl border border-primary/10 bg-secondary/75 px-4 py-3"><div className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{label}</div><div className="mt-1 text-base font-semibold text-foreground">{value}</div></div>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -443,11 +443,11 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, title,
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto rounded-[2rem] border-border/90 bg-card/98 p-0 shadow-[0_28px_72px_-40px_color-mix(in_oklab,var(--color-primary)_42%,transparent)] sm:max-w-lg">
-        <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-muted" />
+      <DialogContent className="max-h-[92vh] overflow-y-auto rounded-[2rem] border border-primary/10 bg-card/98 p-0 shadow-[0_28px_72px_-40px_color-mix(in_oklab,var(--color-primary)_24%,transparent)] sm:max-w-lg">
+        <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-gradient-gold" />
         <DialogHeader>
           <div className="px-6 pt-3">
-            <DialogTitle className="text-left text-2xl font-semibold text-foreground">{title}</DialogTitle>
+            <DialogTitle className="text-left font-display text-2xl font-extrabold text-foreground">{title}</DialogTitle>
             <DialogDescription className="mt-2 text-left text-sm leading-6 text-muted-foreground">{description}</DialogDescription>
           </div>
         </DialogHeader>
@@ -456,7 +456,7 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, title,
           <TextInput label="Club name" error={form.formState.errors.clubName?.message} {...form.register("clubName")} />
           <TextAreaInput label="Description" error={form.formState.errors.description?.message} {...form.register("description")} />
           {isEdit ? (
-            <div className="flex items-center justify-between rounded-2xl border border-border/90 bg-secondary/35 px-4 py-4">
+            <div className="flex items-center justify-between rounded-xl border border-primary/10 bg-secondary/45 px-4 py-4">
               <div>
                 <p className="text-sm font-medium text-foreground">Club active</p>
                 <p className="text-sm text-muted-foreground">Hide inactive clubs from day-to-day management.</p>
@@ -539,11 +539,11 @@ export function TemplateDialog({ open, onOpenChange, clubId, initialValues, onSu
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto rounded-[2rem] border-border/90 bg-card/98 p-0 shadow-[0_28px_72px_-40px_color-mix(in_oklab,var(--color-primary)_42%,transparent)] sm:max-w-lg">
-        <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-muted" />
+      <DialogContent className="max-h-[92vh] overflow-y-auto rounded-[2rem] border border-primary/10 bg-card/98 p-0 shadow-[0_28px_72px_-40px_color-mix(in_oklab,var(--color-primary)_24%,transparent)] sm:max-w-lg">
+        <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-gradient-gold" />
         <DialogHeader>
           <div className="px-6 pt-3">
-            <DialogTitle className="text-left text-2xl font-semibold text-foreground">{isEdit ? "Edit Template" : "Create Template"}</DialogTitle>
+            <DialogTitle className="text-left font-display text-2xl font-extrabold text-foreground">{isEdit ? "Edit Template" : "Create Template"}</DialogTitle>
             <DialogDescription className="mt-2 text-left text-sm leading-6 text-muted-foreground">Save lightweight defaults for recurring events.</DialogDescription>
           </div>
         </DialogHeader>
@@ -588,7 +588,7 @@ function DateTimeReadonly({ label, value }: { label: string; value: string }) {
     : date.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
   return (
-    <div className="space-y-2 rounded-2xl border border-border/90 bg-secondary/40 px-4 py-3">
+    <div className="space-y-2 rounded-xl border border-primary/10 bg-secondary/50 px-4 py-3">
       <p className="text-sm font-semibold text-foreground">{label}</p>
       <p className="text-sm text-muted-foreground">{formatted}</p>
     </div>
@@ -597,9 +597,9 @@ function DateTimeReadonly({ label, value }: { label: string; value: string }) {
 
 function FormSection({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-4 rounded-[1.75rem] border border-border/80 bg-surface/70 p-4 shadow-[0_18px_38px_-30px_color-mix(in_oklab,var(--color-primary)_24%,transparent)] sm:p-5">
+    <section className="space-y-4 rounded-[1.75rem] border border-primary/10 bg-surface/80 p-4 shadow-[0_18px_38px_-30px_color-mix(in_oklab,var(--color-primary)_16%,transparent)] sm:p-5">
       <div className="space-y-1">
-        <h2 className="text-base font-semibold text-foreground sm:text-lg">{title}</h2>
+        <h2 className="font-display text-base font-extrabold text-foreground sm:text-lg">{title}</h2>
         <p className="text-sm leading-6 text-muted-foreground">{description}</p>
       </div>
       {children}
