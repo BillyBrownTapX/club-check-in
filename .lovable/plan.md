@@ -1,42 +1,70 @@
 
 
-## Fix duplicate club creation on submit
+## Add Delete buttons for Clubs and Events
 
-### Root cause
+Let hosts remove a club or event they no longer want. Both get a clearly-labeled destructive button with a confirmation step so nothing is nuked by accident.
 
-The Create Club form has no submit guard. The network log shows two POST `createClubManagement` calls ~1 second apart (16:30:26 and 16:30:27), creating `sales-club-rhfy` and `sales-club-s8cp` with identical payloads. This is a classic double-submit — a second click, Enter press, or fast retry fires before the first request finishes, and both succeed.
+### Where Delete appears
 
-`ClubDialog.submit` in `src/components/attendance-hq/host-management.tsx` awaits `onSubmit(values)` but the button stays enabled the whole time, and there's no in-flight flag.
+**Clubs**
+- Club detail page (`/clubs/$clubId`) — new red "Delete Club" button in the action row next to Edit Club. After success, navigate back to `/clubs`.
+- Edit Club dialog — a "Delete Club" option inside the dialog (secondary/destructive style) for parity.
 
-### What I'll change
+**Events**
+- Event detail page (`/events/$eventId`) — "Delete Event" button in the top action area. After success, navigate back to `/events`.
+- Event edit page (`/events/$eventId/edit`) — "Delete Event" at the bottom of the form.
+- EventCard (used on `/clubs/$clubId`, `/events`) — small trash icon next to Duplicate so you can remove an event straight from the list.
 
-**1. Block the double-submit at the form layer (primary fix).**
+Each trigger opens the existing `AlertDialog` confirmation with:
+- Title: "Delete this club?" / "Delete this event?"
+- Warning copy listing what gets removed (see below).
+- Destructive confirm button labeled "Delete" with an `isSubmitting` guard so it can't be double-clicked.
 
-In `ClubDialog` (`src/components/attendance-hq/host-management.tsx`):
-- Track an `isSubmitting` state (or use `form.formState.isSubmitting`).
-- Disable the "Create Club" / "Save Club" button while a submission is in flight.
-- Early-return from `submit` if it's already running, so rapid Enter + click can't queue two calls.
-- Show a subtle spinner/label change ("Creating…") so the user gets feedback.
+### What gets deleted (cascade behavior)
 
-Apply the same guard to `TemplateDialog`, `EventDialog`, and any other dialogs in this file that take an async `onSubmit` — this is a general class of bug, not just clubs.
+Because the current database has no FK cascade declarations, deleting a parent row with child rows would fail. The server functions will delete children in order, inside a single transaction-ish sequence, scoped to the authenticated host (RLS already guarantees ownership):
 
-**2. Clean up the duplicate clubs that already exist.**
+- **Delete event** → delete `attendance_actions` for event → delete `attendance_records` for event → delete `events` row.
+- **Delete club** → for each event in the club, run the event-delete cascade → delete `event_templates` for club → delete `clubs` row.
 
-The account currently has two "Sales Club" rows pointing at the same logo path (`sales-club-rhfy` and `sales-club-s8cp`) from the duplicate submit, plus older `SalesClub` / `SalesCLub` from earlier testing. I'll delete `sales-club-s8cp` (the second of the duplicate pair) via a scoped migration so the list looks correct immediately. I'll leave the earlier test clubs alone unless you want those cleared too.
+No changes to the DB schema or RLS — both operations stay within the existing "hosts can manage own clubs/events" policies.
 
-**3. No schema or server changes.**
+### Files changed
 
-I considered adding a DB-level unique constraint on `(host_id, club_name, university_id)`, but clubs legitimately can share names across universities and hosts may want two clubs with similar names. A client-side submit guard is the correct fix; a DB constraint would cause false errors.
+- `src/lib/attendance-hq-schemas.ts`
+  - Add `deleteClubSchema` (`{ clubId: uuid }`) and `deleteEventSchema` (`{ eventId: uuid }`).
 
-### Files touched
+- `src/lib/attendance-hq.functions.ts`
+  - Add `deleteClub` server function — verifies ownership via `requireOwnedClub`, cascades through events + templates as described, returns `{ ok: true }`.
+  - Add `deleteEvent` server function — verifies ownership via `requireOwnedEvent`, cascades through attendance_actions + attendance_records, returns `{ ok: true }`.
 
-- `src/components/attendance-hq/host-management.tsx` — add `isSubmitting` guard + disabled button state to `ClubDialog`; same treatment for `TemplateDialog` and `EventDialog` submit handlers.
-- `supabase/migrations/<new>.sql` — delete the duplicate `sales-club-s8cp` row for the current host.
+- `src/components/attendance-hq/host-management.tsx`
+  - Add a reusable `DeleteConfirmButton` (button + AlertDialog + submitting guard) so the same pattern is used everywhere.
+  - `ClubDialog`: add an optional `onDelete?: () => Promise<void>` prop; when present, render `DeleteConfirmButton` at the bottom of the dialog.
+  - `EventCard`: add optional `onDelete?: (eventId: string) => Promise<void>`; render a small destructive icon button next to Duplicate when provided.
 
-### What you'll see after
+- `src/routes/clubs.$clubId.tsx`
+  - Wire `deleteClub` into the action row and into `ClubDialog` (`onDelete`). On success: `toast.success`, navigate to `/clubs`.
 
-- Creating a club produces exactly one row, even with a double-click or Enter-then-click.
-- The button shows "Creating…" and is disabled until the server responds.
-- The stray duplicate on your `/clubs` list is gone.
-- Edit, template, and event dialogs get the same protection, so this doesn't resurface elsewhere.
+- `src/routes/events.$eventId.tsx`
+  - Add a "Delete Event" button in the header action area. On success: `toast.success`, navigate to `/events`.
+
+- `src/routes/events.$eventId.edit.tsx`
+  - Add a "Delete Event" button at the bottom of the edit form. Same confirm + nav behavior.
+
+- `src/routes/events.index.tsx` and the event cards rendered inside `src/routes/clubs.$clubId.tsx`
+  - Pass `onDelete` to `EventCard` so deletion from the list works. On success: refetch the list / club detail.
+
+### Guardrails
+
+- Confirmation dialog is required — no one-click deletes.
+- Every delete button disables while the request is in flight (reuses the same `isSubmitting` pattern we just added for creates).
+- Server functions re-verify ownership — the UI cannot bypass RLS.
+- Error surfaces through `getManagementErrorMessage` + `toast.error` so failures (e.g. network, RLS) show a clear message instead of silently failing.
+
+### Out of scope
+
+- No "soft delete / archive" toggle. Clubs already have `is_active` and events already have `is_archived`; this is an explicit destructive delete.
+- No bulk delete. One club / one event at a time.
+- No undo. The confirmation dialog is the safety net.
 
