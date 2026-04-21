@@ -1,4 +1,4 @@
-import { useEffect, useId, useState } from "react";
+import { useEffect, useId, useState, type ChangeEvent } from "react";
 import { Link } from "@tanstack/react-router";
 import { CalendarDays, Clock3, ImagePlus, Loader2, MapPin, QrCode, ShieldCheck, Users, Zap } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -93,7 +93,7 @@ export function AttendanceLogo({ compact = false }: { compact?: boolean }) {
     };
   }, [user]);
 
-  async function handleLogoUpload(event: React.ChangeEvent<HTMLInputElement>) {
+  async function handleLogoUpload(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     event.target.value = "";
     if (!file || !user) return;
@@ -157,11 +157,6 @@ export function AttendanceLogo({ compact = false }: { compact?: boolean }) {
       ) : (
         <>
           <QrCode className={cn("h-5 w-5 transition-opacity", user ? "group-hover:opacity-0" : "")} />
-          {user ? (
-            <span className="absolute inset-0 flex items-center justify-center bg-foreground/10 opacity-0 transition-opacity group-hover:opacity-100">
-              {uploading || loadingLogo ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
-            </span>
-          ) : null}
         </>
       )}
       {user ? (
