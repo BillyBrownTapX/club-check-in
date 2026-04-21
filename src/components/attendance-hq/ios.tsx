@@ -5,11 +5,9 @@ import { cn } from "@/lib/utils";
 
 /* ─── Brand mark (auth-free) ──────────────────────────────────────────── */
 export function BrandMark({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
-  const dim = size === "sm" ? "h-9 w-9" : size === "lg" ? "h-14 w-14" : "h-11 w-11";
-  const txt = size === "sm" ? "text-base" : size === "lg" ? "text-2xl" : "text-lg";
+  void size;
   return (
     <div className="inline-flex items-center gap-2.5">
-      <div className={cn("flex items-center justify-center rounded-2xl bg-gradient-brand text-primary-foreground font-display font-extrabold ios-cta-shadow", dim, txt)}>A</div>
       <span className="font-display text-[17px] font-extrabold tracking-tight text-foreground">Attendance HQ</span>
     </div>
   );
