@@ -36,6 +36,7 @@ import {
   signInSchema,
   signUpSchema,
   studentRegistrationSchema,
+  validatedEventSchema,
 } from "@/lib/attendance-hq-schemas";
 
 async function ensureHostProfile(userId: string, fallback?: { fullName?: string | null; email?: string | null }) {
@@ -187,23 +188,24 @@ export const getHostWorkspace = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const profile = await ensureHostProfile(context.userId);
+    const admin = await getSupabaseAdmin();
 
     const [{ data: clubs }, { data: templates }, { data: events }] = await Promise.all([
-      (await getSupabaseAdmin()).from("clubs").select("*").eq("host_id", context.userId).order("created_at", { ascending: false }),
-      supabaseAdmin
+      admin.from("clubs").select("*").eq("host_id", context.userId).order("created_at", { ascending: false }),
+      admin
         .from("event_templates")
         .select("*, clubs(id, club_name, club_slug)")
         .in(
           "club_id",
-          (await (await getSupabaseAdmin()).from("clubs").select("id").eq("host_id", context.userId)).data?.map((club) => club.id) ?? ["00000000-0000-0000-0000-000000000000"],
+          (await admin.from("clubs").select("id").eq("host_id", context.userId)).data?.map((club) => club.id) ?? ["00000000-0000-0000-0000-000000000000"],
         )
         .order("created_at", { ascending: false }),
-      supabaseAdmin
+      admin
         .from("events")
         .select("*, clubs(id, club_name, club_slug), attendance_records(id, checked_in_at, student_id)")
         .in(
           "club_id",
-          (await (await getSupabaseAdmin()).from("clubs").select("id").eq("host_id", context.userId)).data?.map((club) => club.id) ?? ["00000000-0000-0000-0000-000000000000"],
+          (await admin.from("clubs").select("id").eq("host_id", context.userId)).data?.map((club) => club.id) ?? ["00000000-0000-0000-0000-000000000000"],
         )
         .order("event_date", { ascending: true }),
     ]);
@@ -275,7 +277,7 @@ export const createEventTemplate = createServerFn({ method: "POST" })
 
 export const createEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(eventSchema)
+  .inputValidator(validatedEventSchema)
   .handler(async ({ data, context }) => {
     const { data: club } = await (await getSupabaseAdmin()).from("clubs").select("id").eq("id", data.clubId).eq("host_id", context.userId).maybeSingle();
     if (!club) throw new Error("Club not found");
