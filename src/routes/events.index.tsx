@@ -91,10 +91,10 @@ function EventsRoute() {
 
   return (
     <ManagementPageShell>
-      <div className="space-y-6 pb-20 md:pb-0">
+      <div className="space-y-5 pb-20 md:pb-0">
         <PageHeader
           title="Events"
-          description="Run live meetings, track attendance, and jump into the right ops console fast."
+          description="Run live meetings, monitor check-ins, and jump into the right ops console fast from your phone."
           action={<PrimaryButton asChild><Link to="/events/new" search={{ clubId: "", templateId: "", duplicateFrom: "" }}><Plus className="h-4 w-4" />Create Event</Link></PrimaryButton>}
         />
         <FilterBar>
@@ -132,7 +132,7 @@ function EventsRoute() {
               {groupedEvents.archived.length ? <EventSection title="Archived" description="Stored for historical reference." events={groupedEvents.archived} navigate={navigate} /> : null}
             </div>
           ) : (
-            <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-4 xl:grid-cols-3">
               {events.map((event) => <EventCard key={event.id} event={event} onDuplicate={(eventId) => navigate({ to: "/events/new", search: { clubId: event.club_id, templateId: "", duplicateFrom: eventId } })} />)}
             </div>
           )
@@ -166,7 +166,7 @@ function EventSection({
         <h2 className="text-lg font-semibold text-foreground">{title}</h2>
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
-      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-4 xl:grid-cols-3">
         {events.map((event) => <EventCard key={event.id} event={event} onDuplicate={(eventId) => navigate({ to: "/events/new", search: { clubId: event.club_id, templateId: "", duplicateFrom: eventId } })} />)}
       </div>
     </section>
