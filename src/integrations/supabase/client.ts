@@ -2,17 +2,34 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
-function createSupabaseClient() {
-  // Use import.meta.env for client-side (Vite build-time replacement)
-  // Fall back to process.env for SSR (server-side rendering)
-  const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
-  const SUPABASE_PUBLISHABLE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
+// Hardcoded fallbacks for the publishable (non-secret) backend config.
+// These match the values in wrangler.jsonc and are safe to commit:
+// the anon key is designed to be exposed to browsers and is protected by RLS.
+// Having these fallbacks guarantees the client can always construct, even if
+// a build somehow ships without VITE_SUPABASE_* inlined.
+const FALLBACK_SUPABASE_URL = 'https://ikmxrbgsbdxettetvqiw.supabase.co';
+const FALLBACK_SUPABASE_PUBLISHABLE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImlrbXhyYmdzYmR4ZXR0ZXR2cWl3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3MTUwNTksImV4cCI6MjA5MjI5MTA1OX0.wjRklP1me6RJiGoYDqcDlDxUijk-90XB0efprPEpwF4';
 
-  if (!SUPABASE_URL || !SUPABASE_PUBLISHABLE_KEY) {
-    throw new Error(
-      'Missing Supabase environment variables. Ensure SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY (or VITE_ prefixed versions) are set in your .env file.'
-    );
+function readEnv(key: string): string | undefined {
+  // process.env is only present during SSR / Worker runtime
+  if (typeof process !== 'undefined' && process.env && process.env[key]) {
+    return process.env[key];
   }
+  return undefined;
+}
+
+function createSupabaseClient() {
+  const SUPABASE_URL =
+    import.meta.env.VITE_SUPABASE_URL ||
+    readEnv('SUPABASE_URL') ||
+    readEnv('VITE_SUPABASE_URL') ||
+    FALLBACK_SUPABASE_URL;
+
+  const SUPABASE_PUBLISHABLE_KEY =
+    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+    readEnv('SUPABASE_PUBLISHABLE_KEY') ||
+    readEnv('VITE_SUPABASE_PUBLISHABLE_KEY') ||
+    FALLBACK_SUPABASE_PUBLISHABLE_KEY;
 
   return createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
     auth: {
@@ -33,4 +50,3 @@ export const supabase = new Proxy({} as ReturnType<typeof createSupabaseClient>,
     return Reflect.get(_supabase, prop, receiver);
   },
 });
-

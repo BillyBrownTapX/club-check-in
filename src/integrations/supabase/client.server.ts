@@ -5,13 +5,18 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
+// Public, non-secret fallback for the project URL (matches wrangler.jsonc).
+// The service role key has NO fallback — it is sensitive and must come from
+// the Worker secret store.
+const FALLBACK_SUPABASE_URL = 'https://ikmxrbgsbdxettetvqiw.supabase.co';
+
 function createSupabaseAdminClient() {
-  const SUPABASE_URL = process.env.SUPABASE_URL;
+  const SUPABASE_URL = process.env.SUPABASE_URL || FALLBACK_SUPABASE_URL;
   const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
+  if (!SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error(
-      'Missing Supabase server environment variables. Ensure SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are set.'
+      'Missing SUPABASE_SERVICE_ROLE_KEY. This secret must be set in the server environment.'
     );
   }
 
