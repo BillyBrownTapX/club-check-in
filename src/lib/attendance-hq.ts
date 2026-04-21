@@ -48,6 +48,14 @@ export type PublicStudentPreview = {
   maskedEmail: string;
 };
 
+export type HostOnboardingState = {
+  hasProfile: boolean;
+  club: Club | null;
+  event: Event | null;
+  isComplete: boolean;
+  nextPath: string;
+};
+
 export const PRODUCT_NAME = "Attendance HQ";
 export const PRODUCT_DOMAIN = "attendance-hq.com";
 export const HOST_REDIRECT_KEY = "attendance-hq-auth-redirect";
@@ -181,4 +189,51 @@ export function isValidNineHundredNumber(value: string) {
 
 export function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
+}
+
+export function buildHostOnboardingState(input: {
+  profile: HostProfile | null;
+  club: Club | null;
+  event: Event | null;
+}): HostOnboardingState {
+  const hasProfile = Boolean(input.profile);
+  const club = input.club;
+  const event = input.event;
+
+  if (!club) {
+    return {
+      hasProfile,
+      club: null,
+      event: null,
+      isComplete: false,
+      nextPath: "/onboarding/club",
+    };
+  }
+
+  if (!event) {
+    return {
+      hasProfile,
+      club,
+      event: null,
+      isComplete: false,
+      nextPath: "/onboarding/event",
+    };
+  }
+
+  return {
+    hasProfile,
+    club,
+    event,
+    isComplete: true,
+    nextPath: `/events/${event.id}`,
+  };
+}
+
+export function shiftTimeString(time: string, minutes: number) {
+  const [hours, mins] = time.slice(0, 5).split(":").map(Number);
+  const total = hours * 60 + mins + minutes;
+  const wrapped = ((total % 1440) + 1440) % 1440;
+  const nextHours = String(Math.floor(wrapped / 60)).padStart(2, "0");
+  const nextMinutes = String(wrapped % 60).padStart(2, "0");
+  return `${nextHours}:${nextMinutes}`;
 }
