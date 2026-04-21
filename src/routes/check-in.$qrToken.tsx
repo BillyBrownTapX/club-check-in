@@ -3,9 +3,8 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { createFileRoute, notFound, useRouter } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { useServerFn } from "@tanstack/react-start";
-import { CheckCircle2, IdCard, UserPlus } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import {
-  ActionChoiceCard,
   CheckInFormCard,
   ErrorStateCard,
   EventContextRow,
@@ -29,7 +28,7 @@ import {
 } from "@/lib/attendance-hq";
 import { returningLookupSchema, studentRegistrationSchema } from "@/lib/attendance-hq-schemas";
 
-type FlowScreen = "entry" | "first-time" | "returning" | "confirm" | "success" | "blocked";
+type FlowScreen = "first-time" | "returning" | "confirm" | "success" | "blocked";
 type ConfirmMode = "returning" | "remembered";
 
 function RouteErrorComponent({ reset }: { error: Error; reset: () => void }) {
@@ -87,7 +86,7 @@ function CheckInRouteComponent() {
   const confirmRemembered = useServerFn(fastCheckIn);
   const resolveRememberedStudent = useServerFn(getRememberedStudent);
 
-  const [screen, setScreen] = useState<FlowScreen>(initialBlockedState ? "blocked" : "entry");
+  const [screen, setScreen] = useState<FlowScreen>(initialBlockedState ? "blocked" : "first-time");
   const [blockedState, setBlockedState] = useState<PublicBlockedState | null>(initialBlockedState);
   const [pendingStudent, setPendingStudent] = useState<PublicStudentPreview | null>(null);
   // Pre-fix this state held a raw student UUID returned by the server. We now
@@ -145,6 +144,16 @@ function CheckInRouteComponent() {
   }, [qrToken, initialBlockedState, resolveRememberedStudent]);
 
   const blockedCopy = useMemo(() => (blockedState ? getBlockedStateCopy(blockedState) : null), [blockedState]);
+  const blockedDescription = useMemo(() => {
+    if (!blockedCopy) return null;
+    if (blockedState === "not_open_yet") {
+      return "Check-in has not opened for this event yet. Please wait for the host to open student check-in and then scan the QR code again.";
+    }
+    if (blockedState === "closed") {
+      return "This event is not accepting student check-ins right now. If you expected it to be open, please check with the event host.";
+    }
+    return blockedCopy.description;
+  }, [blockedCopy, blockedState]);
 
   const openBlockedState = (state: PublicBlockedState) => {
     setBlockedState(state);
@@ -243,61 +252,44 @@ function CheckInRouteComponent() {
     }
   }
 
-  function renderEntryScreen() {
-    return (
-      <>
-        <EventInfoCard event={event} status={status} />
-        <section className="space-y-3 px-1 pt-2">
-          <h1 className="text-[2rem] font-semibold leading-tight text-foreground">Check in for this event</h1>
-          <p className="text-sm text-muted-foreground">Choose how you’d like to continue</p>
-        </section>
-        <div className="space-y-3">
-          {rememberedStudent && rememberedDeviceToken ? (
-            <ActionChoiceCard
-              title={`Check in as ${rememberedStudent.firstName} ${rememberedStudent.lastInitial}.`}
-              description="Fast path on this device"
-              icon={<CheckCircle2 className="h-5 w-5" />}
-              onClick={() => {
-                setPendingStudent(rememberedStudent);
-                setPendingNineHundredNumber(null);
-                setConfirmMode("remembered");
-                setScreen("confirm");
-              }}
-            />
-          ) : null}
-          <ActionChoiceCard
-            title="First time using Attendance HQ"
-            description="Save your info and check in"
-            icon={<UserPlus className="h-5 w-5" />}
-            onClick={() => {
-              clearTransientState();
-              setScreen("first-time");
-            }}
-          />
-          <ActionChoiceCard
-            title="I’ve checked in before"
-            description="Use your 900 number to continue"
-            icon={<IdCard className="h-5 w-5" />}
-            onClick={() => {
-              clearTransientState();
-              setScreen("returning");
-            }}
-          />
-        </div>
-        <p className="px-1 text-sm text-muted-foreground">{rememberedLoading ? "Checking this device…" : "One quick confirmation tap is always required before check-in."}</p>
-      </>
-    );
-  }
-
   function renderFirstTimeScreen() {
     const errors = registrationForm.formState.errors;
     return (
       <>
+        <EventInfoCard event={event} status={status} />
         <EventContextRow event={event} />
         <section className="space-y-2 px-1">
-          <h1 className="text-[2rem] font-semibold leading-tight text-foreground">First-time check-in</h1>
-          <p className="text-sm text-muted-foreground">Enter your information to save your profile and record your attendance.</p>
+          <h1 className="text-[2rem] font-semibold leading-tight text-foreground">Student check-in</h1>
+          <p className="text-sm text-muted-foreground">Enter your first name, last name, student email, and 9-digit 900 number to record your attendance.</p>
         </section>
+        {rememberedStudent && rememberedDeviceToken ? (
+          <CheckInFormCard>
+            <div className="space-y-4">
+              <div className="flex items-start gap-3 rounded-2xl bg-secondary p-4 text-left">
+                <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-success/12 text-success">
+                  <CheckCircle2 className="h-5 w-5" />
+                </div>
+                <div className="min-w-0 space-y-1">
+                  <p className="text-sm font-semibold text-foreground">Welcome back, {rememberedStudent.firstName} {rememberedStudent.lastInitial}.</p>
+                  <p className="text-sm text-muted-foreground">Use the fast path on this device or complete the form below.</p>
+                </div>
+              </div>
+              <PrimaryButton
+                type="button"
+                onClick={() => {
+                  setPendingStudent(rememberedStudent);
+                  setPendingNineHundredNumber(null);
+                  setConfirmMode("remembered");
+                  setScreen("confirm");
+                }}
+              >
+                {rememberedLoading ? "Checking this device..." : `Check in as ${rememberedStudent.firstName}`}
+              </PrimaryButton>
+            </div>
+          </CheckInFormCard>
+        ) : rememberedLoading ? (
+          <p className="px-1 text-sm text-muted-foreground">Checking this device...</p>
+        ) : null}
         <CheckInFormCard>
           <form className="space-y-4" onSubmit={(event) => void handleFirstTimeSubmit(event)}>
             <MobileInputField label="First name" placeholder="First name" error={errors.firstName?.message} {...registrationForm.register("firstName")} />
@@ -308,7 +300,7 @@ function CheckInRouteComponent() {
             <PrimaryButton type="submit" disabled={registrationForm.formState.isSubmitting}>Save and Check In</PrimaryButton>
           </form>
         </CheckInFormCard>
-        <SecondaryTextButton type="button" onClick={() => setScreen("returning")}>Already used Attendance HQ before?</SecondaryTextButton>
+        <SecondaryTextButton type="button" onClick={() => { clearTransientState(); setScreen("returning"); }}>Already used Attendance HQ before?</SecondaryTextButton>
       </>
     );
   }
@@ -345,7 +337,7 @@ function CheckInRouteComponent() {
         {globalError ? <p className="px-1 text-sm font-medium text-destructive">{globalError}</p> : null}
         <div className="space-y-3">
           <PrimaryButton type="button" onClick={() => void handleConfirmCheckIn()}>Check In</PrimaryButton>
-          <SecondaryTextButton type="button" onClick={() => { clearTransientState(); setScreen(confirmMode === "remembered" ? "entry" : "returning"); }}>This is not me</SecondaryTextButton>
+          <SecondaryTextButton type="button" onClick={() => { clearTransientState(); setScreen(confirmMode === "remembered" ? "first-time" : "returning"); }}>This is not me</SecondaryTextButton>
         </div>
       </>
     );
@@ -356,7 +348,7 @@ function CheckInRouteComponent() {
     return (
       <>
         <SuccessStateCard event={event} checkedInAt={successAt} />
-        <PrimaryButton type="button" onClick={() => { clearTransientState(); setBlockedState(null); setScreen("entry"); }}>Done</PrimaryButton>
+        <PrimaryButton type="button" onClick={() => { clearTransientState(); setBlockedState(null); setScreen("first-time"); }}>Done</PrimaryButton>
       </>
     );
   }
@@ -368,8 +360,8 @@ function CheckInRouteComponent() {
         <EventInfoCard event={event} status={status} />
         <ErrorStateCard
           title={blockedCopy.title}
-          description={blockedCopy.description}
-          action={<PrimaryButton type="button" onClick={() => { setBlockedState(initialBlockedState); setScreen(initialBlockedState ? "blocked" : "entry"); }}>Return to event screen</PrimaryButton>}
+          description={blockedDescription ?? blockedCopy.description}
+          action={<PrimaryButton type="button" onClick={() => { setBlockedState(initialBlockedState); setScreen(initialBlockedState ? "blocked" : "first-time"); }}>Return to check-in</PrimaryButton>}
         />
         {!initialBlockedState && (blockedState === "student_not_found" || blockedState === "invalid_900_number") ? (
           <SecondaryTextButton type="button" onClick={() => setScreen(blockedState === "student_not_found" ? "first-time" : "returning")}>{blockedState === "student_not_found" ? "Register as first-time user" : "Try again"}</SecondaryTextButton>
@@ -380,7 +372,6 @@ function CheckInRouteComponent() {
 
   return (
     <PublicCheckInShell>
-      {screen === "entry" ? renderEntryScreen() : null}
       {screen === "first-time" ? renderFirstTimeScreen() : null}
       {screen === "returning" ? renderReturningScreen() : null}
       {screen === "confirm" ? renderConfirmScreen() : null}
