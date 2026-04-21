@@ -13,11 +13,14 @@ import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as EventsRouteImport } from './routes/events'
+import { Route as ClubsRouteImport } from './routes/clubs'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OnboardingEventRouteImport } from './routes/onboarding.event'
 import { Route as OnboardingClubRouteImport } from './routes/onboarding.club'
 import { Route as EventsEventIdRouteImport } from './routes/events.$eventId'
 import { Route as CheckInQrTokenRouteImport } from './routes/check-in.$qrToken'
+import { Route as ClubsRouteImport } from './routes/clubs.'
 
 const SignUpRoute = SignUpRouteImport.update({
   id: '/sign-up',
@@ -39,6 +42,16 @@ const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EventsRoute = EventsRouteImport.update({
+  id: '/events',
+  path: '/events',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClubsRoute = ClubsRouteImport.update({
+  id: '/clubs',
+  path: '/clubs',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -55,22 +68,30 @@ const OnboardingClubRoute = OnboardingClubRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const EventsEventIdRoute = EventsEventIdRouteImport.update({
-  id: '/events/$eventId',
-  path: '/events/$eventId',
-  getParentRoute: () => rootRouteImport,
+  id: '/$eventId',
+  path: '/$eventId',
+  getParentRoute: () => EventsRoute,
 } as any)
 const CheckInQrTokenRoute = CheckInQrTokenRouteImport.update({
   id: '/check-in/$qrToken',
   path: '/check-in/$qrToken',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClubsRoute = ClubsRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ClubsRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/clubs': typeof ClubsRouteWithChildren
+  '/events': typeof EventsRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/clubs/': typeof ClubsRoute
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
   '/events/$eventId': typeof EventsEventIdRoute
   '/onboarding/club': typeof OnboardingClubRoute
@@ -78,10 +99,12 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/events': typeof EventsRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/clubs': typeof ClubsRoute
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
   '/events/$eventId': typeof EventsEventIdRoute
   '/onboarding/club': typeof OnboardingClubRoute
@@ -90,10 +113,13 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/clubs': typeof ClubsRouteWithChildren
+  '/events': typeof EventsRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
   '/reset-password': typeof ResetPasswordRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/clubs/': typeof ClubsRoute
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
   '/events/$eventId': typeof EventsEventIdRoute
   '/onboarding/club': typeof OnboardingClubRoute
@@ -103,10 +129,13 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/clubs'
+    | '/events'
     | '/forgot-password'
     | '/reset-password'
     | '/sign-in'
     | '/sign-up'
+    | '/clubs/'
     | '/check-in/$qrToken'
     | '/events/$eventId'
     | '/onboarding/club'
@@ -114,10 +143,12 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/events'
     | '/forgot-password'
     | '/reset-password'
     | '/sign-in'
     | '/sign-up'
+    | '/clubs'
     | '/check-in/$qrToken'
     | '/events/$eventId'
     | '/onboarding/club'
@@ -125,10 +156,13 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/clubs'
+    | '/events'
     | '/forgot-password'
     | '/reset-password'
     | '/sign-in'
     | '/sign-up'
+    | '/clubs/'
     | '/check-in/$qrToken'
     | '/events/$eventId'
     | '/onboarding/club'
@@ -137,12 +171,13 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ClubsRoute: typeof ClubsRouteWithChildren
+  EventsRoute: typeof EventsRouteWithChildren
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SignInRoute: typeof SignInRoute
   SignUpRoute: typeof SignUpRoute
   CheckInQrTokenRoute: typeof CheckInQrTokenRoute
-  EventsEventIdRoute: typeof EventsEventIdRoute
   OnboardingClubRoute: typeof OnboardingClubRoute
   OnboardingEventRoute: typeof OnboardingEventRoute
 }
@@ -177,6 +212,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/events': {
+      id: '/events'
+      path: '/events'
+      fullPath: '/events'
+      preLoaderRoute: typeof EventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clubs': {
+      id: '/clubs'
+      path: '/clubs'
+      fullPath: '/clubs'
+      preLoaderRoute: typeof ClubsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -200,10 +249,10 @@ declare module '@tanstack/react-router' {
     }
     '/events/$eventId': {
       id: '/events/$eventId'
-      path: '/events/$eventId'
+      path: '/$eventId'
       fullPath: '/events/$eventId'
       preLoaderRoute: typeof EventsEventIdRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof EventsRoute
     }
     '/check-in/$qrToken': {
       id: '/check-in/$qrToken'
@@ -212,20 +261,58 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckInQrTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/clubs/': {
+      id: '/clubs/'
+      path: '/'
+      fullPath: '/clubs/'
+      preLoaderRoute: typeof ClubsRouteImport
+      parentRoute: typeof ClubsRoute
+    }
   }
 }
 
+interface ClubsRouteChildren {
+  ClubsRoute: typeof ClubsRoute
+}
+
+const ClubsRouteChildren: ClubsRouteChildren = {
+  ClubsRoute: ClubsRoute,
+}
+
+const ClubsRouteWithChildren = ClubsRoute._addFileChildren(ClubsRouteChildren)
+
+interface EventsRouteChildren {
+  EventsEventIdRoute: typeof EventsEventIdRoute
+}
+
+const EventsRouteChildren: EventsRouteChildren = {
+  EventsEventIdRoute: EventsEventIdRoute,
+}
+
+const EventsRouteWithChildren =
+  EventsRoute._addFileChildren(EventsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ClubsRoute: ClubsRouteWithChildren,
+  EventsRoute: EventsRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SignInRoute: SignInRoute,
   SignUpRoute: SignUpRoute,
   CheckInQrTokenRoute: CheckInQrTokenRoute,
-  EventsEventIdRoute: EventsEventIdRoute,
   OnboardingClubRoute: OnboardingClubRoute,
   OnboardingEventRoute: OnboardingEventRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
