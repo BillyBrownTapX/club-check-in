@@ -2,8 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { CalendarDays, Copy, Plus } from "lucide-react";
 import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
-import { ClubDialog, EmptyStateBlock, ManagementPageShell, PageHeader, PrimaryButton, SecondaryButton, StatsCard, TemplateCard, TemplateDialog, EventCard, FormCard, getManagementErrorMessage, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
-import { createEventTemplate, duplicateEventTemplate, getClubDetail, updateClub, updateEventTemplate } from "@/lib/attendance-hq.functions";
+import { toast } from "sonner";
+import { Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ClubDialog, DeleteConfirmButton, EmptyStateBlock, ManagementPageShell, PageHeader, PrimaryButton, SecondaryButton, StatsCard, TemplateCard, TemplateDialog, EventCard, FormCard, getManagementErrorMessage, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
+import { createEventTemplate, deleteClub, deleteEvent, duplicateEventTemplate, getClubDetail, updateClub, updateEventTemplate } from "@/lib/attendance-hq.functions";
 import { useSignedLogoUrl } from "@/hooks/use-signed-logo";
 import type { EventTemplateWithClub, ManagementEventSummary } from "@/lib/attendance-hq";
 
