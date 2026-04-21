@@ -44,6 +44,8 @@ import {
   clubUpdateSchema,
   closeCheckInEarlySchema,
   confirmReturningInputSchema,
+  deleteClubSchema,
+  deleteEventSchema,
   duplicateEventTemplateSchema,
   eventSchema,
   eventListFilterSchema,
