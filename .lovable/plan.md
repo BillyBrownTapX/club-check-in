@@ -1,147 +1,110 @@
 
-Stabilize navigation by fixing the management layer’s routing model, eliminating full-page reload paths, and restoring missing route coverage so the host UI behaves consistently on click, refresh, and direct entry.
+Fix the host management runtime failure by removing the dependency on the server-only admin client for authenticated host flows and standardizing all host-side data access on the authenticated middleware client that already has the bearer token and RLS context.
 
-1. Fix the root navigation architecture
-- Replace every host-side full reload path with TanStack navigation:
-  - remove raw `<a href="/events/new">`, `<a href="/events?...">`, and templated `href={`/events/...`}` usages
-  - replace `window.location.href = state.nextPath` with `navigate({ to: ... })` or route-aware redirects
-  - replace `window.history.back()` cancel behavior with explicit route targets
-- Keep all host navigation inside the router so auth/session state is preserved and SSR hydration is not interrupted.
+1. Root cause to fix
+- The `/clubs` page calls `getHostClubSummaries`.
+- `getHostClubSummaries` currently calls `getSupabaseAdmin()`, which imports `src/integrations/supabase/client.server.ts`.
+- That file requires `SUPABASE_SERVICE_ROLE_KEY` at runtime.
+- In this environment, the host management server functions are running without that server-role configuration, so the request crashes before returning UI data.
+- The `[object Response]` error is the client surfacing a thrown server response/error without a friendly boundary message.
 
-2. Add the missing management routes immediately
-- Create the currently referenced but missing routes:
-  - `/events/new`
-  - `/events/$eventId/edit`
-- These routes are already linked from:
-  - host shell quick action
-  - clubs page cards
-  - club detail actions
-  - events list actions
-  - event cards
-  - template “Use” actions
-- Build them around the existing `EventForm` and `getEventFormPayload` / `createEvent` / `updateEvent` / `duplicateEvent` server functions so the existing UI wiring becomes real instead of dead-ending into 404s.
+2. Correct architecture for this project
+- Keep using `requireSupabaseAuth` for host-only server functions.
+- For authenticated host reads and writes, use `context.supabase` from the middleware instead of the admin client.
+- Reserve `client.server.ts` only for true privileged server operations that must bypass RLS.
+- Since the database already has RLS policies for:
+  - clubs
+  - events
+  - event_templates
+  - attendance_records
+  - host_profiles
+  authenticated host management can run safely through the middleware client.
 
-3. Remove the current SSR auth mismatch on protected management routes
-- The biggest source of broken navigation is that `/clubs`, `/events`, and `/clubs/$clubId` use route loaders that call server functions guarded by `requireSupabaseAuth`, but auth only exists client-side after hydration.
-- Refactor protected host management routes so they do not depend on SSR loader auth headers before the user session is available.
-- Use one of these stable patterns consistently:
-  - preferred: client-side data fetching after auth is confirmed in the component
-  - or: a proper route-context auth guard system that can authenticate before loaders run
-- For this codebase, the lowest-risk stabilization path is:
-  - keep `useRequireHostRedirect`
-  - move management data fetching from route loaders into authenticated components using `useServerFn`
-  - show clean loading states while fetching
-- This avoids unauthorized loader failures on refresh/direct entry and removes the “broken page before redirect” behavior.
-
-4. Rebuild `/clubs` around authenticated client fetch
-- Remove the loader from `src/routes/clubs.index.tsx`.
-- After auth resolves:
-  - fetch club summaries with the server function
-  - render loading, empty, success, and error states inside the page shell
-- Keep create-club dialog behavior, but refresh data via refetch/invalidate only after successful mutation.
-
-5. Rebuild `/clubs/$clubId` around authenticated client fetch
-- Remove the loader from `src/routes/clubs.$clubId.tsx`.
-- After auth resolves:
-  - fetch the club detail payload for the current `clubId`
-  - handle not-found and unauthorized states inside the route component
-- Keep template actions and club editing, but make all follow-up refreshes use one consistent refetch path.
-
-6. Rebuild `/events` around authenticated client fetch
-- Remove the protected loader dependency from `src/routes/events.index.tsx`.
-- Keep `validateSearch` for clean URL-driven filters, but fetch events/clubs after auth is ready.
-- Preserve filter/search state in the URL using TanStack navigate updates, not reloads.
-- Keep empty states for:
-  - no events
-  - no filter matches
-
-7. Implement `/events/new`
-- Add route metadata and route-local error handling.
-- Support prefill sources already implied by existing code:
-  - `clubId`
-  - `templateId`
-  - `duplicateFrom`
-- Load event form payload after auth resolves.
-- Use `EventForm` for UI, but improve the form so:
-  - check-in open/close values are derived from date/start-time changes
-  - date/time inputs are touch-friendly
-  - submit routes to `/events/$eventId` after create/duplicate
-- If `duplicateFrom` is present, submit through `duplicateEvent`; otherwise use `createEvent`.
-
-8. Implement `/events/$eventId/edit`
-- Add route metadata and ownership-safe loading.
-- Use `getEventFormPayload({ eventId })` to prefill the form.
-- Submit via `updateEvent`.
-- After save, route to `/events/$eventId`.
-- Replace generic cancel/back behavior with an explicit link to the event detail page.
-
-9. Tighten onboarding/auth redirect behavior
-- Replace `window.location.href = state.nextPath` in:
-  - sign-in
-  - sign-up
-  - reset-password
-- Route based on onboarding status using TanStack navigation.
-- Keep current onboarding logic, but make it deterministic:
-  - complete + event -> `/events/$eventId`
-  - needs club -> `/onboarding/club`
-  - needs event -> `/onboarding/event`
-- This will reduce hard reloads and avoid re-triggering broken protected SSR paths.
-
-10. Clean up host shell and management actions
-- Ensure every action button uses typed router links/navigation.
-- Replace remaining anchor-based host actions with `<Link>` or `navigate`.
-- Keep mobile quick actions working, especially the `/events/new` button in the host shell.
-
-11. Strengthen loading and boundary behavior
-- Add explicit loading placeholders/skeletons for authenticated management pages while:
-  - auth is resolving
-  - page data is fetching
-- Keep route-level `errorComponent` / `notFoundComponent` where useful, but avoid relying on protected loaders that fail before auth.
-- Prevent blank/null screens by rendering lightweight loading UI instead of returning `null` for long-running states.
-
-12. Fix secondary UX traps contributing to “problems left and right”
-- Replace free-text check-in timestamp inputs in the management event form with clearer date/time presentation or derived hidden values.
-- Ensure template “Use” actions land on the new event route with real prefill behavior.
-- Ensure duplicate buttons create a new event flow instead of linking into missing pages.
-- Make cancel/back actions deterministic so users never land on a 404 or browser-history dead end.
-
-13. Acceptance checks for the stabilization pass
-- Signed-in host can:
-  - open `/clubs`
-  - refresh `/clubs`
-  - open `/clubs/:clubId`
-  - refresh `/clubs/:clubId`
-  - open `/events`
-  - refresh `/events`
-  - open `/events/new`
-  - open `/events/:eventId/edit`
-- From Clubs and Events pages:
-  - all Create Event buttons work
-  - all Manage/Edit links work
-  - duplicate actions work
-  - template Use/Edit/Duplicate actions work
-- Auth/onboarding:
-  - sign-in and sign-up redirects stay in-app without hard reloads
-  - reset-password completion routes correctly
-- No host navigation path should depend on a missing route or force a full reload into a protected SSR loader.
-
-14. Technical details to apply during implementation
-- Do not edit `routeTree.gen.ts`; let route generation update automatically from real route files.
-- Reuse existing components and server functions wherever possible:
-  - `EventForm`
-  - `ClubDialog`
-  - `TemplateDialog`
+3. Refactor scope in `src/lib/attendance-hq.functions.ts`
+- Replace admin-client usage in the host management section with the authenticated client from middleware:
+  - `getHostClubSummaries`
+  - `getHostTemplates`
+  - `getHostEvents`
+  - `getClubDetail`
+  - `createClubManagement`
+  - `updateClub`
+  - `createEventTemplate`
+  - `updateEventTemplate`
+  - `duplicateEventTemplate`
   - `getEventFormPayload`
   - `createEvent`
   - `updateEvent`
   - `duplicateEvent`
-- Prefer typed TanStack `<Link>` and `useNavigate`.
-- Keep ownership checks server-side exactly where they already exist; only change when/how the client calls them.
+  - `getEventOperations`
+- Update helper functions so they accept a Supabase client parameter when used inside authenticated flows:
+  - `getOwnedClubIds`
+  - `requireOwnedClub`
+  - `requireOwnedEvent`
+- Use `context.supabase` for ownership-safe queries instead of re-querying through the admin client.
 
-15. Expected result
-- The host management area becomes reliable instead of brittle:
-  - no more dead links to missing routes
-  - no more full reloads breaking protected navigation
-  - no more refresh/direct-entry failures on `/clubs` and `/events`
-  - create/edit/duplicate/template flows become complete and navigable
-- The app should feel like one coherent host workspace instead of a mix of working screens and broken transitions.
+4. Keep privileged/admin-only operations separate
+- Leave these flows on the admin client unless they are explicitly redesigned:
+  - sign-up / user creation
+  - auth admin user lookup
+  - admin password reset/update paths
+  - public check-in flows if they intentionally bypass RLS
+  - bootstrap helpers like `ensureHostProfile` if they are used before a normal authenticated user query is available
+- Do not mix privileged helpers into the clubs/events management path.
+
+5. Implementation detail for ownership checks
+- Refactor:
+  - `requireOwnedClub(userId, clubId)`
+  - `requireOwnedEvent(userId, eventId)`
+- Into helpers shaped like:
+  - `requireOwnedClub(supabase, userId, clubId)`
+  - `requireOwnedEvent(supabase, userId, eventId)`
+- Query through the authenticated client and keep explicit host ownership filters in addition to RLS where helpful for clear not-found behavior.
+
+6. Remove dynamic admin dependency from `/clubs`
+- Ensure `getHostClubSummaries` no longer imports or touches `getSupabaseAdmin()`.
+- This is the immediate fix for the crash on the current `/clubs` route.
+- Once this function is converted to `context.supabase`, the page should stop failing on first load.
+
+7. Improve error handling so the UI does not show `[object Response]`
+- In host management route components (`/clubs`, `/clubs/$clubId`, `/events`, `/events/new`, `/events/$eventId/edit`):
+  - normalize caught values before rendering
+  - if the thrown value is a `Response`, show a readable fallback like:
+    - “Your session expired. Please sign in again.”
+    - “You do not have access to this club.”
+    - “Unable to load data right now.”
+- Add a small shared helper in the management UI layer to extract a readable message from unknown thrown values.
+
+8. Verify auth wrapper consistency
+- Keep `useAuthorizedServerFn` in `src/components/attendance-hq/auth-provider.tsx`.
+- Ensure every protected host route continues using that wrapper, not raw `useServerFn`.
+- Confirm no management page still calls a middleware-protected server function without the authorization header.
+
+9. Stabilize route UX after the backend fix
+- For `/clubs`, `/events`, and `/clubs/$clubId`:
+  - keep current client-side fetch-after-auth approach
+  - preserve loading state until session exists
+  - show readable error states instead of blank screens
+- Do not reintroduce loader-based auth fetching for these routes.
+
+10. Technical details
+- Files to update:
+  - `src/lib/attendance-hq.functions.ts`
+  - optionally `src/components/attendance-hq/host-management.tsx` for a shared error-message helper
+  - optionally affected route files if their catch blocks need normalization
+- Do not edit:
+  - `src/integrations/supabase/client.ts`
+  - generated Supabase types/client files
+  - `src/routeTree.gen.ts` manually
+- No database migration is needed for this fix; the required RLS policies already exist.
+
+11. Acceptance checks
+- `/clubs` loads without throwing the missing environment variables error.
+- `/events` and `/clubs/:clubId` also work without touching `client.server.ts`.
+- Creating/editing clubs, events, and templates works through authenticated server functions.
+- Unauthorized access still fails safely through RLS/ownership checks.
+- Error UIs show human-readable messages instead of `[object Response]`.
+
+12. Expected result
+- The host management layer stops crashing because it no longer depends on unavailable server-role runtime variables.
+- Authenticated clubs/events management uses the existing bearer-token middleware and database policies as intended.
+- Navigation becomes stable and errors become readable instead of blank-screening.
