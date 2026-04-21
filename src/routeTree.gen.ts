@@ -9,12 +9,54 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SignUpRouteImport } from './routes/sign-up'
+import { Route as SignInRouteImport } from './routes/sign-in'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as OnboardingEventRouteImport } from './routes/onboarding.event'
+import { Route as OnboardingClubRouteImport } from './routes/onboarding.club'
+import { Route as EventsEventIdRouteImport } from './routes/events.$eventId'
 import { Route as CheckInQrTokenRouteImport } from './routes/check-in.$qrToken'
 
+const SignUpRoute = SignUpRouteImport.update({
+  id: '/sign-up',
+  path: '/sign-up',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignInRoute = SignInRouteImport.update({
+  id: '/sign-in',
+  path: '/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingEventRoute = OnboardingEventRouteImport.update({
+  id: '/onboarding/event',
+  path: '/onboarding/event',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingClubRoute = OnboardingClubRouteImport.update({
+  id: '/onboarding/club',
+  path: '/onboarding/club',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EventsEventIdRoute = EventsEventIdRouteImport.update({
+  id: '/events/$eventId',
+  path: '/events/$eventId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CheckInQrTokenRoute = CheckInQrTokenRouteImport.update({
@@ -25,37 +67,142 @@ const CheckInQrTokenRoute = CheckInQrTokenRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/sign-in': typeof SignInRoute
+  '/sign-up': typeof SignUpRoute
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
+  '/events/$eventId': typeof EventsEventIdRoute
+  '/onboarding/club': typeof OnboardingClubRoute
+  '/onboarding/event': typeof OnboardingEventRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/sign-in': typeof SignInRoute
+  '/sign-up': typeof SignUpRoute
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
+  '/events/$eventId': typeof EventsEventIdRoute
+  '/onboarding/club': typeof OnboardingClubRoute
+  '/onboarding/event': typeof OnboardingEventRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/sign-in': typeof SignInRoute
+  '/sign-up': typeof SignUpRoute
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
+  '/events/$eventId': typeof EventsEventIdRoute
+  '/onboarding/club': typeof OnboardingClubRoute
+  '/onboarding/event': typeof OnboardingEventRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/check-in/$qrToken'
+  fullPaths:
+    | '/'
+    | '/forgot-password'
+    | '/reset-password'
+    | '/sign-in'
+    | '/sign-up'
+    | '/check-in/$qrToken'
+    | '/events/$eventId'
+    | '/onboarding/club'
+    | '/onboarding/event'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/check-in/$qrToken'
-  id: '__root__' | '/' | '/check-in/$qrToken'
+  to:
+    | '/'
+    | '/forgot-password'
+    | '/reset-password'
+    | '/sign-in'
+    | '/sign-up'
+    | '/check-in/$qrToken'
+    | '/events/$eventId'
+    | '/onboarding/club'
+    | '/onboarding/event'
+  id:
+    | '__root__'
+    | '/'
+    | '/forgot-password'
+    | '/reset-password'
+    | '/sign-in'
+    | '/sign-up'
+    | '/check-in/$qrToken'
+    | '/events/$eventId'
+    | '/onboarding/club'
+    | '/onboarding/event'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
+  SignInRoute: typeof SignInRoute
+  SignUpRoute: typeof SignUpRoute
   CheckInQrTokenRoute: typeof CheckInQrTokenRoute
+  EventsEventIdRoute: typeof EventsEventIdRoute
+  OnboardingClubRoute: typeof OnboardingClubRoute
+  OnboardingEventRoute: typeof OnboardingEventRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sign-up': {
+      id: '/sign-up'
+      path: '/sign-up'
+      fullPath: '/sign-up'
+      preLoaderRoute: typeof SignUpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sign-in': {
+      id: '/sign-in'
+      path: '/sign-in'
+      fullPath: '/sign-in'
+      preLoaderRoute: typeof SignInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/event': {
+      id: '/onboarding/event'
+      path: '/onboarding/event'
+      fullPath: '/onboarding/event'
+      preLoaderRoute: typeof OnboardingEventRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/club': {
+      id: '/onboarding/club'
+      path: '/onboarding/club'
+      fullPath: '/onboarding/club'
+      preLoaderRoute: typeof OnboardingClubRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/events/$eventId': {
+      id: '/events/$eventId'
+      path: '/events/$eventId'
+      fullPath: '/events/$eventId'
+      preLoaderRoute: typeof EventsEventIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/check-in/$qrToken': {
@@ -70,8 +217,24 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
+  SignInRoute: SignInRoute,
+  SignUpRoute: SignUpRoute,
   CheckInQrTokenRoute: CheckInQrTokenRoute,
+  EventsEventIdRoute: EventsEventIdRoute,
+  OnboardingClubRoute: OnboardingClubRoute,
+  OnboardingEventRoute: OnboardingEventRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
