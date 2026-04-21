@@ -111,19 +111,41 @@ export const getPublicEventByQr = createServerFn({ method: "GET" })
 export const signUpHost = createServerFn({ method: "POST" })
   .inputValidator(signUpSchema)
   .handler(async ({ data }) => {
-    const origin = getRequestHeader("origin") ?? process.env.SUPABASE_URL ?? "";
     const { data: authData, error } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
       password: data.password,
-      email_confirm: false,
+      email_confirm: true,
       user_metadata: { full_name: data.fullName },
     });
 
     if (error) throw new Error(error.message);
     if (!authData.user) throw new Error("Unable to create account");
 
+    await ensureHostProfile(authData.user.id, { fullName: data.fullName, email: data.email });
     setResponseHeader("x-attendance-created-user", authData.user.id);
-    return { ok: true, email: data.email, redirectTo: `${origin}/sign-in` };
+    return { ok: true, email: data.email, userId: authData.user.id };
+  });
+
+export const signInHost = createServerFn({ method: "POST" })
+  .inputValidator(signInSchema)
+  .handler(async ({ data }) => {
+    const { data: userLookup, error } = await supabaseAdmin.auth.admin.listUsers();
+    if (error) throw new Error(error.message);
+
+    const matchedUser = userLookup.users.find((user) => user.email?.toLowerCase() === data.email);
+    if (!matchedUser) {
+      return { ok: false as const, message: "Invalid email or password" };
+    }
+
+    await ensureHostProfile(matchedUser.id, {
+      fullName: typeof matchedUser.user_metadata?.full_name === "string" ? matchedUser.user_metadata.full_name : null,
+      email: matchedUser.email,
+    });
+
+    return {
+      ok: true as const,
+      onboarding: await resolveHostOnboardingState(matchedUser.id),
+    };
   });
 
 export const sendPasswordReset = createServerFn({ method: "POST" })
@@ -133,6 +155,26 @@ export const sendPasswordReset = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.auth.resetPasswordForEmail(data.email, {
       redirectTo: `${origin}/reset-password`,
     });
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const getHostOnboardingState = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const profile = await ensureHostProfile(context.userId);
+    const onboarding = await resolveHostOnboardingState(context.userId);
+    return { profile, onboarding };
+  });
+
+export const completePasswordReset = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(resetPasswordSchema)
+  .handler(async ({ data, context }) => {
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(context.userId, {
+      password: data.password,
+    });
+
     if (error) throw new Error(error.message);
     return { ok: true };
   });
