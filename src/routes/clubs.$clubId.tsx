@@ -205,6 +205,7 @@ function ClubDetailRoute() {
              await updateClubMutation({ data: values as never });
              setData(await getClub({ data: { clubId } }));
           }}
+          onDelete={handleDeleteClub}
         />
 
         <TemplateDialog
