@@ -87,6 +87,13 @@ function EventsRoute() {
     return groups;
   }, [events]);
 
+  const totals = useMemo(() => ({
+    open: groupedEvents.open.length,
+    upcoming: groupedEvents.upcoming.length,
+    review: groupedEvents.past.length,
+    archived: groupedEvents.archived.length,
+  }), [groupedEvents]);
+
   if (loading || !user) return <ManagementPageShell><div className="py-16 text-center text-sm text-muted-foreground">Loading your events…</div></ManagementPageShell>;
 
   return (
@@ -97,6 +104,12 @@ function EventsRoute() {
           description="Run live meetings, monitor check-ins, and jump into the right ops console fast from your phone."
           action={<PrimaryButton asChild><Link to="/events/new" search={{ clubId: "", templateId: "", duplicateFrom: "" }}><Plus className="h-4 w-4" />Create Event</Link></PrimaryButton>}
         />
+        <div className="grid grid-cols-2 gap-3">
+          <OpsStat label="Open now" value={totals.open} tone="info" />
+          <OpsStat label="Upcoming" value={totals.upcoming} tone="warning" />
+          <OpsStat label="Review" value={totals.review} tone="default" />
+          <OpsStat label="Archived" value={totals.archived} tone="default" />
+        </div>
         <FilterBar>
           <SelectInput
             label="Club"
@@ -161,14 +174,29 @@ function EventSection({
 }) {
   if (!events.length) return null;
   return (
-    <section className="space-y-3">
+    <section className="space-y-4 rounded-[1.9rem] border border-border/90 bg-card/95 p-4 shadow-[0_22px_48px_-32px_color-mix(in_oklab,var(--color-primary)_32%,transparent)]">
       <div className="space-y-1">
         <h2 className="text-lg font-semibold text-foreground">{title}</h2>
         <p className="text-sm text-muted-foreground">{description}</p>
       </div>
-      <div className="grid gap-4 xl:grid-cols-3">
+      <div className="grid gap-4">
         {events.map((event) => <EventCard key={event.id} event={event} onDuplicate={(eventId) => navigate({ to: "/events/new", search: { clubId: event.club_id, templateId: "", duplicateFrom: eventId } })} />)}
       </div>
     </section>
+  );
+}
+
+function OpsStat({ label, value, tone }: { label: string; value: number; tone: "default" | "info" | "warning" }) {
+  const toneClass = tone === "info"
+    ? "border-info/20 bg-info/10"
+    : tone === "warning"
+      ? "border-warning/20 bg-warning/10"
+      : "border-border/90 bg-card/95";
+
+  return (
+    <div className={`rounded-[1.5rem] border p-4 shadow-[0_18px_40px_-30px_color-mix(in_oklab,var(--color-primary)_28%,transparent)] ${toneClass}`}>
+      <p className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
+      <p className="mt-2 text-3xl font-semibold tracking-tight text-foreground">{value}</p>
+    </div>
   );
 }

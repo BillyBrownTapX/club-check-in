@@ -449,7 +449,7 @@ function EventDetailRoute() {
 
   return (
     <ManagementPageShell>
-      <div className="space-y-5 pb-20 md:pb-0">
+        <div className="space-y-5 pb-20 md:pb-0">
         <PageHeader
           title={event.event_name}
           description={event.clubs?.club_name ?? "Club event"}
@@ -504,7 +504,7 @@ function EventDetailRoute() {
 
         <div className="grid gap-5 xl:grid-cols-[minmax(0,1.7fr)_24rem]">
           <div className="space-y-6">
-            <Card className="rounded-2xl border-border/70 shadow-sm">
+            <Card className="rounded-[2rem] border-border/90 bg-card/95 shadow-[0_26px_60px_-36px_color-mix(in_oklab,var(--color-primary)_36%,transparent)]">
               <CardContent className="space-y-4 p-5 sm:p-6">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <div className="space-y-1">
@@ -539,10 +539,10 @@ function EventDetailRoute() {
                 <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_12rem_12rem]">
                   <div className="relative">
                     <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input value={rosterQuery} onChange={(event) => setRosterQuery(event.target.value)} placeholder="Search by name, email, or 900 number" className="h-11 rounded-xl pl-9" />
+                    <Input value={rosterQuery} onChange={(event) => setRosterQuery(event.target.value)} placeholder="Search by name, email, or 900 number" className="h-12 rounded-2xl border-border/90 bg-surface pl-9" />
                   </div>
                   <Select value={methodFilter} onValueChange={(value) => setMethodFilter(value as RosterMethodFilter)}>
-                    <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder="Method" /></SelectTrigger>
+                    <SelectTrigger className="h-12 rounded-2xl border-border/90 bg-surface"><SelectValue placeholder="Method" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="all">All methods</SelectItem>
                       <SelectItem value="qr_scan">First scan</SelectItem>
@@ -552,7 +552,7 @@ function EventDetailRoute() {
                     </SelectContent>
                   </Select>
                   <Select value={sortMode} onValueChange={(value) => setSortMode(value as RosterSort)}>
-                    <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder="Sort" /></SelectTrigger>
+                    <SelectTrigger className="h-12 rounded-2xl border-border/90 bg-surface"><SelectValue placeholder="Sort" /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="newest">Newest first</SelectItem>
                       <SelectItem value="oldest">Oldest first</SelectItem>
@@ -577,9 +577,9 @@ function EventDetailRoute() {
                         </p>
                       </div>
                     ) : (
-                      <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/70">
+                      <ul className="divide-y divide-border/80 overflow-hidden rounded-[1.75rem] border border-border/90 bg-surface/60">
                         {filteredAttendance.map((row) => (
-                          <li key={row.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                            <li key={row.id} className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
                             <div className="min-w-0 flex-1 space-y-1">
                               <div className="flex flex-wrap items-center gap-2">
                                 <p className="font-medium text-foreground">{row.students?.first_name} {row.students?.last_name}</p>
@@ -592,11 +592,11 @@ function EventDetailRoute() {
                             </div>
                             <div className="flex items-center justify-between gap-3 sm:justify-end sm:gap-4">
                               <span className="shrink-0 text-sm text-muted-foreground">{formatTimestamp(row.checked_in_at)}</span>
-                              <Button
+                                <Button
                                 type="button"
                                 variant="ghost"
                                 size="sm"
-                                className="rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                  className="rounded-2xl text-destructive hover:bg-destructive/10 hover:text-destructive"
                                 onClick={() => setPendingRemoveRow(row)}
                                 disabled={removingId === row.id}
                                 aria-label={`Remove attendance for ${row.students?.first_name} ${row.students?.last_name}`}
@@ -698,16 +698,16 @@ function EventDetailRoute() {
           </div>
 
           <div className="space-y-6">
-            <Card className="rounded-2xl border-border/70 shadow-sm">
+            <Card className="rounded-[2rem] border-border/90 bg-card/95 shadow-[0_26px_60px_-36px_color-mix(in_oklab,var(--color-primary)_36%,transparent)]">
               <CardContent className="space-y-4 p-5 sm:p-6">
                 <div className="space-y-1">
                   <h2 className="text-base font-semibold text-foreground">QR check-in</h2>
                   <p className="text-sm text-muted-foreground">Print, project, or share the link below.</p>
                 </div>
-                <div className="mx-auto w-full max-w-[16rem] rounded-2xl bg-white p-4">
+                <div className="mx-auto w-full max-w-[16rem] rounded-[1.75rem] bg-white p-4 shadow-[0_16px_40px_-24px_rgba(15,23,42,0.24)]">
                   {checkInUrl ? <QRCode value={checkInUrl} size={224} className="h-auto w-full" /> : null}
                 </div>
-                <div className="space-y-2 rounded-2xl bg-secondary p-3">
+                <div className="space-y-2 rounded-[1.5rem] border border-border/80 bg-secondary p-3">
                   <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Check-in URL</p>
                   <p className="break-all text-xs text-foreground">{checkInUrl}</p>
                   <div className="flex flex-wrap gap-2">

@@ -12,15 +12,15 @@ export interface AppRouterContext {
 
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
-        <p className="mt-2 text-sm text-muted-foreground">The page you’re looking for doesn’t exist.</p>
+    <div className="flex min-h-screen items-center justify-center bg-app-shell px-4 py-8">
+      <div className="w-full max-w-md rounded-[2rem] border border-border/80 bg-card/95 p-8 text-center shadow-[0_24px_64px_-36px_color-mix(in_oklab,var(--color-primary)_42%,transparent)]">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-secondary-foreground text-sm font-semibold">404</div>
+        <h1 className="mt-5 text-3xl font-semibold tracking-tight text-foreground">Page not found</h1>
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">The page you’re looking for doesn’t exist or is no longer available.</p>
         <div className="mt-6">
           <Link
             to="/"
-            className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-[0_18px_40px_-24px_color-mix(in_oklab,var(--color-primary)_58%,transparent)] transition-colors hover:bg-primary/90"
           >
             Go home
           </Link>
@@ -44,12 +44,13 @@ function RootErrorComponent({ error }: { error: Error }) {
   // screen — we never echo the raw .message into the page.
   const isConfigError = /supabase environment variables/i.test(error?.message ?? "");
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
-      <div className="max-w-md text-center">
-        <h1 className="text-2xl font-semibold text-foreground">
+    <div className="flex min-h-screen items-center justify-center bg-app-shell px-4 py-8">
+      <div className="w-full max-w-md rounded-[2rem] border border-border/80 bg-card/95 p-8 text-center shadow-[0_24px_64px_-36px_color-mix(in_oklab,var(--color-primary)_42%,transparent)]">
+        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10 text-sm font-semibold text-destructive">!</div>
+        <h1 className="mt-5 text-2xl font-semibold tracking-tight text-foreground">
           {isConfigError ? `${PRODUCT_NAME} isn’t configured` : "Something went wrong"}
         </h1>
-        <p className="mt-3 text-sm text-muted-foreground">
+        <p className="mt-3 text-sm leading-6 text-muted-foreground">
           {isConfigError
             ? "The site is missing required server settings. The team has been notified — please check back shortly."
             : "An unexpected error happened. Please refresh the page or try again in a moment."}
@@ -58,13 +59,13 @@ function RootErrorComponent({ error }: { error: Error }) {
           <button
             type="button"
             onClick={() => { if (typeof window !== "undefined") window.location.reload(); }}
-            className="inline-flex items-center justify-center rounded-xl bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-[0_18px_40px_-24px_color-mix(in_oklab,var(--color-primary)_58%,transparent)] transition-colors hover:bg-primary/90"
           >
             Reload
           </button>
           <Link
             to="/"
-            className="inline-flex items-center justify-center rounded-xl border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+            className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-border bg-surface px-5 text-sm font-semibold text-foreground transition-colors hover:bg-secondary"
           >
             Go home
           </Link>
@@ -117,7 +118,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AttendanceAuthProvider>
-        <div className="min-h-screen bg-background text-foreground antialiased">
+        <div className="min-h-screen bg-app-shell text-app-shell-foreground antialiased">
           <a href="#main-content" className="sr-only focus:not-sr-only">Skip to content</a>
           <main id="main-content" className="mx-auto min-h-screen w-full max-w-[100rem] px-0 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[env(safe-area-inset-top)]">
             <Outlet />

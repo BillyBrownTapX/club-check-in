@@ -20,16 +20,20 @@ const DISPLAY_POLL_INTERVAL_MS = 3000;
 
 function DisplayError({ error }: { error: Error }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-6 text-center text-sm text-muted-foreground">
-      {error.message}
+    <div className="flex min-h-screen items-center justify-center bg-app-shell px-6">
+      <div className="rounded-[2rem] border border-border/90 bg-card/95 px-6 py-8 text-center text-sm text-muted-foreground shadow-[0_28px_72px_-40px_color-mix(in_oklab,var(--color-primary)_42%,transparent)]">
+        {error.message}
+      </div>
     </div>
   );
 }
 
 function DisplayNotFound() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-6 text-center text-sm text-muted-foreground">
-      Event not found.
+    <div className="flex min-h-screen items-center justify-center bg-app-shell px-6">
+      <div className="rounded-[2rem] border border-border/90 bg-card/95 px-6 py-8 text-center text-sm text-muted-foreground shadow-[0_28px_72px_-40px_color-mix(in_oklab,var(--color-primary)_42%,transparent)]">
+        Event not found.
+      </div>
     </div>
   );
 }
@@ -143,14 +147,14 @@ function EventDisplayRoute() {
           : `Check-in closed at ${formatTimestamp(event.check_in_closes_at)}`;
 
   return (
-    <div className="relative flex min-h-screen flex-col gap-6 bg-background px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:px-6 sm:py-8">
-      <div className="flex items-center justify-between gap-3 rounded-[1.8rem] border border-border/70 bg-background/88 px-4 py-3 shadow-[0_16px_40px_-24px_color-mix(in_oklab,var(--color-primary)_35%,transparent)] backdrop-blur">
+    <div className="relative flex min-h-screen flex-col gap-6 bg-app-shell px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:px-6 sm:py-8">
+      <div className="flex items-center justify-between gap-3 rounded-[1.8rem] border border-border/90 bg-card/95 px-4 py-3 shadow-[0_24px_56px_-34px_color-mix(in_oklab,var(--color-primary)_42%,transparent)] backdrop-blur">
         <Button asChild variant="ghost" className="rounded-2xl">
           <Link to="/events/$eventId" params={{ eventId }} search={{ created: "" }}>
             <ArrowLeft className="h-4 w-4" />Back
           </Link>
         </Button>
-        <Button type="button" variant="outline" className="rounded-2xl border-border/80" onClick={() => void handleEnterFullscreen()}>
+         <Button type="button" variant="outline" className="rounded-2xl border-border/90 bg-surface" onClick={() => void handleEnterFullscreen()}>
           <Maximize2 className="h-4 w-4" />Fullscreen
         </Button>
       </div>
@@ -185,7 +189,7 @@ function EventDisplayRoute() {
           {checkInUrl ? <QRCode value={checkInUrl} size={420} className="h-auto w-full max-w-[28rem]" /> : null}
         </div>
         <div className="space-y-4">
-          <div className="rounded-[2rem] border border-border/70 bg-card/95 px-6 py-8 text-center shadow-[0_18px_42px_-28px_color-mix(in_oklab,var(--color-primary)_38%,transparent)]">
+          <div className="rounded-[2rem] border border-border/90 bg-card/95 px-6 py-8 text-center shadow-[0_24px_56px_-34px_color-mix(in_oklab,var(--color-primary)_42%,transparent)]">
             <div className="inline-flex items-center gap-3 text-muted-foreground">
               <Users className="h-5 w-5" />
               <span className="text-sm font-medium uppercase tracking-[0.18em]">Checked in</span>
@@ -193,7 +197,7 @@ function EventDisplayRoute() {
             <div className="mt-4 text-7xl font-bold leading-none text-foreground">{attendanceCount}</div>
             <p className="mt-3 text-sm text-muted-foreground">{summary?.recent ?? 0} in the last 15 minutes</p>
           </div>
-          <div className="rounded-[1.6rem] border border-border/70 bg-card/95 px-5 py-4 shadow-[0_18px_42px_-28px_color-mix(in_oklab,var(--color-primary)_38%,transparent)]">
+          <div className="rounded-[1.6rem] border border-border/90 bg-card/95 px-5 py-4 shadow-[0_24px_56px_-34px_color-mix(in_oklab,var(--color-primary)_42%,transparent)]">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Last updated</p>
             <p className="mt-2 text-lg font-semibold text-foreground">{lastUpdatedAt ? formatTimestamp(lastUpdatedAt) : "—"}</p>
             <p className="mt-1 text-sm text-muted-foreground">Polling every {DISPLAY_POLL_INTERVAL_MS / 1000}s while this screen is visible.</p>

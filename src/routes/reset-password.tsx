@@ -65,7 +65,7 @@ function ResetPasswordRoute() {
   return (
     <AuthShell>
       <AuthCard>
-        <PageHeadingBlock eyebrow="Secure your account" title="Choose a new password" description="Set a new password and continue straight back into your host workspace." />
+        <PageHeadingBlock eyebrow="Secure your account" title="Choose a new password" description="Set a new password and return directly to your mobile host workspace." />
         {success ? <SuccessBanner message="Password updated. Redirecting you back into Attendance HQ." /> : null}
         <form className="space-y-4" onSubmit={(event) => void onSubmit(event)}>
           <PasswordInput label="New password" autoComplete="new-password" error={form.formState.errors.password?.message} {...form.register("password")} />

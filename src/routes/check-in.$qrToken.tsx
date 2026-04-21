@@ -259,13 +259,13 @@ function CheckInRouteComponent() {
         <EventInfoCard event={event} status={status} />
         <EventContextRow event={event} />
         <section className="space-y-2 px-1">
-          <h1 className="text-[2.15rem] font-semibold leading-tight text-foreground">Student check-in</h1>
+          <h1 className="text-[2.25rem] font-semibold leading-tight text-foreground">Student check-in</h1>
           <p className="text-sm leading-6 text-muted-foreground">Enter your first name, last name, student email, and 9-digit 900 number to record your attendance.</p>
         </section>
         {rememberedStudent && rememberedDeviceToken ? (
           <CheckInFormCard>
             <div className="space-y-4">
-              <div className="flex items-start gap-3 rounded-2xl bg-secondary p-4 text-left">
+              <div className="flex items-start gap-3 rounded-[1.6rem] border border-border/80 bg-secondary p-4 text-left">
                 <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-success/12 text-success">
                   <CheckCircle2 className="h-5 w-5" />
                 </div>
@@ -311,7 +311,7 @@ function CheckInRouteComponent() {
       <>
         <EventContextRow event={event} />
         <section className="space-y-2 px-1">
-          <h1 className="text-[2.15rem] font-semibold leading-tight text-foreground">Returning check-in</h1>
+          <h1 className="text-[2.25rem] font-semibold leading-tight text-foreground">Returning check-in</h1>
           <p className="text-sm leading-6 text-muted-foreground">Enter your 900 number to continue.</p>
         </section>
         <CheckInFormCard>
@@ -331,7 +331,7 @@ function CheckInRouteComponent() {
     return (
       <>
         <section className="space-y-2 px-1 pt-2">
-          <h1 className="text-[2rem] font-semibold leading-tight text-foreground">Is this you?</h1>
+          <h1 className="text-[2.1rem] font-semibold leading-tight text-foreground">Is this you?</h1>
         </section>
         <IdentityConfirmationCard student={pendingStudent} />
         {globalError ? <p className="px-1 text-sm font-medium text-destructive">{globalError}</p> : null}
