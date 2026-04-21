@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { FormCard, InlineErrorMessage, OnboardingShell, PageHeadingBlock, PrimaryButton, ProgressIndicator, SecondaryTextLink, TextAreaField, TextInput } from "@/components/attendance-hq/host-onboarding";
 import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
-import { getManagementErrorMessage, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
+import { ClubLogoField, getManagementErrorMessage, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
 import { clubSchema } from "@/lib/attendance-hq-schemas";
 import { createClubManagement, getHostOnboardingState, getUniversitiesForHost } from "@/lib/attendance-hq.functions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
