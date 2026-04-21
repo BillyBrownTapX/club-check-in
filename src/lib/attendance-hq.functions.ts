@@ -337,7 +337,7 @@ async function requireOwnedEvent(supabase: AppSupabaseClient, userId: string, ev
 async function getHostClubSummariesForUser(supabase: AppSupabaseClient, userId: string): Promise<ClubSummary[]> {
   const { data: clubs, error: clubsError } = await supabase
     .from("clubs")
-    .select("*")
+    .select("*, universities(id, name, slug)")
     .eq("host_id", userId)
     .order("created_at", { ascending: true });
 
@@ -371,6 +371,12 @@ async function getHostClubSummariesForUser(supabase: AppSupabaseClient, userId: 
     ...club,
     ...(counts.get(club.id) ?? { upcomingEventsCount: 0, pastEventsCount: 0, totalCheckIns: 0 }),
   })) as ClubSummary[];
+}
+
+async function getUniversities(supabase: AppSupabaseClient) {
+  const { data, error } = await supabase.from("universities").select("*").order("name", { ascending: true });
+  if (error) throw new Error(safeMessage(error, "Unable to load universities."));
+  return (data ?? []) as University[];
 }
 
 async function getHostTemplatesForUser(supabase: AppSupabaseClient, userId: string, clubId?: string) {
@@ -507,7 +513,8 @@ export const getClubDetail = createServerFn({ method: "GET" })
   .handler(async ({ data, context }) => {
     const club = await requireOwnedClub(context.supabase, context.userId, data.clubId);
 
-    const [{ data: events, error: eventsError }, { data: templates, error: templatesError }] = await Promise.all([
+    const [universities, { data: events, error: eventsError }, { data: templates, error: templatesError }] = await Promise.all([
+      getUniversities(context.supabase),
       context.supabase
         .from("events")
         .select("*, clubs(id, club_name, club_slug, university_id, universities(id, name, slug)), attendance_records(id)")
@@ -532,6 +539,7 @@ export const getClubDetail = createServerFn({ method: "GET" })
 
     return {
       club,
+      universities,
       stats: {
         upcomingEvents: upcomingEvents.length,
         pastEvents: pastEvents.length,
@@ -692,9 +700,9 @@ export const getEventFormPayload = createServerFn({ method: "GET" })
     templateId: input.templateId ?? "",
   }))
   .handler(async ({ data, context }) => {
-    const clubIds = await getOwnedClubIds(context.supabase, context.userId);
+    const [universities, clubIds] = await Promise.all([getUniversities(context.supabase), getOwnedClubIds(context.supabase, context.userId)]);
     const clubs = clubIds.length
-      ? ((await context.supabase.from("clubs").select("*").in("id", clubIds).order("club_name", { ascending: true })).data ?? [])
+      ? ((await context.supabase.from("clubs").select("*, universities(id, name, slug)").in("id", clubIds).order("club_name", { ascending: true })).data ?? [])
       : [];
     const templates = clubIds.length
       ? ((await context.supabase.from("event_templates").select("*, clubs(id, club_name, club_slug)").in("club_id", clubIds).order("template_name", { ascending: true })).data ?? [])
@@ -759,7 +767,8 @@ export const getEventFormPayload = createServerFn({ method: "GET" })
     }
 
     return {
-      clubs: clubs as Club[],
+      clubs: clubs as EventFormPayload["clubs"],
+      universities,
       templates: templates as EventTemplateWithClub[],
       initialValues,
       sourceEventId: data.duplicateFrom || undefined,

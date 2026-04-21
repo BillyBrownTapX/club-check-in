@@ -45,6 +45,7 @@ export type ManagementEventSummary = Event & {
 
 export type ClubDetailPayload = {
   club: ClubWithUniversity;
+  universities: University[];
   stats: {
     upcomingEvents: number;
     pastEvents: number;
