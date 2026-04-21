@@ -182,7 +182,7 @@ export const completePasswordReset = createServerFn({ method: "POST" })
 export const getHostWorkspace = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const profile = await requireHostProfile(context.userId);
+    const profile = await ensureHostProfile(context.userId);
 
     const [{ data: clubs }, { data: templates }, { data: events }] = await Promise.all([
       supabaseAdmin.from("clubs").select("*").eq("host_id", context.userId).order("created_at", { ascending: false }),
@@ -216,6 +216,11 @@ export const createClub = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(clubSchema)
   .handler(async ({ data, context }) => {
+    const existingClubState = await resolveHostOnboardingState(context.userId);
+    if (existingClubState.club) {
+      return { club: existingClubState.club, onboarding: existingClubState };
+    }
+
     const baseSlug = slugifyClubName(data.clubName);
     const slug = `${baseSlug || "club"}-${Math.random().toString(36).slice(2, 6)}`;
 
@@ -231,7 +236,11 @@ export const createClub = createServerFn({ method: "POST" })
       .single();
 
     if (error) throw new Error(error.message);
-    return club as Club;
+
+    return {
+      club: club as Club,
+      onboarding: await resolveHostOnboardingState(context.userId),
+    };
   });
 
 export const createEventTemplate = createServerFn({ method: "POST" })
@@ -285,7 +294,10 @@ export const createEvent = createServerFn({ method: "POST" })
       .single();
 
     if (error) throw new Error(error.message);
-    return event as EventWithClub;
+    return {
+      event: event as EventWithClub,
+      onboarding: await resolveHostOnboardingState(context.userId),
+    };
   });
 
 export const getEventOperations = createServerFn({ method: "GET" })
