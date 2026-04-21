@@ -176,3 +176,11 @@ export const toggleEventArchiveSchema = z.object({
 export const duplicateEventTemplateSchema = z.object({
   templateId: z.string().uuid(),
 });
+
+export const deleteClubSchema = z.object({
+  clubId: z.string().uuid(),
+});
+
+export const deleteEventSchema = z.object({
+  eventId: z.string().uuid(),
+});
