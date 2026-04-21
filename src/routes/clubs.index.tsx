@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
-import { ClubCard, ClubDialog, EmptyStateBlock, ManagementPageShell, PageHeader, PrimaryButton, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
+import { ClubCard, ClubDialog, EmptyStateBlock, ManagementPageShell, PageHeader, PrimaryButton, getManagementErrorMessage, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
 import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
 import type { ClubSummary } from "@/lib/attendance-hq";
 import { getHostClubSummaries, createClubManagement } from "@/lib/attendance-hq.functions";
-import { useServerFn } from "@tanstack/react-start";
 import { useRouter as useInvalidateRouter } from "@tanstack/react-router";
 
 function ClubsNotFound() {
@@ -47,7 +46,7 @@ function ClubsRoute() {
         const nextClubs = await getClubs();
         if (!cancelled) setClubs(nextClubs);
       } catch (loadError) {
-        if (!cancelled) setError(loadError instanceof Error ? loadError.message : "Unable to load clubs.");
+        if (!cancelled) setError(getManagementErrorMessage(loadError, "Unable to load clubs."));
       } finally {
         if (!cancelled) setFetching(false);
       }

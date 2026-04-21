@@ -42,6 +42,24 @@ export function ManagementPageShell({ children }: { children: React.ReactNode })
   return <HostAppShell>{children}</HostAppShell>;
 }
 
+export function getManagementErrorMessage(error: unknown, fallback = "Something went wrong.") {
+  if (error instanceof Response) {
+    if (error.status === 401) return "Your session expired. Please sign in again.";
+    if (error.status === 403) return "You do not have access to this area.";
+    if (error.status === 404) return "That record could not be found.";
+    return fallback;
+  }
+
+  if (typeof error === "object" && error !== null && "status" in error && typeof error.status === "number") {
+    if (error.status === 401) return "Your session expired. Please sign in again.";
+    if (error.status === 403) return "You do not have access to this area.";
+    if (error.status === 404) return "That record could not be found.";
+  }
+
+  if (error instanceof Error && error.message) return error.message;
+  return fallback;
+}
+
 export function PageHeader({ title, description, action }: { title: string; description: string; action?: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -288,7 +306,7 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, title,
       await onSubmit(values);
       onOpenChange(false);
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Unable to save club.");
+      setError(getManagementErrorMessage(submitError, "Unable to save club."));
     }
   });
 
@@ -380,7 +398,7 @@ export function TemplateDialog({ open, onOpenChange, clubId, initialValues, onSu
       await onSubmit(values);
       onOpenChange(false);
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Unable to save template.");
+      setError(getManagementErrorMessage(submitError, "Unable to save template."));
     }
   });
 
@@ -466,7 +484,7 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
     try {
       await onSubmit(values);
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Unable to save event.");
+      setError(getManagementErrorMessage(submitError, "Unable to save event."));
     }
   });
 
