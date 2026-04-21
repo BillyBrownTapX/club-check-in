@@ -61,12 +61,14 @@ export function useAuthorizedServerFn<T extends (...args: any[]) => Promise<any>
       throw new Error("Your session expired. Please sign in again.");
     }
 
-    return invoke({
+    const nextOptions = {
       ...options,
       headers: {
         ...(options && typeof options === "object" && "headers" in options && options.headers ? options.headers : {}),
         authorization: `Bearer ${accessToken}`,
       },
-    } as Parameters<T>[0]);
+    } as Parameters<T>[0];
+
+    return invoke(...([nextOptions] as unknown as Parameters<T>));
   };
 }
