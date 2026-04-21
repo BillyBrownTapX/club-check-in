@@ -115,7 +115,7 @@ function EventsRoute() {
           <>
             <SectionLabel>{filtered.length} {filtered.length === 1 ? "event" : "events"}</SectionLabel>
             <div className="space-y-3">
-              {filtered.map((e) => <EventCard key={e.id} event={e} />)}
+              {filtered.map((e) => <EventCard key={e.id} event={e} onDelete={handleDelete} />)}
             </div>
           </>
         )}
@@ -124,7 +124,7 @@ function EventsRoute() {
   );
 }
 
-function EventCard({ event }: { event: ManagementEventSummary }) {
+function EventCard({ event, onDelete }: { event: ManagementEventSummary; onDelete: (eventId: string) => Promise<void> }) {
   const date = new Date(`${event.event_date}T00:00:00`);
   const month = date.toLocaleDateString("en-US", { month: "short" }).toUpperCase();
   const day = date.getDate();
@@ -132,29 +132,54 @@ function EventCard({ event }: { event: ManagementEventSummary }) {
   const label = event.checkInStatus === "open" ? "Live" : event.checkInStatus === "upcoming" ? "Upcoming" : event.checkInStatus === "archived" ? "Archived" : "Closed";
 
   return (
-    <Link
-      to="/events/$eventId"
-      params={{ eventId: event.id }}
-      search={{ created: "" }}
-      className="ios-card ios-press flex items-stretch gap-4 rounded-2xl p-3.5"
-    >
-      <div className="flex w-[64px] shrink-0 flex-col items-center justify-center rounded-xl bg-primary/10 text-primary">
-        <span className="text-[10.5px] font-bold tracking-wider">{month}</span>
-        <span className="font-display text-[24px] font-extrabold leading-none">{day}</span>
-      </div>
-      <div className="min-w-0 flex-1 py-0.5">
-        <div className="flex items-start justify-between gap-2">
-          <p className="truncate font-display text-[16px] font-bold text-foreground">{event.event_name}</p>
-          <Chip tone={tone}>{label}</Chip>
+    <div className="relative">
+      <Link
+        to="/events/$eventId"
+        params={{ eventId: event.id }}
+        search={{ created: "" }}
+        className="ios-card ios-press flex items-stretch gap-4 rounded-2xl p-3.5"
+      >
+        <div className="flex w-[64px] shrink-0 flex-col items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <span className="text-[10.5px] font-bold tracking-wider">{month}</span>
+          <span className="font-display text-[24px] font-extrabold leading-none">{day}</span>
         </div>
-        <p className="mt-0.5 truncate text-[12.5px] text-muted-foreground">{event.clubs?.club_name ?? "Club event"}</p>
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-muted-foreground">
-          <span className="inline-flex items-center gap-1"><Clock3 className="h-3 w-3" />{formatEventTime(event.start_time, event.end_time)}</span>
-          {event.location ? <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{event.location}</span> : null}
-          <span className="inline-flex items-center gap-1"><CalendarDays className="h-3 w-3" />{formatEventDate(event.event_date)}</span>
+        <div className="min-w-0 flex-1 py-0.5">
+          <div className="flex items-start justify-between gap-2">
+            <p className="truncate font-display text-[16px] font-bold text-foreground">{event.event_name}</p>
+            <Chip tone={tone}>{label}</Chip>
+          </div>
+          <p className="mt-0.5 truncate text-[12.5px] text-muted-foreground">{event.clubs?.club_name ?? "Club event"}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-muted-foreground">
+            <span className="inline-flex items-center gap-1"><Clock3 className="h-3 w-3" />{formatEventTime(event.start_time, event.end_time)}</span>
+            {event.location ? <span className="inline-flex items-center gap-1"><MapPin className="h-3 w-3" />{event.location}</span> : null}
+            <span className="inline-flex items-center gap-1"><CalendarDays className="h-3 w-3" />{formatEventDate(event.event_date)}</span>
+          </div>
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <div className="text-[12px] font-semibold text-primary">{event.attendanceCount ?? 0} checked in</div>
+          </div>
         </div>
-        <div className="mt-2 text-[12px] font-semibold text-primary">{event.attendanceCount ?? 0} checked in</div>
+      </Link>
+      <div
+        className="absolute bottom-2 right-2"
+        onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}
+      >
+        <DeleteConfirmButton
+          trigger={
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full text-destructive hover:bg-destructive/10 hover:text-destructive"
+              aria-label="Delete event"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          }
+          title="Delete this event?"
+          description="This permanently removes the event, its attendance records, and action history. This cannot be undone."
+          onConfirm={() => onDelete(event.id)}
+        />
       </div>
-    </Link>
+    </div>
   );
 }
