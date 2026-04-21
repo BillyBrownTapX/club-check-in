@@ -3,7 +3,9 @@ import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   AlertCircle,
   Archive,
+  ArrowDownUp,
   CalendarDays,
+  ChevronDown,
   Clock3,
   Copy,
   Download,
@@ -12,10 +14,11 @@ import {
   Maximize2,
   Pencil,
   Plus,
+  QrCode,
   RefreshCw,
   RotateCcw,
-  Search,
   Trash2,
+  UserPlus,
   X,
 } from "lucide-react";
 import QRCode from "react-qr-code";
@@ -31,7 +34,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -41,18 +43,28 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
 import {
-  DeleteConfirmButton,
+  ActionSheet,
+  ActionSheetItem,
   ManagementPageShell,
-  PageHeader,
   PrimaryButton,
   SecondaryButton,
-  StatsCard,
   getManagementErrorMessage,
   useRequireHostRedirect,
 } from "@/components/attendance-hq/host-management";
+import {
+  ActionTile,
+  Chip,
+  GroupedList,
+  IosSearchField,
+  LargeTitleHeader,
+  ListRow,
+  SectionLabel,
+  SegmentedControl,
+} from "@/components/attendance-hq/ios";
+import { cn } from "@/lib/utils";
 import {
   closeCheckInEarly,
   deleteEvent,
