@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { CalendarDays, Clock3, MapPin, Plus, Search } from "lucide-react";
+import { CalendarDays, Clock3, MapPin, Plus, Search, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
 import { HostAppShell } from "@/components/attendance-hq/host-shell";
-import { useRequireHostRedirect } from "@/components/attendance-hq/host-management";
+import { DeleteConfirmButton, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
 import { Chip, IosSearchField, LargeTitleHeader, SectionLabel, SegmentedControl } from "@/components/attendance-hq/ios";
 import { Button } from "@/components/ui/button";
-import { getHostEvents } from "@/lib/attendance-hq.functions";
+import { deleteEvent, getHostEvents } from "@/lib/attendance-hq.functions";
 import { formatEventDate, formatEventTime, type EventListStatusFilter, type ManagementEventSummary } from "@/lib/attendance-hq";
 
 export const Route = createFileRoute("/events/")({
@@ -29,12 +30,20 @@ type Tab = "upcoming" | "live" | "past";
 function EventsRoute() {
   const { loading, user } = useRequireHostRedirect();
   const getEvents = useAuthorizedServerFn(getHostEvents);
+  const deleteEventMutation = useAuthorizedServerFn(deleteEvent);
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/events/" });
   const [events, setEvents] = useState<ManagementEventSummary[]>([]);
   const [fetching, setFetching] = useState(true);
   const [query, setQuery] = useState(search.query);
   const [tab, setTab] = useState<Tab>(search.status === "upcoming" ? "upcoming" : search.status === "active" ? "live" : search.status === "past" ? "past" : "upcoming");
+
+  const handleDelete = async (eventId: string) => {
+    await deleteEventMutation({ data: { eventId } });
+    toast.success("Event deleted");
+    const next = await getEvents({ data: { clubId: "", status: "all", query: "" } });
+    setEvents(next);
+  };
 
   useEffect(() => {
     if (loading || !user) return;

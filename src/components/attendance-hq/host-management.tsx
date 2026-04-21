@@ -13,6 +13,17 @@ import { getHostOnboardingState } from "@/lib/attendance-hq.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -252,7 +263,7 @@ export function ClubCard({ club }: { club: ClubSummary }) {
   );
 }
 
-export function EventCard({ event, showClub = true, onDuplicate }: { event: ManagementEventSummary; showClub?: boolean; onDuplicate?: (eventId: string) => void }) {
+export function EventCard({ event, showClub = true, onDuplicate, onDelete }: { event: ManagementEventSummary; showClub?: boolean; onDuplicate?: (eventId: string) => void; onDelete?: (eventId: string) => Promise<void> }) {
   const statusLabel = event.checkInStatus === "open"
     ? "Open"
     : event.checkInStatus === "upcoming"
@@ -298,6 +309,23 @@ export function EventCard({ event, showClub = true, onDuplicate }: { event: Mana
           <SecondaryButton asChild><Link to="/events/$eventId/edit" params={{ eventId: event.id }} search={{ created: "" }}>Edit</Link></SecondaryButton>
           <SecondaryButton type="button" onClick={() => onDuplicate?.(event.id)}>Duplicate</SecondaryButton>
         </div>
+        {onDelete ? (
+          <DeleteConfirmButton
+            trigger={
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 w-full rounded-xl border-destructive/30 text-sm font-semibold text-destructive hover:bg-destructive/10 hover:text-destructive"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete Event
+              </Button>
+            }
+            title="Delete this event?"
+            description="This permanently removes the event, its attendance records, and action history. This cannot be undone."
+            onConfirm={() => onDelete(event.id)}
+          />
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -530,7 +558,63 @@ interface DialogBaseProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, title, description, universities }: DialogBaseProps & { initialValues?: Partial<ClubUpdateValues> & { logoPath?: string | null }; onSubmit: (values: ClubCreateValues | ClubUpdateValues) => Promise<void>; title: string; description: string; universities: University[] }) {
+// Reusable destructive confirm button with an AlertDialog + in-flight guard.
+// Used for deleting clubs and events from every entry point (list cards,
+// detail pages, edit dialogs) so the confirmation UX stays consistent.
+export function DeleteConfirmButton({
+  trigger,
+  title,
+  description,
+  confirmLabel = "Delete",
+  onConfirm,
+}: {
+  trigger: React.ReactNode;
+  title: string;
+  description: React.ReactNode;
+  confirmLabel?: string;
+  onConfirm: () => Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleConfirm = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    if (deleting) return;
+    setDeleting(true);
+    try {
+      await onConfirm();
+      setOpen(false);
+    } catch (deleteError) {
+      toast.error(getManagementErrorMessage(deleteError, "Unable to delete."));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <AlertDialog open={open} onOpenChange={(next) => { if (!deleting) setOpen(next); }}>
+      <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={deleting}
+            onClick={handleConfirm}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {deleting ? "Deleting…" : confirmLabel}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
+export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, onDelete, title, description, universities }: DialogBaseProps & { initialValues?: Partial<ClubUpdateValues> & { logoPath?: string | null }; onSubmit: (values: ClubCreateValues | ClubUpdateValues) => Promise<void>; onDelete?: () => Promise<void>; title: string; description: string; universities: University[] }) {
   const isEdit = Boolean(initialValues?.clubId);
   const form = useForm<ClubCreateValues | ClubUpdateValues>({
     resolver: zodResolver(isEdit ? clubUpdateSchema : clubSchema),
@@ -588,6 +672,27 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, title,
           ) : null}
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           <PrimaryButton type="submit" className="w-full" disabled={isSubmitting}>{isSubmitting ? (isEdit ? "Saving…" : "Creating…") : (isEdit ? "Save Club" : "Create Club")}</PrimaryButton>
+          {isEdit && onDelete ? (
+            <DeleteConfirmButton
+              trigger={
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-12 w-full rounded-xl border-destructive/30 text-sm font-semibold text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  disabled={isSubmitting}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete Club
+                </Button>
+              }
+              title="Delete this club?"
+              description="This permanently removes the club, all of its events, attendance records, and templates. This cannot be undone."
+              onConfirm={async () => {
+                await onDelete();
+                onOpenChange(false);
+              }}
+            />
+          ) : null}
         </form>
       </DialogContent>
     </Dialog>

@@ -2,8 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { CalendarDays, Copy, Plus } from "lucide-react";
 import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
-import { ClubDialog, EmptyStateBlock, ManagementPageShell, PageHeader, PrimaryButton, SecondaryButton, StatsCard, TemplateCard, TemplateDialog, EventCard, FormCard, getManagementErrorMessage, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
-import { createEventTemplate, duplicateEventTemplate, getClubDetail, updateClub, updateEventTemplate } from "@/lib/attendance-hq.functions";
+import { toast } from "sonner";
+import { Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { ClubDialog, DeleteConfirmButton, EmptyStateBlock, ManagementPageShell, PageHeader, PrimaryButton, SecondaryButton, StatsCard, TemplateCard, TemplateDialog, EventCard, FormCard, getManagementErrorMessage, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
+import { createEventTemplate, deleteClub, deleteEvent, duplicateEventTemplate, getClubDetail, updateClub, updateEventTemplate } from "@/lib/attendance-hq.functions";
 import { useSignedLogoUrl } from "@/hooks/use-signed-logo";
 import type { EventTemplateWithClub, ManagementEventSummary } from "@/lib/attendance-hq";
 
@@ -33,6 +36,8 @@ function ClubDetailRoute() {
   const navigate = useNavigate();
   const getClub = useAuthorizedServerFn(getClubDetail);
   const updateClubMutation = useAuthorizedServerFn(updateClub);
+  const deleteClubMutation = useAuthorizedServerFn(deleteClub);
+  const deleteEventMutation = useAuthorizedServerFn(deleteEvent);
   const createTemplateMutation = useAuthorizedServerFn(createEventTemplate);
   const updateTemplateMutation = useAuthorizedServerFn(updateEventTemplate);
   const duplicateTemplateMutation = useAuthorizedServerFn(duplicateEventTemplate);
@@ -42,6 +47,18 @@ function ClubDetailRoute() {
   const [data, setData] = useState<Awaited<ReturnType<typeof getClubDetail>> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fetching, setFetching] = useState(true);
+
+  const handleDeleteClub = async () => {
+    await deleteClubMutation({ data: { clubId } });
+    toast.success("Club deleted");
+    navigate({ to: "/clubs" });
+  };
+
+  const handleDeleteEvent = async (eventId: string) => {
+    await deleteEventMutation({ data: { eventId } });
+    toast.success("Event deleted");
+    setData(await getClub({ data: { clubId } }));
+  };
 
   useEffect(() => {
     if (loading || !user) return;
@@ -99,6 +116,21 @@ function ClubDetailRoute() {
               <PrimaryButton asChild><Link to="/events/new" search={{ clubId: data.club.id, templateId: "", duplicateFrom: "" }}>Create Event</Link></PrimaryButton>
               <SecondaryButton type="button" onClick={() => { setEditingTemplate(null); setTemplateDialogOpen(true); }}>Create Template</SecondaryButton>
               <SecondaryButton type="button" onClick={() => setClubDialogOpen(true)}>Edit Club</SecondaryButton>
+              <DeleteConfirmButton
+                trigger={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-12 rounded-xl border-destructive/30 px-4 text-sm font-semibold text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    Delete Club
+                  </Button>
+                }
+                title="Delete this club?"
+                description="This permanently removes the club, all of its events, attendance records, and templates. This cannot be undone."
+                onConfirm={handleDeleteClub}
+              />
             </div>
           </div>
         </FormCard>
@@ -116,7 +148,7 @@ function ClubDetailRoute() {
           </div>
           {data.upcomingEvents.length ? (
               <div className="grid gap-4">
-               {data.upcomingEvents.map((event: ManagementEventSummary) => <EventCard key={event.id} event={event} showClub={false} onDuplicate={(eventId) => navigate({ to: "/events/new", search: { clubId: data.club.id, templateId: "", duplicateFrom: eventId } })} />)}
+               {data.upcomingEvents.map((event: ManagementEventSummary) => <EventCard key={event.id} event={event} showClub={false} onDuplicate={(eventId) => navigate({ to: "/events/new", search: { clubId: data.club.id, templateId: "", duplicateFrom: eventId } })} onDelete={handleDeleteEvent} />)}
             </div>
           ) : (
             <EmptyStateBlock title="No upcoming events" description="Create your next event to start tracking attendance." action={<PrimaryButton asChild><Link to="/events/new" search={{ clubId: data.club.id, templateId: "", duplicateFrom: "" }}>Create Event</Link></PrimaryButton>} />
@@ -130,7 +162,7 @@ function ClubDetailRoute() {
           </div>
           {data.pastEvents.length ? (
               <div className="grid gap-4">
-               {data.pastEvents.map((event: ManagementEventSummary) => <EventCard key={event.id} event={event} showClub={false} onDuplicate={(eventId) => navigate({ to: "/events/new", search: { clubId: data.club.id, templateId: "", duplicateFrom: eventId } })} />)}
+               {data.pastEvents.map((event: ManagementEventSummary) => <EventCard key={event.id} event={event} showClub={false} onDuplicate={(eventId) => navigate({ to: "/events/new", search: { clubId: data.club.id, templateId: "", duplicateFrom: eventId } })} onDelete={handleDeleteEvent} />)}
             </div>
           ) : (
             <EmptyStateBlock title="No past events" description="Past events will show here once your club starts hosting them." />
@@ -173,6 +205,7 @@ function ClubDetailRoute() {
              await updateClubMutation({ data: values as never });
              setData(await getClub({ data: { clubId } }));
           }}
+          onDelete={handleDeleteClub}
         />
 
         <TemplateDialog

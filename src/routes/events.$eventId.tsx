@@ -44,6 +44,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
 import {
+  DeleteConfirmButton,
   ManagementPageShell,
   PageHeader,
   PrimaryButton,
@@ -54,6 +55,7 @@ import {
 } from "@/components/attendance-hq/host-management";
 import {
   closeCheckInEarly,
+  deleteEvent,
   duplicateEvent,
   exportEventAttendance,
   getEventOperations,
@@ -157,6 +159,7 @@ function EventDetailRoute() {
   const manualCheckInMutation = useAuthorizedServerFn(manualCheckIn);
   const closeEarlyMutation = useAuthorizedServerFn(closeCheckInEarly);
   const duplicateEventMutation = useAuthorizedServerFn(duplicateEvent);
+  const deleteEventMutation = useAuthorizedServerFn(deleteEvent);
   const exportAttendanceFn = useAuthorizedServerFn(exportEventAttendance);
   const toggleArchiveMutation = useAuthorizedServerFn(toggleEventArchive);
 
@@ -476,6 +479,25 @@ function EventDetailRoute() {
                 <span className="hidden sm:inline">Manual check-in</span>
                 <span className="sm:hidden">Manual</span>
               </PrimaryButton>
+              <DeleteConfirmButton
+                trigger={
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="h-12 rounded-xl border-destructive/30 px-4 text-sm font-semibold text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span className="hidden sm:inline">Delete</span>
+                  </Button>
+                }
+                title="Delete this event?"
+                description="This permanently removes the event, its attendance records, and action history. This cannot be undone."
+                onConfirm={async () => {
+                  await deleteEventMutation({ data: { eventId } });
+                  toast.success("Event deleted");
+                  navigate({ to: "/events", search: { clubId: "", status: "all", query: "" } });
+                }}
+              />
             </div>
           }
         />
