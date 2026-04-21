@@ -206,18 +206,19 @@ export function SearchInput({ value, onChange }: { value: string; onChange: (val
 
 const EMPTY_SELECT_VALUE = "__empty__";
 
-export function SelectInput({ label, value, onValueChange, placeholder, options }: { label: string; value: string; onValueChange: (value: string) => void; placeholder: string; options: { value: string; label: string }[] }) {
+export function SelectInput({ label, value, onValueChange, placeholder, options, error }: { label: string; value: string; onValueChange: (value: string) => void; placeholder: string; options: { value: string; label: string }[]; error?: string }) {
   return (
       <div className="space-y-2 min-w-[10rem]">
       <Label className="text-sm font-semibold text-foreground">{label}</Label>
       <Select value={value || EMPTY_SELECT_VALUE} onValueChange={(nextValue) => onValueChange(nextValue === EMPTY_SELECT_VALUE ? "" : nextValue)}>
-        <SelectTrigger className="h-12 rounded-2xl border-border/80 bg-background/90">
+        <SelectTrigger className={cn("h-12 rounded-2xl border-border/80 bg-background/90", error && "border-destructive ring-1 ring-destructive/40")}>
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
           {options.map((option) => <SelectItem key={option.value || EMPTY_SELECT_VALUE} value={option.value || EMPTY_SELECT_VALUE}>{option.label}</SelectItem>)}
         </SelectContent>
       </Select>
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </div>
   );
 }
@@ -644,7 +645,7 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, onDele
             onChange={(path) => form.setValue("logoPath", path as never, { shouldDirty: true })}
             clubId={initialValues?.clubId}
           />
-          <SelectInput label="University" value={form.watch("universityId") as string} onValueChange={(value) => form.setValue("universityId", value as never, { shouldValidate: true })} placeholder="Choose a university" options={universities.map((university) => ({ value: university.id, label: university.name }))} />
+          <SelectInput label="University" value={form.watch("universityId") as string} onValueChange={(value) => form.setValue("universityId", value as never, { shouldValidate: true })} placeholder="Choose a university" options={universities.map((university) => ({ value: university.id, label: university.name }))} error={(form.formState.errors as Record<string, { message?: string } | undefined>).universityId?.message} />
           <TextInput label="Club name" error={form.formState.errors.clubName?.message} {...form.register("clubName")} />
           <TextAreaInput label="Description" error={form.formState.errors.description?.message} {...form.register("description")} />
           {isEdit ? (
@@ -822,6 +823,38 @@ function FormSection({ title, description, children }: { title: string; descript
   );
 }
 
+// Friendly labels for top-level EventForm fields. Used by the form-error
+// summary banner so hosts see plain English next to each blocking message.
+const EVENT_FIELD_LABELS: Record<string, string> = {
+  clubId: "Club",
+  eventName: "Event name",
+  eventDate: "Event date",
+  startTime: "Start time",
+  endTime: "End time",
+  location: "Location",
+  checkInOpensAt: "Check-in opens",
+  checkInClosesAt: "Check-in closes",
+};
+
+function EventFormErrorSummary({ errors }: { errors: Record<string, { message?: string } | undefined> }) {
+  const entries = Object.entries(errors)
+    .map(([field, value]) => ({ field, message: value?.message }))
+    .filter((entry): entry is { field: string; message: string } => Boolean(entry.message));
+  if (!entries.length) return null;
+  return (
+    <div role="alert" className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4">
+      <p className="text-sm font-semibold text-destructive">Fix these before saving</p>
+      <ul className="mt-2 space-y-1 text-sm text-destructive">
+        {entries.map((entry) => (
+          <li key={entry.field}>
+            <span className="font-medium">{EVENT_FIELD_LABELS[entry.field] ?? entry.field}:</span> {entry.message}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function EventForm({ payload, title, description, submitLabel, onSubmit, cancelAction }: { payload: EventFormPayload; title: string; description: string; submitLabel: string; onSubmit: (values: EventValues | EventUpdateValues) => Promise<void>; cancelAction?: React.ReactNode }) {
   const navigate = useNavigate();
   const form = useForm<EventFormValues>({
@@ -852,15 +885,43 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
     form.setValue("checkInClosesAt", combineDateAndTime(eventDate, `${shiftTimeString(endTime, offsets.closeMinutesAfterEnd)}:00`), { shouldValidate: true });
   }, [endTime, eventDate, form, offsets.closeMinutesAfterEnd, offsets.openMinutesBeforeStart, startTime]);
 
-  const submit = form.handleSubmit(async (values) => {
-    if (form.formState.isSubmitting) return;
-    setError("");
-    try {
-      await onSubmit(values);
-    } catch (submitError) {
-      setError(getManagementErrorMessage(submitError, "Unable to save event."));
+  const submit = form.handleSubmit(
+    async (values) => {
+      if (form.formState.isSubmitting) return;
+      setError("");
+      try {
+        await onSubmit(values);
+      } catch (submitError) {
+        setError(getManagementErrorMessage(submitError, "Unable to save event."));
+      }
+    },
+    () => {
+      setError("Some fields need attention — see highlighted errors above.");
+    },
+  );
+
+  // Defensive: synchronously recompute hidden datetime fields from the latest
+  // visible inputs before submission. The useEffect above can lag behind a
+  // rapid Save click and leave checkInOpensAt / checkInClosesAt empty,
+  // which would silently fail Zod validation.
+  const handleSubmitClick = (event: React.FormEvent<HTMLFormElement>) => {
+    const currentEventDate = form.getValues("eventDate");
+    const currentStartTime = form.getValues("startTime");
+    const currentEndTime = form.getValues("endTime");
+    if (currentEventDate && currentStartTime && currentEndTime) {
+      form.setValue(
+        "checkInOpensAt",
+        combineDateAndTime(currentEventDate, `${shiftTimeString(currentStartTime, -offsets.openMinutesBeforeStart)}:00`),
+        { shouldValidate: false },
+      );
+      form.setValue(
+        "checkInClosesAt",
+        combineDateAndTime(currentEventDate, `${shiftTimeString(currentEndTime, offsets.closeMinutesAfterEnd)}:00`),
+        { shouldValidate: false },
+      );
     }
-  });
+    void submit(event);
+  };
   const isSubmitting = form.formState.isSubmitting;
 
   const selectedClubId = form.watch("clubId");
@@ -892,7 +953,7 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
             </FormCard>
           ) : null}
           <FormCard>
-            <form className="space-y-5" onSubmit={(event) => void submit(event)}>
+            <form className="space-y-5" onSubmit={handleSubmitClick}>
               <div className="grid gap-3 sm:grid-cols-3">
                 <MetaPill label="Club" value={selectedClub?.club_name ?? "Select club"} />
                 <MetaPill label="University" value={selectedUniversity} />
@@ -905,6 +966,7 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
                   onValueChange={(value) => form.setValue("clubId", value, { shouldValidate: true })}
                   placeholder="Choose a club"
                   options={payload.clubs.map((club) => ({ value: club.id, label: club.club_name }))}
+                  error={form.formState.errors.clubId?.message}
                 />
                 <TextInput label="Event name" error={form.formState.errors.eventName?.message} {...form.register("eventName")} />
                 <div className="grid gap-4">
@@ -945,6 +1007,7 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
               {form.formState.errors.checkInOpensAt?.message ? <p className="text-sm text-destructive">{form.formState.errors.checkInOpensAt.message}</p> : null}
               {form.formState.errors.checkInClosesAt?.message ? <p className="text-sm text-destructive">{form.formState.errors.checkInClosesAt.message}</p> : null}
               {error ? <p className="text-sm text-destructive">{error}</p> : null}
+              <EventFormErrorSummary errors={form.formState.errors} />
               <div className="sticky bottom-[calc(5.8rem+env(safe-area-inset-bottom))] z-20 -mx-2 rounded-[1.75rem] border border-border/90 bg-card/96 p-3 shadow-[0_24px_52px_-28px_color-mix(in_oklab,var(--color-primary)_42%,transparent)] backdrop-blur md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:shadow-none">
                 <p className="mb-3 text-sm leading-6 text-muted-foreground md:mb-2">Save when the mobile summary looks right. Updated timing takes effect immediately on the live event.</p>
                 <div className="flex flex-col gap-2 md:flex-row md:justify-end">
