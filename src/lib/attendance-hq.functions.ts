@@ -2,7 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { getRequestHeader, setResponseHeader } from "@tanstack/react-start/server";
 import { notFound, redirect } from "@tanstack/react-router";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import {
   buildHostOnboardingState,
   combineDateAndTime,
@@ -20,6 +19,11 @@ import {
   type HostProfile,
   type PublicStudentPreview,
 } from "@/lib/attendance-hq";
+async function getSupabaseAdmin() {
+  const mod = await import("@/integrations/supabase/client.server");
+  return mod.supabaseAdmin;
+}
+
 import {
   clubSchema,
   eventSchema,
@@ -35,7 +39,7 @@ import {
 } from "@/lib/attendance-hq-schemas";
 
 async function ensureHostProfile(userId: string, fallback?: { fullName?: string | null; email?: string | null }) {
-  const { data: existingProfile, error: existingError } = await supabaseAdmin
+  const { data: existingProfile, error: existingError } = await (await getSupabaseAdmin())
     .from("host_profiles")
     .select("*")
     .eq("id", userId)
@@ -47,7 +51,7 @@ async function ensureHostProfile(userId: string, fallback?: { fullName?: string 
   const fullName = fallback?.fullName?.trim() || fallback?.email?.split("@")[0] || "Host";
   const email = fallback?.email?.trim().toLowerCase();
 
-  const { data: createdProfile, error: createError } = await supabaseAdmin
+  const { data: createdProfile, error: createError } = await (await getSupabaseAdmin())
     .from("host_profiles")
     .upsert({ id: userId, full_name: fullName, email: email ?? `${userId}@attendancehq.local` }, { onConflict: "id" })
     .select("*")
@@ -59,8 +63,8 @@ async function ensureHostProfile(userId: string, fallback?: { fullName?: string 
 
 async function resolveHostOnboardingState(userId: string): Promise<HostOnboardingState> {
   const [{ data: profile, error: profileError }, { data: club, error: clubError }] = await Promise.all([
-    supabaseAdmin.from("host_profiles").select("*").eq("id", userId).maybeSingle(),
-    supabaseAdmin.from("clubs").select("*").eq("host_id", userId).order("created_at", { ascending: true }).limit(1).maybeSingle(),
+    (await getSupabaseAdmin()).from("host_profiles").select("*").eq("id", userId).maybeSingle(),
+    (await getSupabaseAdmin()).from("clubs").select("*").eq("host_id", userId).order("created_at", { ascending: true }).limit(1).maybeSingle(),
   ]);
 
   if (profileError) throw new Error(profileError.message);
@@ -68,7 +72,7 @@ async function resolveHostOnboardingState(userId: string): Promise<HostOnboardin
 
   let event = null;
   if (club?.id) {
-    const { data: firstEvent, error: eventError } = await supabaseAdmin
+    const { data: firstEvent, error: eventError } = await (await getSupabaseAdmin())
       .from("events")
       .select("*")
       .eq("club_id", club.id)
@@ -88,7 +92,7 @@ async function resolveHostOnboardingState(userId: string): Promise<HostOnboardin
 }
 
 async function requireHostProfile(userId: string) {
-  const { data, error } = await supabaseAdmin.from("host_profiles").select("*").eq("id", userId).single();
+  const { data, error } = await (await getSupabaseAdmin()).from("host_profiles").select("*").eq("id", userId).single();
   if (error || !data) throw new Error("Host profile not found");
   return data as HostProfile;
 }
@@ -96,7 +100,7 @@ async function requireHostProfile(userId: string) {
 export const getPublicEventByQr = createServerFn({ method: "GET" })
   .inputValidator((input: { qrToken: string }) => input)
   .handler(async ({ data }) => {
-    const { data: event, error } = await supabaseAdmin
+    const { data: event, error } = await (await getSupabaseAdmin())
       .from("events")
       .select("*, clubs(id, club_name, club_slug, description)")
       .eq("qr_token", data.qrToken)
@@ -111,7 +115,7 @@ export const getPublicEventByQr = createServerFn({ method: "GET" })
 export const signUpHost = createServerFn({ method: "POST" })
   .inputValidator(signUpSchema)
   .handler(async ({ data }) => {
-    const { data: authData, error } = await supabaseAdmin.auth.admin.createUser({
+    const { data: authData, error } = await (await getSupabaseAdmin()).auth.admin.createUser({
       email: data.email,
       password: data.password,
       email_confirm: true,
@@ -129,7 +133,7 @@ export const signUpHost = createServerFn({ method: "POST" })
 export const signInHost = createServerFn({ method: "POST" })
   .inputValidator(signInSchema)
   .handler(async ({ data }) => {
-    const { data: userLookup, error } = await supabaseAdmin.auth.admin.listUsers();
+    const { data: userLookup, error } = await (await getSupabaseAdmin()).auth.admin.listUsers();
     if (error) throw new Error(error.message);
 
     const matchedUser = userLookup.users.find((user) => user.email?.toLowerCase() === data.email);
@@ -152,7 +156,7 @@ export const sendPasswordReset = createServerFn({ method: "POST" })
   .inputValidator(forgotPasswordSchema)
   .handler(async ({ data }) => {
     const origin = getRequestHeader("origin") ?? "";
-    const { error } = await supabaseAdmin.auth.resetPasswordForEmail(data.email, {
+    const { error } = await (await getSupabaseAdmin()).auth.resetPasswordForEmail(data.email, {
       redirectTo: `${origin}/reset-password`,
     });
     if (error) throw new Error(error.message);
@@ -171,7 +175,7 @@ export const completePasswordReset = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(resetPasswordSchema)
   .handler(async ({ data, context }) => {
-    const { error } = await supabaseAdmin.auth.admin.updateUserById(context.userId, {
+    const { error } = await (await getSupabaseAdmin()).auth.admin.updateUserById(context.userId, {
       password: data.password,
     });
 
@@ -185,13 +189,13 @@ export const getHostWorkspace = createServerFn({ method: "GET" })
     const profile = await ensureHostProfile(context.userId);
 
     const [{ data: clubs }, { data: templates }, { data: events }] = await Promise.all([
-      supabaseAdmin.from("clubs").select("*").eq("host_id", context.userId).order("created_at", { ascending: false }),
+      (await getSupabaseAdmin()).from("clubs").select("*").eq("host_id", context.userId).order("created_at", { ascending: false }),
       supabaseAdmin
         .from("event_templates")
         .select("*, clubs(id, club_name, club_slug)")
         .in(
           "club_id",
-          (await supabaseAdmin.from("clubs").select("id").eq("host_id", context.userId)).data?.map((club) => club.id) ?? ["00000000-0000-0000-0000-000000000000"],
+          (await (await getSupabaseAdmin()).from("clubs").select("id").eq("host_id", context.userId)).data?.map((club) => club.id) ?? ["00000000-0000-0000-0000-000000000000"],
         )
         .order("created_at", { ascending: false }),
       supabaseAdmin
@@ -199,7 +203,7 @@ export const getHostWorkspace = createServerFn({ method: "GET" })
         .select("*, clubs(id, club_name, club_slug), attendance_records(id, checked_in_at, student_id)")
         .in(
           "club_id",
-          (await supabaseAdmin.from("clubs").select("id").eq("host_id", context.userId)).data?.map((club) => club.id) ?? ["00000000-0000-0000-0000-000000000000"],
+          (await (await getSupabaseAdmin()).from("clubs").select("id").eq("host_id", context.userId)).data?.map((club) => club.id) ?? ["00000000-0000-0000-0000-000000000000"],
         )
         .order("event_date", { ascending: true }),
     ]);
@@ -224,7 +228,7 @@ export const createClub = createServerFn({ method: "POST" })
     const baseSlug = slugifyClubName(data.clubName);
     const slug = `${baseSlug || "club"}-${Math.random().toString(36).slice(2, 6)}`;
 
-    const { data: club, error } = await supabaseAdmin
+    const { data: club, error } = await (await getSupabaseAdmin())
       .from("clubs")
       .insert({
         host_id: context.userId,
@@ -247,10 +251,10 @@ export const createEventTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(eventTemplateSchema)
   .handler(async ({ data, context }) => {
-    const { data: club } = await supabaseAdmin.from("clubs").select("id").eq("id", data.clubId).eq("host_id", context.userId).maybeSingle();
+    const { data: club } = await (await getSupabaseAdmin()).from("clubs").select("id").eq("id", data.clubId).eq("host_id", context.userId).maybeSingle();
     if (!club) throw new Error("Club not found");
 
-    const { data: template, error } = await supabaseAdmin
+    const { data: template, error } = await (await getSupabaseAdmin())
       .from("event_templates")
       .insert({
         club_id: data.clubId,
@@ -273,10 +277,10 @@ export const createEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(eventSchema)
   .handler(async ({ data, context }) => {
-    const { data: club } = await supabaseAdmin.from("clubs").select("id").eq("id", data.clubId).eq("host_id", context.userId).maybeSingle();
+    const { data: club } = await (await getSupabaseAdmin()).from("clubs").select("id").eq("id", data.clubId).eq("host_id", context.userId).maybeSingle();
     if (!club) throw new Error("Club not found");
 
-    const { data: event, error } = await supabaseAdmin
+    const { data: event, error } = await (await getSupabaseAdmin())
       .from("events")
       .insert({
         club_id: data.clubId,
@@ -304,7 +308,7 @@ export const getEventOperations = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { eventId: string }) => input)
   .handler(async ({ data, context }) => {
-    const { data: event, error } = await supabaseAdmin
+    const { data: event, error } = await (await getSupabaseAdmin())
       .from("events")
       .select("*, clubs(id, club_name, club_slug, description)")
       .eq("id", data.eventId)
@@ -313,10 +317,10 @@ export const getEventOperations = createServerFn({ method: "GET" })
     if (error) throw new Error(error.message);
     if (!event) throw notFound();
 
-    const { data: club } = await supabaseAdmin.from("clubs").select("host_id").eq("id", event.club_id).maybeSingle();
+    const { data: club } = await (await getSupabaseAdmin()).from("clubs").select("host_id").eq("id", event.club_id).maybeSingle();
     if (!club || club.host_id !== context.userId) throw redirect({ to: "/sign-in" });
 
-    const { data: attendance } = await supabaseAdmin
+    const { data: attendance } = await (await getSupabaseAdmin())
       .from("attendance_records")
       .select("*, students(id, first_name, last_name, student_email, nine_hundred_number)")
       .eq("event_id", data.eventId)
@@ -335,7 +339,7 @@ function buildStudentPreview(student: { id: string; first_name: string; last_nam
 }
 
 async function getEventForPublicCheckIn(eventId: string) {
-  const { data: event, error } = await supabaseAdmin.from("events").select("*").eq("id", eventId).maybeSingle();
+  const { data: event, error } = await (await getSupabaseAdmin()).from("events").select("*").eq("id", eventId).maybeSingle();
   if (error) throw new Error(error.message);
   if (!event) {
     return { ok: false as const, state: "event_not_found" as const };
@@ -353,7 +357,7 @@ async function getEventForPublicCheckIn(eventId: string) {
 }
 
 async function getExistingAttendance(eventId: string, studentId: string) {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await (await getSupabaseAdmin())
     .from("attendance_records")
     .select("id, checked_in_at")
     .eq("event_id", eventId)
@@ -381,7 +385,7 @@ async function createAttendanceRecord(input: {
     };
   }
 
-  const { data: attendance, error } = await supabaseAdmin
+  const { data: attendance, error } = await (await getSupabaseAdmin())
     .from("attendance_records")
     .insert({
       event_id: input.eventId,
@@ -402,7 +406,7 @@ export const studentCheckIn = createServerFn({ method: "POST" })
     const eventCheck = await getEventForPublicCheckIn(data.eventId);
     if (!eventCheck.ok) return eventCheck;
 
-    const { data: existingStudent, error: existingStudentError } = await supabaseAdmin
+    const { data: existingStudent, error: existingStudentError } = await (await getSupabaseAdmin())
       .from("students")
       .select("id, first_name, last_name, student_email")
       .eq("nine_hundred_number", data.nineHundredNumber)
@@ -427,7 +431,7 @@ export const studentCheckIn = createServerFn({ method: "POST" })
       };
     }
 
-    const { data: student, error: studentError } = await supabaseAdmin
+    const { data: student, error: studentError } = await (await getSupabaseAdmin())
       .from("students")
       .insert({
         first_name: data.firstName.trim(),
@@ -451,7 +455,7 @@ export const studentCheckIn = createServerFn({ method: "POST" })
     let deviceToken: string | null = null;
     if (data.rememberDevice) {
       deviceToken = createDeviceToken();
-      const { error: sessionError } = await supabaseAdmin.from("student_device_sessions").insert({
+      const { error: sessionError } = await (await getSupabaseAdmin()).from("student_device_sessions").insert({
         student_id: student.id,
         device_token: deviceToken,
       });
@@ -473,7 +477,7 @@ export const getRememberedStudent = createServerFn({ method: "POST" })
     const eventCheck = await getEventForPublicCheckIn(data.eventId);
     if (!eventCheck.ok) return eventCheck;
 
-    const { data: session, error } = await supabaseAdmin
+    const { data: session, error } = await (await getSupabaseAdmin())
       .from("student_device_sessions")
       .select("id, student_id")
       .eq("device_token", data.deviceToken)
@@ -484,7 +488,7 @@ export const getRememberedStudent = createServerFn({ method: "POST" })
       return { ok: false as const, state: "student_not_found" as const };
     }
 
-    const { data: student, error: studentError } = await supabaseAdmin
+    const { data: student, error: studentError } = await (await getSupabaseAdmin())
       .from("students")
       .select("id, first_name, last_name, student_email")
       .eq("id", session.student_id)
@@ -514,7 +518,7 @@ export const getRememberedStudent = createServerFn({ method: "POST" })
 export const fastCheckIn = createServerFn({ method: "POST" })
   .inputValidator(fastCheckInSchema)
   .handler(async ({ data }) => {
-    const { data: session, error: sessionError } = await supabaseAdmin
+    const { data: session, error: sessionError } = await (await getSupabaseAdmin())
       .from("student_device_sessions")
       .select("id")
       .eq("student_id", data.studentId)
@@ -534,7 +538,7 @@ export const fastCheckIn = createServerFn({ method: "POST" })
 
     if (!attendanceResult.ok) return attendanceResult;
 
-    await supabaseAdmin.from("student_device_sessions").update({ last_used_at: new Date().toISOString() }).eq("id", session.id);
+    await (await getSupabaseAdmin()).from("student_device_sessions").update({ last_used_at: new Date().toISOString() }).eq("id", session.id);
 
     return { ok: true as const, attendance: attendanceResult.attendance };
   });
@@ -558,7 +562,7 @@ export const lookupStudent = createServerFn({ method: "POST" })
     const eventCheck = await getEventForPublicCheckIn(data.eventId);
     if (!eventCheck.ok) return eventCheck;
 
-    const { data: student, error } = await supabaseAdmin
+    const { data: student, error } = await (await getSupabaseAdmin())
       .from("students")
       .select("id, first_name, last_name, student_email")
       .eq("nine_hundred_number", data.nineHundredNumber)
@@ -588,11 +592,11 @@ export const removeAttendance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(removeAttendanceSchema)
   .handler(async ({ data, context }) => {
-    const { data: record } = await supabaseAdmin.from("attendance_records").select("*").eq("id", data.attendanceRecordId).maybeSingle();
+    const { data: record } = await (await getSupabaseAdmin()).from("attendance_records").select("*").eq("id", data.attendanceRecordId).maybeSingle();
     if (!record) throw new Error("Attendance record not found");
 
-    await supabaseAdmin.from("attendance_records").delete().eq("id", data.attendanceRecordId);
-    await supabaseAdmin.from("attendance_actions").insert({
+    await (await getSupabaseAdmin()).from("attendance_records").delete().eq("id", data.attendanceRecordId);
+    await (await getSupabaseAdmin()).from("attendance_actions").insert({
       event_id: data.eventId,
       attendance_record_id: data.attendanceRecordId,
       host_id: context.userId,
@@ -607,7 +611,7 @@ export const closeCheckInEarly = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { eventId: string }) => input)
   .handler(async ({ data }) => {
-    const { error } = await supabaseAdmin
+    const { error } = await (await getSupabaseAdmin())
       .from("events")
       .update({ is_active: false, check_in_closes_at: new Date().toISOString() })
       .eq("id", data.eventId);
