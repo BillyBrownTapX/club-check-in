@@ -36,7 +36,10 @@ export function HostAppShell({
 
 function BottomTabBar({ pathname }: { pathname: string }) {
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 px-3 pb-[max(0.6rem,env(safe-area-inset-bottom))] pt-2 pointer-events-none">
+    <nav
+      className="ios-tabbar-shell px-3 pt-2"
+      style={{ paddingBottom: `max(0.6rem, var(--tabbar-bottom-offset))` }}
+    >
       <div className="mx-auto max-w-[420px] pointer-events-auto">
         <div className="ios-tabbar grid grid-cols-5 gap-1 rounded-[1.6rem] p-1.5">
           {tabs.map((tab) => {
