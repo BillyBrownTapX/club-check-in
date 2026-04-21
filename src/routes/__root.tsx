@@ -103,7 +103,7 @@ function RootShell({ children }: { children: ReactNode }) {
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body className="app-shell overflow-x-hidden">
         {children}
         <Scripts />
       </body>
@@ -119,7 +119,7 @@ function RootComponent() {
       <AttendanceAuthProvider>
         <div className="min-h-screen bg-background text-foreground antialiased">
           <a href="#main-content" className="sr-only focus:not-sr-only">Skip to content</a>
-          <main id="main-content">
+          <main id="main-content" className="mx-auto min-h-screen w-full max-w-[100rem] px-0 pb-[max(1rem,env(safe-area-inset-bottom))] pt-[env(safe-area-inset-top)]">
             <Outlet />
           </main>
         </div>
