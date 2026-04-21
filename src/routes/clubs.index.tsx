@@ -3,8 +3,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import { ClubCard, ClubDialog, EmptyStateBlock, ManagementPageShell, PageHeader, PrimaryButton, getManagementErrorMessage, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
 import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
-import type { ClubSummary } from "@/lib/attendance-hq";
-import { getHostClubSummaries, createClubManagement } from "@/lib/attendance-hq.functions";
+import type { ClubSummary, University } from "@/lib/attendance-hq";
+import { getHostClubSummaries, createClubManagement, getUniversitiesForHost } from "@/lib/attendance-hq.functions";
 import { useRouter as useInvalidateRouter } from "@tanstack/react-router";
 
 function ClubsNotFound() {
@@ -28,10 +28,12 @@ export const Route = createFileRoute("/clubs/")({
 function ClubsRoute() {
   const { loading, user } = useRequireHostRedirect();
   const getClubs = useAuthorizedServerFn(getHostClubSummaries);
+  const getUniversities = useAuthorizedServerFn(getUniversitiesForHost);
   const createClub = useAuthorizedServerFn(createClubManagement);
   const router = useInvalidateRouter();
   const [open, setOpen] = useState(false);
   const [clubs, setClubs] = useState<ClubSummary[]>([]);
+  const [universities, setUniversities] = useState<University[]>([]);
   const [fetching, setFetching] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,8 +45,11 @@ function ClubsRoute() {
       setFetching(true);
       setError(null);
       try {
-        const nextClubs = await getClubs();
-        if (!cancelled) setClubs(nextClubs);
+        const [nextClubs, nextUniversities] = await Promise.all([getClubs(), getUniversities()]);
+        if (!cancelled) {
+          setClubs(nextClubs);
+          setUniversities(nextUniversities);
+        }
       } catch (loadError) {
         if (!cancelled) setError(getManagementErrorMessage(loadError, "Unable to load clubs."));
       } finally {
@@ -86,6 +91,7 @@ function ClubsRoute() {
         <ClubDialog
           open={open}
           onOpenChange={setOpen}
+          universities={universities}
           title="Create Club"
           description="Add another club without leaving your workspace."
           onSubmit={async (values) => {
