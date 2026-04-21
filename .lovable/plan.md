@@ -1,65 +1,104 @@
 
-Fix the clubs page reload loop by stabilizing the authorized server-function wrapper and keeping the clubs routes aligned with that stable API.
+Build out the event-management surface so hosts can reliably run 50–200 person meetings with live monitoring, fast issue correction, clean QR projection, and strong post-event review.
 
-1. Root cause confirmed from code
-- `src/routes/clubs.index.tsx` loads clubs inside a `useEffect` with `[getClubs, loading, user]` as dependencies.
-- `src/routes/clubs.$clubId.tsx` does the same with `[clubId, getClub, loading, user]`.
-- `getClubs` and `getClub` come from `useAuthorizedServerFn(...)` in `src/components/attendance-hq/auth-provider.tsx`.
-- `useAuthorizedServerFn()` currently returns a new function on every render because the wrapper itself is not memoized.
-- Each successful `setClubs(...)` / `setData(...)` causes a rerender, which creates a new `getClubs` / `getClub` function, which retriggers the effect, which fetches again. That matches the repeated club reloads shown in the session replay.
+1. Strengthen the event detail page into a real operations console
+- Update `src/routes/events.$eventId.tsx` to support high-usage host workflows instead of only showing a raw attendance list.
+- Add attendance tools for:
+  - roster search by student name, email, or 900 number
+  - method filter (first scan, returning, remembered)
+  - sort modes such as newest first / oldest first
+- Add a “recent check-ins” emphasis so hosts can quickly see who just arrived during active meetings.
+- Keep the current live polling, QR tools, export, duplicate, and close-check-in actions intact.
 
-2. Primary fix
-- Update `src/components/attendance-hq/auth-provider.tsx` so `useAuthorizedServerFn()` returns a stable callback using `useCallback`.
-- Keep the current auth-expiry behavior, including:
-  - fallback `supabase.auth.getSession()`
-  - redirect to `/sign-in?reason=expired` for real expired sessions
-- Ensure the returned function identity only changes when its true dependencies change, not on every render.
+2. Add host correction workflows for attendance issues
+- Extend the event page with safe manual workflows for common operational problems:
+  - manual add/check-in when a student cannot complete mobile check-in
+  - restore attendance after accidental removal
+  - clearer remove/restore confirmations and success feedback
+- Add server-side support in `src/lib/attendance-hq.functions.ts` for these correction flows with the same ownership checks already used elsewhere.
+- Reuse existing student validation rules from `src/lib/attendance-hq-schemas.ts`, especially email validation and 9-digit 900 number rules.
+- Show these actions directly in the event ops UI so hosts can fix issues fast without leaving the page.
 
-3. Clubs page alignment
-- Keep `src/routes/clubs.index.tsx` using its existing effect-based load flow, but rely on the stabilized `getClubs` function so the effect runs only when auth state truly changes.
-- Preserve current create-club behavior and refresh-after-create behavior.
-- Optionally tighten the post-create refresh path so it uses one consistent reload routine instead of mixing router invalidation plus direct fetch.
-
-4. Club detail page alignment
-- Keep `src/routes/clubs.$clubId.tsx` using its current fetch pattern, but let the stabilized `getClub` and mutation wrappers stop the repeated reload behavior there too.
-- Preserve the current template and event actions.
-- Make sure the effect still reloads correctly when `clubId` changes.
-
-5. Scope check for similar risk
-- Review other management routes using `useAuthorizedServerFn()` inside `useEffect` dependency arrays, especially:
-  - `src/routes/events.index.tsx`
+3. Improve event settings so hosts can control the check-in window strategically
+- Upgrade the shared `EventForm` in `src/components/attendance-hq/host-management.tsx` so event setup is not limited to hidden derived timestamps.
+- Expose clear controls for check-in timing behavior:
+  - open minutes before start
+  - close minutes after end
+  - computed read-only timestamps preview
+- Keep sane defaults, but let hosts tune the event for realistic student arrival patterns.
+- Preserve existing create/edit/duplicate flows in:
   - `src/routes/events.new.tsx`
-  - `src/routes/events.$eventId.tsx`
-  - onboarding routes
-- Apply only minimal consistency updates where needed; do not redesign their data flow if the stable hook fix already resolves the issue.
+  - `src/routes/events.$eventId.edit.tsx`
+  - `src/routes/onboarding.event.tsx`
 
-6. Files to update
-- `src/components/attendance-hq/auth-provider.tsx`
-  - memoize the returned authorized server-fn wrapper
-- `src/routes/clubs.index.tsx`
-  - minimal cleanup if needed after the hook stabilization
-- `src/routes/clubs.$clubId.tsx`
-  - minimal cleanup if needed after the hook stabilization
-- Possibly a small follow-up in other route files that depend on the same hook pattern
+4. Add event lifecycle controls that match real operations
+- Expand event management so a host can clearly see and control status:
+  - open / upcoming / closed / inactive / archived
+  - reopen by editing the window
+  - archive old events intentionally
+- Keep current close-early support, but make the event page messaging and controls more explicit so hosts understand what students can or cannot do at that moment.
+- Improve empty and blocked states so they explain what the next operator action should be.
 
-7. Why this fix works
-- The clubs page is not failing because the server data is missing; it is refetching repeatedly because the fetch function reference changes every render.
-- Stabilizing the wrapper stops `useEffect` from interpreting every render as a dependency change.
-- That preserves the existing architecture and fixes the issue at the shared source instead of patching each page separately.
+5. Improve the QR projection and room display experience
+- Refine `src/routes/events.$eventId.display.tsx` for live meeting use:
+  - stronger attendance count prominence
+  - “last updated” visibility
+  - clearer status when check-in is upcoming or closed
+  - safer full-screen presentation behavior
+- Keep the current fast polling model, but align the display copy with the event’s real status so hosts can project it confidently in the room.
 
-8. Validation after implementation
-- Open `/clubs`
-  - confirm clubs load once and the page stops reloading
-- Open `/clubs/$clubId`
-  - confirm club detail loads once without repeated refreshes
-- Create a club
-  - confirm the new club appears without triggering a reload loop
-- Navigate between clubs and events
-  - confirm no repeated background reload pattern appears
-- Verify auth expiry still works
-  - real expired sessions should still redirect to `/sign-in?reason=expired`
+6. Make event list pages more useful for ongoing operations
+- Improve `src/routes/events.index.tsx` so the event list works as a real control center:
+  - better status grouping for upcoming vs active vs past
+  - more actionable summary cards
+  - clearer attendance totals and event state labels
+- Ensure the list helps a host jump into the correct active event quickly during a busy meeting day.
 
-9. Expected result
-- The clubs page becomes stable and usable.
-- Club detail pages stop continuously reloading.
-- Shared auth-protected server calls remain secure and continue to handle true expired sessions correctly.
+7. Add post-event review visibility
+- Extend the event detail page with simple review tools for after the meeting:
+  - total attendance summary
+  - attendance method breakdown
+  - event metadata summary
+  - CSV export kept as the canonical record
+- Keep this lightweight and operational, not a full analytics module.
+
+8. Backend and data changes needed
+- Review `attendance_actions` support and extend server functions to write/read operational history needed for restore/manual-change flows.
+- Use migrations only if a schema change is truly needed for event ops history or manual attendance support; otherwise prefer existing tables and server functions.
+- Preserve current ownership protections:
+  - event ownership via club ownership
+  - host-only event management
+  - public student check-in kept separate from host tools
+
+9. Files most likely to change
+- `src/routes/events.index.tsx`
+- `src/routes/events.$eventId.tsx`
+- `src/routes/events.$eventId.edit.tsx`
+- `src/routes/events.$eventId.display.tsx`
+- `src/routes/events.new.tsx`
+- `src/routes/onboarding.event.tsx`
+- `src/components/attendance-hq/host-management.tsx`
+- `src/lib/attendance-hq.functions.ts`
+- `src/lib/attendance-hq-schemas.ts`
+- possibly `src/lib/attendance-hq.ts` for new event ops types
+
+10. Technical implementation notes
+- Keep the existing architecture: TanStack route pages + shared management components + server functions.
+- Do not redesign authentication or public QR check-in flows.
+- Prefer focused additions over broad rewrites.
+- For 50–200 student events, optimize UX around operator speed:
+  - fewer page hops
+  - clear filters
+  - fast corrections
+  - readable live state
+- Continue using host-authorized server functions for all protected event actions.
+
+11. Validation after implementation
+- Create, edit, duplicate, and open an event end-to-end.
+- Verify the event detail page loads once, polls cleanly, and stays responsive.
+- Test live attendance monitoring with search/filter on the roster.
+- Test remove and restore/manual correction flows.
+- Test QR display mode and projected count updates.
+- Test true closed/upcoming/inactive states.
+- Export CSV and verify data accuracy after attendance changes.
+- Check the flow on mobile and desktop for both hosts and students.
