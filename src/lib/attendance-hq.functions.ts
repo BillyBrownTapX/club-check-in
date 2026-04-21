@@ -364,12 +364,23 @@ export const getRememberedStudent = createServerFn({ method: "POST" })
 
     const { data: session, error } = await supabaseAdmin
       .from("student_device_sessions")
-      .select("id, student_id, students(id, first_name, last_name, student_email)")
+      .select("id, student_id")
       .eq("device_token", data.deviceToken)
       .maybeSingle();
 
     if (error) throw new Error(error.message);
-    if (!session?.students) {
+    if (!session) {
+      return { ok: false as const, state: "student_not_found" as const };
+    }
+
+    const { data: student, error: studentError } = await supabaseAdmin
+      .from("students")
+      .select("id, first_name, last_name, student_email")
+      .eq("id", session.student_id)
+      .maybeSingle();
+
+    if (studentError) throw new Error(studentError.message);
+    if (!student) {
       return { ok: false as const, state: "student_not_found" as const };
     }
 
@@ -384,7 +395,7 @@ export const getRememberedStudent = createServerFn({ method: "POST" })
 
     return {
       ok: true as const,
-      student: buildStudentPreview(session.students),
+      student: buildStudentPreview(student),
       studentId: session.student_id,
     };
   });
