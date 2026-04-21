@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { CalendarDays, Copy, Plus } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { ClubDialog, EmptyStateBlock, ManagementPageShell, PageHeader, PrimaryButton, SecondaryButton, StatsCard, TemplateCard, TemplateDialog, EventCard, FormCard, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
@@ -29,7 +29,6 @@ export const Route = createFileRoute("/clubs/$clubId")({
 function ClubDetailRoute() {
   const { loading, user } = useRequireHostRedirect();
   const { clubId } = Route.useParams();
-  const router = useRouter();
   const navigate = useNavigate();
   const getClub = useServerFn(getClubDetail);
   const updateClubMutation = useServerFn(updateClub);

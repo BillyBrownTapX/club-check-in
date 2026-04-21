@@ -18,9 +18,11 @@ import { Route as EventsIndexRouteImport } from './routes/events.index'
 import { Route as ClubsIndexRouteImport } from './routes/clubs.index'
 import { Route as OnboardingEventRouteImport } from './routes/onboarding.event'
 import { Route as OnboardingClubRouteImport } from './routes/onboarding.club'
+import { Route as EventsNewRouteImport } from './routes/events.new'
 import { Route as EventsEventIdRouteImport } from './routes/events.$eventId'
 import { Route as ClubsClubIdRouteImport } from './routes/clubs.$clubId'
 import { Route as CheckInQrTokenRouteImport } from './routes/check-in.$qrToken'
+import { Route as EventsEventIdEditRouteImport } from './routes/events.$eventId.edit'
 
 const SignUpRoute = SignUpRouteImport.update({
   id: '/sign-up',
@@ -67,10 +69,15 @@ const OnboardingClubRoute = OnboardingClubRouteImport.update({
   path: '/onboarding/club',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EventsEventIdRoute = EventsEventIdRouteImport.update({
-  id: '/events/$eventId',
-  path: '/events/$eventId',
+const EventsNewRoute = EventsNewRouteImport.update({
+  id: '/events/new',
+  path: '/events/new',
   getParentRoute: () => rootRouteImport,
+} as any)
+const EventsEventIdRoute = EventsEventIdRouteImport.update({
+  id: '/$eventId',
+  path: '/$eventId',
+  getParentRoute: () => EventsRoute,
 } as any)
 const ClubsClubIdRoute = ClubsClubIdRouteImport.update({
   id: '/clubs/$clubId',
@@ -82,6 +89,11 @@ const CheckInQrTokenRoute = CheckInQrTokenRouteImport.update({
   path: '/check-in/$qrToken',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EventsEventIdEditRoute = EventsEventIdEditRouteImport.update({
+  id: '/edit',
+  path: '/edit',
+  getParentRoute: () => EventsEventIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -91,11 +103,13 @@ export interface FileRoutesByFullPath {
   '/sign-up': typeof SignUpRoute
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
-  '/events/$eventId': typeof EventsEventIdRoute
+  '/events/$eventId': typeof EventsEventIdRouteWithChildren
+  '/events/new': typeof EventsNewRoute
   '/onboarding/club': typeof OnboardingClubRoute
   '/onboarding/event': typeof OnboardingEventRoute
   '/clubs/': typeof ClubsIndexRoute
   '/events/': typeof EventsIndexRoute
+  '/events/$eventId/edit': typeof EventsEventIdEditRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -105,11 +119,13 @@ export interface FileRoutesByTo {
   '/sign-up': typeof SignUpRoute
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
-  '/events/$eventId': typeof EventsEventIdRoute
+  '/events/$eventId': typeof EventsEventIdRouteWithChildren
+  '/events/new': typeof EventsNewRoute
   '/onboarding/club': typeof OnboardingClubRoute
   '/onboarding/event': typeof OnboardingEventRoute
   '/clubs': typeof ClubsIndexRoute
   '/events': typeof EventsIndexRoute
+  '/events/$eventId/edit': typeof EventsEventIdEditRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -120,11 +136,13 @@ export interface FileRoutesById {
   '/sign-up': typeof SignUpRoute
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
-  '/events/$eventId': typeof EventsEventIdRoute
+  '/events/$eventId': typeof EventsEventIdRouteWithChildren
+  '/events/new': typeof EventsNewRoute
   '/onboarding/club': typeof OnboardingClubRoute
   '/onboarding/event': typeof OnboardingEventRoute
   '/clubs/': typeof ClubsIndexRoute
   '/events/': typeof EventsIndexRoute
+  '/events/$eventId/edit': typeof EventsEventIdEditRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -137,10 +155,12 @@ export interface FileRouteTypes {
     | '/check-in/$qrToken'
     | '/clubs/$clubId'
     | '/events/$eventId'
+    | '/events/new'
     | '/onboarding/club'
     | '/onboarding/event'
     | '/clubs/'
     | '/events/'
+    | '/events/$eventId/edit'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -151,10 +171,12 @@ export interface FileRouteTypes {
     | '/check-in/$qrToken'
     | '/clubs/$clubId'
     | '/events/$eventId'
+    | '/events/new'
     | '/onboarding/club'
     | '/onboarding/event'
     | '/clubs'
     | '/events'
+    | '/events/$eventId/edit'
   id:
     | '__root__'
     | '/'
@@ -165,10 +187,12 @@ export interface FileRouteTypes {
     | '/check-in/$qrToken'
     | '/clubs/$clubId'
     | '/events/$eventId'
+    | '/events/new'
     | '/onboarding/club'
     | '/onboarding/event'
     | '/clubs/'
     | '/events/'
+    | '/events/$eventId/edit'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -179,7 +203,7 @@ export interface RootRouteChildren {
   SignUpRoute: typeof SignUpRoute
   CheckInQrTokenRoute: typeof CheckInQrTokenRoute
   ClubsClubIdRoute: typeof ClubsClubIdRoute
-  EventsEventIdRoute: typeof EventsEventIdRoute
+  EventsNewRoute: typeof EventsNewRoute
   OnboardingClubRoute: typeof OnboardingClubRoute
   OnboardingEventRoute: typeof OnboardingEventRoute
   ClubsIndexRoute: typeof ClubsIndexRoute
@@ -251,12 +275,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OnboardingClubRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/events/new': {
+      id: '/events/new'
+      path: '/events/new'
+      fullPath: '/events/new'
+      preLoaderRoute: typeof EventsNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/events/$eventId': {
       id: '/events/$eventId'
-      path: '/events/$eventId'
+      path: '/$eventId'
       fullPath: '/events/$eventId'
       preLoaderRoute: typeof EventsEventIdRouteImport
-      parentRoute: typeof rootRouteImport
+      parentRoute: typeof EventsRoute
     }
     '/clubs/$clubId': {
       id: '/clubs/$clubId'
@@ -272,6 +303,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckInQrTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/events/$eventId/edit': {
+      id: '/events/$eventId/edit'
+      path: '/edit'
+      fullPath: '/events/$eventId/edit'
+      preLoaderRoute: typeof EventsEventIdEditRouteImport
+      parentRoute: typeof EventsEventIdRoute
+    }
   }
 }
 
@@ -283,7 +321,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignUpRoute: SignUpRoute,
   CheckInQrTokenRoute: CheckInQrTokenRoute,
   ClubsClubIdRoute: ClubsClubIdRoute,
-  EventsEventIdRoute: EventsEventIdRoute,
+  EventsNewRoute: EventsNewRoute,
   OnboardingClubRoute: OnboardingClubRoute,
   OnboardingEventRoute: OnboardingEventRoute,
   ClubsIndexRoute: ClubsIndexRoute,
@@ -292,3 +330,12 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { createStart } from '@tanstack/react-start'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+  }
+}
