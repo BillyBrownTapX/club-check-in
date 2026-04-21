@@ -30,6 +30,7 @@ import {
   type ManagementEventSummary,
   maskEmail,
   type PublicStudentPreview,
+  type University,
   shiftTimeString,
   slugifyClubName,
 } from "@/lib/attendance-hq";
@@ -302,10 +303,10 @@ async function getOwnedClubIds(supabase: AppSupabaseClient, userId: string) {
 }
 
 async function requireOwnedClub(supabase: AppSupabaseClient, userId: string, clubId: string) {
-  const { data, error } = await supabase.from("clubs").select("*").eq("id", clubId).eq("host_id", userId).maybeSingle();
+  const { data, error } = await supabase.from("clubs").select("*, universities(id, name, slug)").eq("id", clubId).eq("host_id", userId).maybeSingle();
   if (error) throw new Error(safeMessage(error));
   if (!data) throw notFound();
-  return data as Club;
+  return data as Club & { universities?: Pick<University, "id" | "name" | "slug"> | null };
 }
 
 async function requireOwnedEvent(supabase: AppSupabaseClient, userId: string, eventId: string) {
@@ -327,6 +328,8 @@ async function requireOwnedEvent(supabase: AppSupabaseClient, userId: string, ev
       club_name: club.club_name,
       club_slug: club.club_slug,
       description: club.description,
+      university_id: club.university_id,
+      universities: club.universities ?? null,
     },
   } as EventWithClub;
 }
@@ -435,12 +438,13 @@ async function createEventForUser(
   userId: string,
   data: z.infer<typeof validatedEventSchema>,
 ) {
-  await requireOwnedClub(supabase, userId, data.clubId);
+  const club = await requireOwnedClub(supabase, userId, data.clubId);
 
   const { data: event, error } = await supabase
     .from("events")
     .insert({
       club_id: data.clubId,
+      university_id: club.university_id,
       event_template_id: data.eventTemplateId || null,
       event_name: data.eventName.trim(),
       event_date: data.eventDate,
@@ -451,7 +455,7 @@ async function createEventForUser(
       check_in_closes_at: data.checkInClosesAt,
       qr_token: createQrToken(),
     })
-    .select("*, clubs(id, club_name, club_slug, description)")
+    .select("*, clubs(id, club_name, club_slug, description, university_id, universities(id, name, slug))")
     .single();
 
   if (error || !event) throw new Error(safeMessage(error, "Unable to create event"));
@@ -506,7 +510,7 @@ export const getClubDetail = createServerFn({ method: "GET" })
     const [{ data: events, error: eventsError }, { data: templates, error: templatesError }] = await Promise.all([
       context.supabase
         .from("events")
-        .select("*, clubs(id, club_name, club_slug), attendance_records(id)")
+        .select("*, clubs(id, club_name, club_slug, university_id, universities(id, name, slug)), attendance_records(id)")
         .eq("club_id", club.id)
         .order("event_date", { ascending: false })
         .order("start_time", { ascending: false }),
@@ -550,6 +554,7 @@ export const createClubManagement = createServerFn({ method: "POST" })
       .from("clubs")
       .insert({
         host_id: context.userId,
+        university_id: data.universityId,
         club_name: data.clubName.trim(),
         club_slug: slug,
         description: data.description?.trim() || null,
@@ -574,6 +579,7 @@ export const updateClub = createServerFn({ method: "POST" })
     const { data: club, error } = await context.supabase
       .from("clubs")
       .update({
+        university_id: data.universityId,
         club_name: data.clubName.trim(),
         description: data.description?.trim() || null,
         is_active: data.isActive,
