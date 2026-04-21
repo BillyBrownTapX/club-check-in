@@ -14,7 +14,7 @@ function ClubDetailError({ error }: { error: Error }) {
   return <ManagementPageShell><div className="py-16 text-center text-sm text-muted-foreground">{error.message}</div></ManagementPageShell>;
 }
 
-export const Route = createFileRoute("/clubs/")({
+export const Route = createFileRoute("/clubs/$clubId")({
   loader: ({ params }) => getClubDetail({ data: { clubId: params.clubId } }),
   errorComponent: ClubDetailError,
   notFoundComponent: ClubDetailNotFound,
