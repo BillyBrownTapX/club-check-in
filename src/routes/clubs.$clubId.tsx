@@ -164,7 +164,7 @@ function ClubDetailRoute() {
           title="Edit Club"
           description="Keep this club’s details current."
           universities={data.universities}
-          initialValues={{ clubId: data.club.id, universityId: data.club.university_id ?? "", clubName: data.club.club_name, description: data.club.description ?? "", isActive: data.club.is_active }}
+          initialValues={{ clubId: data.club.id, universityId: data.club.university_id ?? "", clubName: data.club.club_name, description: data.club.description ?? "", isActive: data.club.is_active, logoPath: data.club.logo_url ?? null }}
           onSubmit={async (values) => {
              await updateClubMutation({ data: values as never });
              setData(await getClub({ data: { clubId } }));
