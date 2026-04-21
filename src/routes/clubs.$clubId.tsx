@@ -4,7 +4,7 @@ import { CalendarDays, Copy, Plus } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { ClubDialog, EmptyStateBlock, ManagementPageShell, PageHeader, PrimaryButton, SecondaryButton, StatsCard, TemplateCard, TemplateDialog, EventCard, FormCard, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
 import { createEventTemplate, duplicateEventTemplate, getClubDetail, updateClub, updateEventTemplate } from "@/lib/attendance-hq.functions";
-import type { EventTemplateWithClub } from "@/lib/attendance-hq";
+import type { EventTemplateWithClub, ManagementEventSummary } from "@/lib/attendance-hq";
 
 function ClubDetailNotFound() {
   return <ManagementPageShell><div className="py-16 text-center text-sm text-muted-foreground">Club not found.</div></ManagementPageShell>;
@@ -83,7 +83,7 @@ function ClubDetailRoute() {
           </div>
           {data.upcomingEvents.length ? (
             <div className="grid gap-4 lg:grid-cols-2">
-              {data.upcomingEvents.map((event) => <EventCard key={event.id} event={event} showClub={false} onDuplicate={(eventId) => navigate({ to: "/events/new", search: { duplicateFrom: eventId } })} />)}
+              {data.upcomingEvents.map((event: ManagementEventSummary) => <EventCard key={event.id} event={event} showClub={false} onDuplicate={(eventId) => navigate({ to: "/events/new", search: { duplicateFrom: eventId } })} />)}
             </div>
           ) : (
             <EmptyStateBlock title="No upcoming events" description="Create your next event to start tracking attendance." action={<PrimaryButton asChild><a href={`/events/new?clubId=${data.club.id}`}>Create Event</a></PrimaryButton>} />
@@ -97,7 +97,7 @@ function ClubDetailRoute() {
           </div>
           {data.pastEvents.length ? (
             <div className="grid gap-4 lg:grid-cols-2">
-              {data.pastEvents.map((event) => <EventCard key={event.id} event={event} showClub={false} onDuplicate={(eventId) => navigate({ to: "/events/new", search: { duplicateFrom: eventId } })} />)}
+              {data.pastEvents.map((event: ManagementEventSummary) => <EventCard key={event.id} event={event} showClub={false} onDuplicate={(eventId) => navigate({ to: "/events/new", search: { duplicateFrom: eventId } })} />)}
             </div>
           ) : (
             <EmptyStateBlock title="No past events" description="Past events will show here once your club starts hosting them." />
@@ -111,7 +111,7 @@ function ClubDetailRoute() {
           </div>
           {data.templates.length ? (
             <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-              {data.templates.map((template) => (
+              {data.templates.map((template: EventTemplateWithClub) => (
                 <TemplateCard
                   key={template.id}
                   template={template}

@@ -1,7 +1,8 @@
-import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
-import { EventCard, EmptyStateBlock, FilterBar, ManagementPageShell, PageHeader, PrimaryButton, SearchInput, SelectInput, useEventFilters, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
+import { EventCard, EmptyStateBlock, FilterBar, ManagementPageShell, PageHeader, PrimaryButton, SearchInput, SelectInput, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
 import { getHostClubSummaries, getHostEvents } from "@/lib/attendance-hq.functions";
+import type { ClubSummary, EventListStatusFilter, ManagementEventSummary } from "@/lib/attendance-hq";
 
 function EventsNotFound() {
   return <ManagementPageShell><div className="py-16 text-center text-sm text-muted-foreground">Events not found.</div></ManagementPageShell>;
@@ -14,7 +15,7 @@ function EventsError({ error }: { error: Error }) {
 export const Route = createFileRoute("/events/")({
   validateSearch: (search: Record<string, unknown>) => ({
     clubId: typeof search.clubId === "string" ? search.clubId : "",
-    status: search.status === "upcoming" || search.status === "past" ? search.status : "all",
+    status: (search.status === "upcoming" || search.status === "past" ? search.status : "all") as EventListStatusFilter,
     query: typeof search.query === "string" ? search.query : "",
   }),
   loaderDeps: ({ search }) => search,
@@ -56,22 +57,22 @@ function EventsRoute() {
           <SelectInput
             label="Club"
             value={search.clubId}
-            onValueChange={(clubId) => navigate({ search: (prev) => ({ ...prev, clubId }) })}
+            onValueChange={(clubId) => navigate({ search: { ...search, clubId } })}
             placeholder="All Clubs"
-            options={[{ value: "", label: "All Clubs" }, ...clubs.map((club) => ({ value: club.id, label: club.club_name }))]}
+            options={[{ value: "", label: "All Clubs" }, ...clubs.map((club: ClubSummary) => ({ value: club.id, label: club.club_name }))]}
           />
           <SelectInput
             label="Status"
             value={search.status}
-            onValueChange={(status) => navigate({ search: (prev) => ({ ...prev, status: status as "all" | "upcoming" | "past" }) })}
+            onValueChange={(status) => navigate({ search: { ...search, status: status as EventListStatusFilter } })}
             placeholder="All"
             options={[{ value: "all", label: "All" }, { value: "upcoming", label: "Upcoming" }, { value: "past", label: "Past" }]}
           />
-          <SearchInput value={search.query} onChange={(query) => navigate({ search: (prev) => ({ ...prev, query }) })} />
+          <SearchInput value={search.query} onChange={(query) => navigate({ search: { ...search, query } })} />
         </FilterBar>
         {events.length ? (
           <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-            {events.map((event) => <EventCard key={event.id} event={event} onDuplicate={(eventId) => navigate({ to: "/events/new", search: { duplicateFrom: eventId } })} />)}
+            {events.map((event: ManagementEventSummary) => <EventCard key={event.id} event={event} onDuplicate={(eventId) => navigate({ to: "/events/new", search: { duplicateFrom: eventId } })} />)}
           </div>
         ) : (
           <EmptyStateBlock

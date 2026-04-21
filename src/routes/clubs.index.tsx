@@ -2,6 +2,7 @@ import { useState } from "react";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import { ClubCard, ClubDialog, EmptyStateBlock, ManagementPageShell, PageHeader, PrimaryButton, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
+import type { ClubSummary } from "@/lib/attendance-hq";
 import { getHostClubSummaries, createClubManagement } from "@/lib/attendance-hq.functions";
 import { useServerFn } from "@tanstack/react-start";
 import { useRouter as useInvalidateRouter } from "@tanstack/react-router";
@@ -46,7 +47,7 @@ function ClubsRoute() {
         />
         {clubs.length ? (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {clubs.map((club) => <ClubCard key={club.id} club={club} />)}
+            {clubs.map((club: ClubSummary) => <ClubCard key={club.id} club={club} />)}
           </div>
         ) : (
           <EmptyStateBlock
