@@ -429,6 +429,37 @@ async function getHostEventsForUser(
   });
 }
 
+async function createEventForUser(
+  supabase: AppSupabaseClient,
+  userId: string,
+  data: z.infer<typeof validatedEventSchema>,
+) {
+  await requireOwnedClub(supabase, userId, data.clubId);
+
+  const { data: event, error } = await supabase
+    .from("events")
+    .insert({
+      club_id: data.clubId,
+      event_template_id: data.eventTemplateId || null,
+      event_name: data.eventName.trim(),
+      event_date: data.eventDate,
+      start_time: data.startTime,
+      end_time: data.endTime,
+      location: data.location?.trim() || null,
+      check_in_opens_at: data.checkInOpensAt,
+      check_in_closes_at: data.checkInClosesAt,
+      qr_token: createQrToken(),
+    })
+    .select("*, clubs(id, club_name, club_slug, description)")
+    .single();
+
+  if (error || !event) throw new Error(safeMessage(error, "Unable to create event"));
+  return {
+    event: event as EventWithClub,
+    onboarding: await resolveHostOnboardingStateWithClient(supabase, userId),
+  };
+}
+
 export const getHostWorkspace = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {

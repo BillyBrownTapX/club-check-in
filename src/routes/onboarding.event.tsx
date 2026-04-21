@@ -8,12 +8,27 @@ import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider"
 import { getManagementErrorMessage, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
 import { buildEventDefaults, combineDateAndTime, shiftTimeString } from "@/lib/attendance-hq";
 import { createEvent, getHostOnboardingState } from "@/lib/attendance-hq.functions";
-import { validatedEventSchema } from "@/lib/attendance-hq-schemas";
 
-const formSchema = validatedEventSchema.extend({
+const baseEventSchema = z.object({
+  eventName: z.string().trim().min(2, "Enter an event name").max(160, "Event name is too long"),
+  eventDate: z.string().min(1, "Choose a date"),
+  startTime: z.string().min(1, "Choose a start time"),
+  endTime: z.string().min(1, "Choose an end time"),
+  location: z.string().trim().max(160, "Location is too long").optional().or(z.literal("")),
+  checkInOpensAt: z.string().min(1, "Choose when check-in opens"),
+  checkInClosesAt: z.string().min(1, "Choose when check-in closes"),
+});
+
+const formSchema = baseEventSchema.extend({
   openMinutesBeforeStart: z.coerce.number().int().min(0).max(1440),
   closeMinutesAfterEnd: z.coerce.number().int().min(0).max(1440),
-}).omit({ clubId: true, eventTemplateId: true });
+}).refine((value) => value.endTime > value.startTime, {
+  message: "End time must be after start time",
+  path: ["endTime"],
+}).refine((value) => new Date(value.checkInClosesAt).getTime() > new Date(value.checkInOpensAt).getTime(), {
+  message: "Check-in close must be after open",
+  path: ["checkInClosesAt"],
+});
 type FormValues = z.infer<typeof formSchema>;
 
 export const Route = createFileRoute("/onboarding/event")({
