@@ -823,6 +823,38 @@ function FormSection({ title, description, children }: { title: string; descript
   );
 }
 
+// Friendly labels for top-level EventForm fields. Used by the form-error
+// summary banner so hosts see plain English next to each blocking message.
+const EVENT_FIELD_LABELS: Record<string, string> = {
+  clubId: "Club",
+  eventName: "Event name",
+  eventDate: "Event date",
+  startTime: "Start time",
+  endTime: "End time",
+  location: "Location",
+  checkInOpensAt: "Check-in opens",
+  checkInClosesAt: "Check-in closes",
+};
+
+function EventFormErrorSummary({ errors }: { errors: Record<string, { message?: string } | undefined> }) {
+  const entries = Object.entries(errors)
+    .map(([field, value]) => ({ field, message: value?.message }))
+    .filter((entry): entry is { field: string; message: string } => Boolean(entry.message));
+  if (!entries.length) return null;
+  return (
+    <div role="alert" className="rounded-2xl border border-destructive/30 bg-destructive/10 p-4">
+      <p className="text-sm font-semibold text-destructive">Fix these before saving</p>
+      <ul className="mt-2 space-y-1 text-sm text-destructive">
+        {entries.map((entry) => (
+          <li key={entry.field}>
+            <span className="font-medium">{EVENT_FIELD_LABELS[entry.field] ?? entry.field}:</span> {entry.message}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 export function EventForm({ payload, title, description, submitLabel, onSubmit, cancelAction }: { payload: EventFormPayload; title: string; description: string; submitLabel: string; onSubmit: (values: EventValues | EventUpdateValues) => Promise<void>; cancelAction?: React.ReactNode }) {
   const navigate = useNavigate();
   const form = useForm<EventFormValues>({
