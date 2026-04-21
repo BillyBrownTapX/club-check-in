@@ -5,6 +5,7 @@ import QRCode from "react-qr-code";
 import { Button } from "@/components/ui/button";
 import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
 import { useRequireHostRedirect } from "@/components/attendance-hq/host-management";
+import { Chip } from "@/components/attendance-hq/ios";
 import { getEventDisplayPayload } from "@/lib/attendance-hq.functions";
 import {
   formatEventDate,
@@ -20,20 +21,16 @@ const DISPLAY_POLL_INTERVAL_MS = 3000;
 
 function DisplayError({ error }: { error: Error }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-app-shell px-6">
-      <div className="rounded-[2rem] border border-border/90 bg-card/95 px-6 py-8 text-center text-sm text-muted-foreground shadow-[0_28px_72px_-40px_color-mix(in_oklab,var(--color-primary)_42%,transparent)]">
-        {error.message}
-      </div>
+    <div className="flex min-h-screen items-center justify-center bg-gradient-hero px-6">
+      <div className="ios-card rounded-3xl p-6 text-center text-sm text-muted-foreground">{error.message}</div>
     </div>
   );
 }
 
 function DisplayNotFound() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-app-shell px-6">
-      <div className="rounded-[2rem] border border-border/90 bg-card/95 px-6 py-8 text-center text-sm text-muted-foreground shadow-[0_28px_72px_-40px_color-mix(in_oklab,var(--color-primary)_42%,transparent)]">
-        Event not found.
-      </div>
+    <div className="flex min-h-screen items-center justify-center bg-gradient-hero px-6">
+      <div className="ios-card rounded-3xl p-6 text-center text-sm text-muted-foreground">Event not found.</div>
     </div>
   );
 }
@@ -44,7 +41,7 @@ export const Route = createFileRoute("/events/$eventId/display")({
   head: () => ({
     meta: [
       { title: "QR display — Attendance HQ" },
-      { name: "description", content: "Full-screen QR code projector for an Attendance HQ event." },
+      { name: "description", content: "Wallet-style QR display for an Attendance HQ event." },
     ],
   }),
   component: EventDisplayRoute,
@@ -64,7 +61,7 @@ function EventDisplayRoute() {
 
   const refresh = useCallback(async () => {
     try {
-      const next = await loadDisplayPayload({ data: { eventId } }) as EventDisplayPayload;
+      const next = (await loadDisplayPayload({ data: { eventId } })) as EventDisplayPayload;
       setEvent(next.event as EventWithClub);
       setAttendanceCount(next.attendanceCount);
       setSummary(next.summary);
@@ -82,9 +79,7 @@ function EventDisplayRoute() {
       await refresh();
       if (!cancelled) setInitialLoaded(true);
     })();
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [loading, refresh, user]);
 
   useEffect(() => {
@@ -106,28 +101,17 @@ function EventDisplayRoute() {
   const handleEnterFullscreen = async () => {
     if (typeof document === "undefined") return;
     try {
-      if (document.fullscreenElement) {
-        await document.exitFullscreen();
-      } else {
-        await document.documentElement.requestFullscreen();
-      }
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await document.documentElement.requestFullscreen();
     } catch {
       return;
     }
   };
 
-  if (loading || !user) {
+  if (loading || !user || !initialLoaded) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
+      <div className="flex min-h-screen items-center justify-center bg-gradient-hero text-sm text-white/80">
         Loading…
-      </div>
-    );
-  }
-
-  if (!initialLoaded) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background text-sm text-muted-foreground">
-        Loading event…
       </div>
     );
   }
@@ -137,79 +121,74 @@ function EventDisplayRoute() {
 
   const status = getCheckInStatus(event);
   const statusCopy = status === "open"
-    ? `Check-in is open until ${formatTimestamp(event.check_in_closes_at)}`
+    ? `Open until ${formatTimestamp(event.check_in_closes_at)}`
     : status === "upcoming"
-      ? `Check-in opens at ${formatTimestamp(event.check_in_opens_at)}`
+      ? `Opens at ${formatTimestamp(event.check_in_opens_at)}`
       : status === "archived"
         ? "This event is archived"
         : status === "inactive"
           ? "This event was closed early"
-          : `Check-in closed at ${formatTimestamp(event.check_in_closes_at)}`;
+          : `Closed at ${formatTimestamp(event.check_in_closes_at)}`;
 
   return (
-    <div className="relative flex min-h-screen flex-col gap-6 bg-app-shell px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:px-6 sm:py-8">
-      <div className="flex items-center justify-between gap-3 rounded-[1.8rem] border border-border/90 bg-card/95 px-4 py-3 shadow-[0_24px_56px_-34px_color-mix(in_oklab,var(--color-primary)_42%,transparent)] backdrop-blur">
-        <Button asChild variant="ghost" className="rounded-2xl">
-          <Link to="/events/$eventId" params={{ eventId }} search={{ created: "" }}>
-            <ArrowLeft className="h-4 w-4" />Back
-          </Link>
-        </Button>
-         <Button type="button" variant="outline" className="rounded-2xl border-border/90 bg-surface" onClick={() => void handleEnterFullscreen()}>
-          <Maximize2 className="h-4 w-4" />Fullscreen
-        </Button>
-      </div>
+    <div className="relative min-h-screen overflow-hidden hero-wash">
+      <div className="blur-orb-white -left-20 top-10 h-64 w-64 opacity-30" />
+      <div className="blur-orb-gold -bottom-20 -right-12 h-72 w-72 opacity-40" />
 
-      <div className="flex flex-1 flex-col items-center justify-center gap-6 sm:gap-8">
-      <div className="absolute left-4 top-4 flex gap-2 sr-only">
-        <Button asChild variant="ghost" className="rounded-xl">
-          <Link to="/events/$eventId" params={{ eventId }} search={{ created: "" }}>
-            <ArrowLeft className="h-4 w-4" />Back
-          </Link>
-        </Button>
-      </div>
-      <div className="absolute right-4 top-4 sr-only">
-        <Button type="button" variant="ghost" className="rounded-xl" onClick={() => void handleEnterFullscreen()}>
-          <Maximize2 className="h-4 w-4" />Fullscreen
-        </Button>
-      </div>
-
-      <div className="space-y-3 px-2 text-center">
-        <p className="text-base font-semibold uppercase tracking-[0.18em] text-muted-foreground sm:text-lg">
-          {event.clubs?.club_name ?? "Club event"}
-        </p>
-        <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-6xl">{event.event_name}</h1>
-        <p className="text-lg text-muted-foreground sm:text-xl">
-          {formatEventDate(event.event_date)} · {formatEventTime(event.start_time, event.end_time)}
-        </p>
-        <p className="text-sm text-muted-foreground sm:text-base">{statusCopy}</p>
-      </div>
-
-      <div className="grid w-full max-w-6xl gap-5 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-center">
-        <div className="flex items-center justify-center rounded-[2rem] bg-white p-5 shadow-[0_24px_60px_-28px_rgba(15,23,42,0.28)] sm:p-8">
-          {checkInUrl ? <QRCode value={checkInUrl} size={420} className="h-auto w-full max-w-[28rem]" /> : null}
+      <div className="relative mx-auto flex min-h-screen w-full max-w-[440px] flex-col px-4 pb-safe pt-safe-1 sm:max-w-[480px] sm:px-5">
+        <div className="flex items-center justify-between py-3">
+          <Button asChild variant="ghost" size="icon" className="rounded-full text-white hover:bg-white/15 hover:text-white">
+            <Link to="/events/$eventId" params={{ eventId }} search={{ created: "" }}>
+              <ArrowLeft className="h-5 w-5" />
+            </Link>
+          </Button>
+          <Chip tone="gold" className="border-white/30 bg-white/15 text-white">
+            <span className="inline-flex h-1.5 w-1.5 rounded-full bg-success" />
+            {status === "open" ? "Live" : status}
+          </Chip>
+          <Button variant="ghost" size="icon" className="rounded-full text-white hover:bg-white/15 hover:text-white" onClick={() => void handleEnterFullscreen()}>
+            <Maximize2 className="h-5 w-5" />
+          </Button>
         </div>
-        <div className="space-y-4">
-          <div className="rounded-[2rem] border border-border/90 bg-card/95 px-6 py-8 text-center shadow-[0_24px_56px_-34px_color-mix(in_oklab,var(--color-primary)_42%,transparent)]">
-            <div className="inline-flex items-center gap-3 text-muted-foreground">
-              <Users className="h-5 w-5" />
-              <span className="text-sm font-medium uppercase tracking-[0.18em]">Checked in</span>
+
+        {/* Wallet-style pass card */}
+        <div className="mt-4 flex flex-1 flex-col items-center justify-start">
+          <div className="w-full overflow-hidden rounded-[2rem] bg-white shadow-[0_30px_70px_-20px_rgba(15,23,42,0.45)] ios-spring-in">
+            <div className="bg-gradient-brand px-5 py-5 text-white">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-white/80">{event.clubs?.club_name ?? "Club event"}</p>
+              <h1 className="mt-2 font-display text-[26px] font-extrabold leading-tight">{event.event_name}</h1>
+              <p className="mt-2 text-[13px] text-white/85">{formatEventDate(event.event_date)} · {formatEventTime(event.start_time, event.end_time)}</p>
             </div>
-            <div className="mt-4 text-7xl font-bold leading-none text-foreground">{attendanceCount}</div>
-            <p className="mt-3 text-sm text-muted-foreground">{summary?.recent ?? 0} in the last 15 minutes</p>
+            <div className="relative">
+              {/* perforation */}
+              <div className="absolute -left-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-[hsl(var(--app-shell))]" />
+              <div className="absolute -right-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full bg-[hsl(var(--app-shell))]" />
+              <div className="border-y border-dashed border-border" />
+            </div>
+            <div className="flex items-center justify-center px-6 py-7">
+              {checkInUrl ? <QRCode value={checkInUrl} size={272} className="h-auto w-full max-w-[280px]" /> : null}
+            </div>
+            <div className="px-5 pb-5 text-center">
+              <p className="text-[12px] text-muted-foreground">{statusCopy}</p>
+              <p className="mt-3 break-all text-[11.5px] text-muted-foreground/80">{checkInUrl}</p>
+            </div>
           </div>
-          <div className="rounded-[1.6rem] border border-border/90 bg-card/95 px-5 py-4 shadow-[0_24px_56px_-34px_color-mix(in_oklab,var(--color-primary)_42%,transparent)]">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Last updated</p>
-            <p className="mt-2 text-lg font-semibold text-foreground">{lastUpdatedAt ? formatTimestamp(lastUpdatedAt) : "—"}</p>
-            <p className="mt-1 text-sm text-muted-foreground">Polling every {DISPLAY_POLL_INTERVAL_MS / 1000}s while this screen is visible.</p>
-          </div>
-        </div>
-      </div>
 
-      <div className="flex max-w-4xl flex-col items-center gap-2">
-        <p className="max-w-2xl break-all text-center text-sm text-muted-foreground sm:text-base">
-          {checkInUrl}
-        </p>
-      </div>
+          {/* Live counter */}
+          <div className="mt-4 grid w-full grid-cols-2 gap-3">
+            <div className="ios-glass rounded-2xl p-4 text-white">
+              <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-white/80">
+                <Users className="h-3.5 w-3.5" /> Checked in
+              </div>
+              <p className="mt-2 font-display text-[34px] font-black leading-none">{attendanceCount}</p>
+            </div>
+            <div className="ios-glass rounded-2xl p-4 text-white">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-white/80">Recent (15m)</p>
+              <p className="mt-2 font-display text-[34px] font-black leading-none">{summary?.recent ?? 0}</p>
+            </div>
+          </div>
+          <p className="mt-3 text-[11px] text-white/70">Updated {lastUpdatedAt ? formatTimestamp(lastUpdatedAt) : "—"}</p>
+        </div>
       </div>
     </div>
   );
