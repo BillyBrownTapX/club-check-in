@@ -387,26 +387,12 @@ export function useRequireHostRedirect() {
 // never compute it locally.
 export function useResolvePostAuthRedirect() {
   const navigate = useNavigate();
-  const fetchOnboardingState = useAuthorizedServerFn(getHostOnboardingState);
 
   return useCallback(
-    async (seed?: { fullName?: string; email?: string }) => {
-      const { onboarding } = await fetchOnboardingState({ data: seed ?? {} });
-      if (onboarding.isComplete && onboarding.event) {
-        navigate({
-          to: "/events/$eventId",
-          params: { eventId: onboarding.event.id },
-          search: { created: "" },
-        });
-        return;
-      }
-      if (onboarding.nextPath === "/onboarding/event") {
-        navigate({ to: "/onboarding/event" });
-        return;
-      }
-      navigate({ to: "/onboarding/club" });
+    async (_seed?: { fullName?: string; email?: string }) => {
+      navigate({ to: "/home" });
     },
-    [fetchOnboardingState, navigate],
+    [navigate],
   );
 }
 
