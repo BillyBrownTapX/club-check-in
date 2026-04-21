@@ -1,79 +1,82 @@
 
-Fix the real deployment/config mismatch that is still breaking Attendance HQ.
+Fix the real configuration failure that is keeping Attendance HQ stuck on the “App isn’t configured” screen.
 
-## What is actually wrong now
+## Confirmed issue
 
-The earlier diagnosis is outdated.
+The app is failing before normal UI logic runs.
 
-- The project now does have a local `.env` file in the sandbox.
-- But the published app still renders **“App isn't configured”**.
-- That means the problem is no longer “missing file in the workspace” — it is that the **deployed app is not receiving the backend env values at build/runtime**.
+What is confirmed:
+- The published site currently renders the root config fallback, not the app.
+- The browser console error is:
+  `Missing Supabase environment variables. Ensure SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY (or VITE_ prefixed versions) are set in your .env file.`
+- `src/integrations/supabase/client.ts` throws immediately if `VITE_SUPABASE_URL` or `VITE_SUPABASE_PUBLISHABLE_KEY` are missing.
+- `wrangler.jsonc` currently documents the required values, but does not actually define any `vars`.
+- The project secrets currently do not include the required backend keys.
 
-Most likely cause:
-- the manual `.env` workaround only affected the local sandbox session
-- `.env` is gitignored and is not a durable deployment source
-- the published build still does not have the required browser-safe backend values (`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`) injected by Lovable Cloud
+This is a deployment/config problem, not a visual/UI bug.
 
-The evidence:
-- published URL still shows the root config error screen
-- preview fetch is gated behind the auth bridge, so it did not prove the deployed app was healthy
-- runtime secrets already exist for this project, so this is a **Cloud/deployment injection problem**, not a missing-secret problem
+## What to implement
 
-## Plan
+### 1. Restore the required backend configuration
+Set the missing project configuration so both the browser bundle and server-side code receive the values they expect:
 
-### 1. Repair the backend env source of truth
-Use Lovable Cloud as the source of configuration again instead of relying on the sandbox-only `.env`.
+Required public values:
+- `SUPABASE_URL`
+- `SUPABASE_PUBLISHABLE_KEY`
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
+- `VITE_SUPABASE_PROJECT_ID`
 
-- Verify the project’s Cloud connection is healthy
-- Refresh/reconnect the Cloud integration so the managed environment is regenerated for builds
-- Confirm the public backend values are available to the app build, not just to runtime secrets
+Required server-only value:
+- `SUPABASE_SERVICE_ROLE_KEY`
 
-### 2. Remove the false assumption that the sandbox `.env` fixed deployment
-Treat the current `.env` as a temporary local workaround only.
+### 2. Make the public values durable in project config
+Update `wrangler.jsonc` to include a real `vars` block for the non-secret values above so the deployment has a stable source of truth for:
+- browser Vite injection
+- SSR/runtime access
+- future publishes
 
-- Do not rely on the manually created `.env` as the permanent fix
-- Ensure the project rebuilds from managed configuration so preview/published deployments receive the same values consistently
+Keep `SUPABASE_SERVICE_ROLE_KEY` as a secret only.
 
-### 3. Rebuild and republish from the repaired configuration
-Once Cloud env injection is restored:
+### 3. Leave generated client files untouched
+Do not edit:
+- `src/integrations/supabase/client.ts`
+- `src/integrations/supabase/client.server.ts`
 
-- trigger a fresh preview rebuild
-- verify the root route no longer throws the “missing backend settings” error
-- republish so the public site is rebuilt from the corrected environment state
+They are correctly failing fast; the missing config is the actual issue.
 
-### 4. Verify both app entry paths
-After the rebuild, explicitly test these routes:
+### 4. Republish after config is restored
+After the backend values are restored, rebuild/publish the app so the generated browser bundle includes the `VITE_*` values.
 
-- `/`
-- `/sign-in`
-- `/sign-up`
-- `/forgot-password`
-- `/check-in/$qrToken` with a valid token if available
+## Files/settings involved
 
-Success criteria:
-- landing page renders instead of the root error card
-- auth screens load normally
-- no “App isn't configured” fallback appears
-- public check-in can at least load its shell instead of failing immediately
+### Code/config changes
+- `wrangler.jsonc`
+  - add a real `vars` section with the public backend values
 
-### 5. Only if Cloud re-sync still fails
-If the deployment still cannot see the backend values after reconnect/rebuild, do a second-pass fix focused on configuration delivery:
+### Project/backend settings
+- Lovable Cloud project secrets/settings
+  - ensure `SUPABASE_SERVICE_ROLE_KEY` exists
+  - ensure the public backend values are present for deployment
 
-- inspect how browser-safe backend config is being injected into TanStack/Vite builds
-- repair that delivery path at the project/platform config layer
-- keep the generated backend client untouched unless absolutely necessary
+## Verification checklist
 
-## Files/code impact
+After the fix:
+- `/` loads the landing page instead of the config error card
+- `/sign-in` loads normally
+- `/sign-up` loads normally
+- `/forgot-password` loads normally
+- `/check-in/$qrToken` no longer fails immediately because of missing config
+- browser console no longer shows the missing-environment error
+- published site and preview behave consistently
 
-Expected best-case outcome:
-- no app code changes required
-- this is fixed by restoring proper managed environment injection and republishing
+## Out of scope
 
-If a second pass is needed, the investigation will center on:
-- `vite.config.ts`
-- deployment/build environment wiring
-- Lovable Cloud configuration state
+- no redesign work
+- no auth-flow refactor
+- no database schema changes
+- no route logic changes unless a second issue appears after config is restored
 
-## Important constraint
+## Expected outcome
 
-Do not continue chasing generic frontend bugs until this is resolved. The app is failing before normal product flows begin, so deployment/backend config must be fixed first.
+Attendance HQ will boot again because the deployment will finally receive the backend settings that the app already expects.
