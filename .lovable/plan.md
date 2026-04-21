@@ -1,58 +1,84 @@
 
 
-## Fix the "App isn't configured" screen at the root, permanently
+## Make Attendance HQ install like a native mobile app
 
-### What's actually happening (the real root cause)
+The app already has the iOS-style shell, safe-area paddings, large-title headers, bottom tab bar, and operational screens. What's missing is the **PWA-lite envelope** so that when a host saves it to their iPhone/Android home screen, it launches full-screen, behaves like an installed app, and surfaces a tasteful Install CTA. No service worker, no Capacitor, no offline caching.
 
-Two things compound to make this keep coming back, and **neither will be fixed by republishing**:
+### What you'll get
 
-1. **The client throws synchronously the first time anything touches `supabase`.** In `src/integrations/supabase/client.ts`, the proxy lazily calls `createSupabaseClient()`, which **throws** if either `VITE_SUPABASE_URL` or `VITE_SUPABASE_PUBLISHABLE_KEY` is falsy at the moment of first access. That throw bubbles into TanStack Router's root error boundary, which (in `src/routes/__root.tsx` lines 45–65) **specifically pattern-matches `/supabase environment variables/i`** and renders the "App isn't configured" screen. So any condition that makes those vars unavailable in the browser bundle takes the entire app down — there is no degraded-mode fallback.
+- Save to Home Screen → launches with no browser chrome, edge-to-edge, respecting notch + home indicator.
+- Android/Chrome users see a real "Install Attendance HQ" button on the Home screen and Settings.
+- iPhone users see a clean "Add to Home Screen" instructional card on Home (one-time, dismissible) since iOS doesn't allow programmatic installs.
+- Once installed, all install prompts disappear automatically.
 
-2. **The browser bundle reads `import.meta.env.VITE_*`, which Vite inlines at build time — but the keys are also already hardcoded as plain strings in `wrangler.jsonc`.** That means the *Worker runtime* has them, but the *browser bundle* only has them if the build step had them in `process.env` at the moment Vite ran. The `process.env.SUPABASE_URL` fallback in `client.ts` is a red herring on the browser — `process.env` doesn't exist in the browser, so the fallback only helps SSR. If a published build was ever produced in an environment where Vite didn't see `VITE_SUPABASE_URL`, the resulting JS contains literal `undefined` and the site is dead until someone rebuilds. There is no recovery path inside the running app.
+### Files added
 
-The published bundle on `attendance-hq.com` is in exactly that state. Republishing *can* fix the symptom for one deploy, but the structural problem remains: **the app has no client-side fallback for its own publishable, non-secret backend config, and the publishable key is already public anyway** (it's in `wrangler.jsonc`, committed to the repo, designed to be exposed to browsers).
+**`public/manifest.webmanifest`** — declares the app to the OS:
+- `name`: "Attendance HQ", `short_name`: "Attendance"
+- `start_url`: `/home`, `scope`: `/`, `display`: `standalone`, `orientation`: `portrait`
+- `background_color`: `#0F3FA0` (brand navy), `theme_color`: `#0F3FA0`
+- `icons`: `192x192` and `512x512` PNGs (plus `maskable` variant for Android adaptive icons). I'll generate them from the existing brand mark and place them at `public/icons/`.
+- `categories`: `["productivity", "business"]`
 
-### The fix (so this never happens again)
+**`public/icons/icon-192.png`, `icon-512.png`, `icon-maskable-512.png`** — generated from the existing brand color/wordmark so iOS/Android show a real app icon, not a Safari screenshot.
 
-Stop letting a missing build-time env var brick the app. Bake a guaranteed fallback for the publishable values directly into the client module, and stop pattern-matching error messages in the root boundary.
+**`src/hooks/use-install-prompt.ts`** — single source of truth for install state:
+- Captures `beforeinstallprompt` (Chrome/Edge/Android) and stashes it.
+- Exposes `{ canInstall, isInstalled, isIos, promptInstall(), dismissIosHint(), iosHintDismissed }`.
+- `isInstalled` checks `matchMedia('(display-mode: standalone)')` + `navigator.standalone` (iOS).
+- `isIos` sniffs UA for iPhone/iPad (only used to decide whether to show the iOS "Share → Add to Home Screen" instructions).
+- Persists "iOS hint dismissed" + "installed" in `localStorage` so the banner doesn't nag.
+- SSR-safe: all `window` access guarded.
 
-**1. Make the Supabase client self-sufficient for the publishable values.**
+**`src/components/attendance-hq/install-cta.tsx`** — two variants:
+- `<InstallBanner />` — slim card for the Home screen. Hides when installed. On Android: button triggers native prompt. On iOS: opens a small in-card hint with the Share-icon glyph + "Tap Share, then Add to Home Screen". Dismissible.
+- `<InstallButton />` — single tonal button for the Settings screen (same logic, no banner chrome).
 
-In `src/integrations/supabase/client.ts`:
-- Define module-level constants `FALLBACK_SUPABASE_URL` and `FALLBACK_SUPABASE_PUBLISHABLE_KEY` set to the project's real publishable values (the same ones already committed in `wrangler.jsonc`). These are non-secret, RLS-protected, and meant for the browser.
-- Resolution order becomes: `import.meta.env.VITE_*` → `process.env.*` (SSR) → hardcoded fallback.
-- Remove the synchronous `throw`. The client always constructs successfully; misconfiguration becomes a request-time error from Supabase, not a boot-time crash.
+### Files modified
 
-This eliminates the entire "stale bundle = white-screen of death" failure mode. Even if a future build runs without env vars, the published values still work because they're in the source.
+**`src/routes/__root.tsx`** — extend `head()`:
+- Add `link rel="manifest" href="/manifest.webmanifest"`.
+- Add `link rel="apple-touch-icon" href="/icons/icon-192.png"`.
+- Add `link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512.png"`.
+- Add `meta name="mobile-web-app-capable" content="yes"` (Android counterpart of the iOS one already present).
+- Add `meta name="apple-mobile-web-app-title" content="Attendance"` so the home-screen label matches `short_name`.
+- Viewport already has `viewport-fit=cover` ✓
+- Theme-color, apple-mobile-web-app-capable, status-bar-style already present ✓
 
-**2. Drop the `Missing Supabase environment variables` branch in the root error boundary.**
+Also add a tiny one-shot effect in `RootComponent` that adds `class="pwa-standalone"` to `<html>` when `display-mode: standalone` matches, so we can hide install CTAs everywhere via CSS (`.pwa-standalone .install-cta { display: none }`).
 
-In `src/routes/__root.tsx`, remove the `isConfigError` regex and its dedicated copy. The boundary keeps the generic "Something went wrong / Reload" UI for any unexpected error, but it no longer has a special case that can only trigger from a self-inflicted throw we just removed.
+**`src/styles.css`** — add three small utilities used by the new install components and to lock down standalone mode:
+- `.install-cta` marker class (hidden when `.pwa-standalone` is on `<html>`).
+- `html, body { overscroll-behavior-y: none; }` so the app doesn't show the browser's rubber-band/refresh gesture in standalone mode.
+- `body { -webkit-tap-highlight-color: transparent; }` to kill the gray flash on tap that breaks the native feel.
 
-**3. Mirror the same fallback pattern on the server admin client.**
+**`src/routes/home.tsx`** — render `<InstallBanner />` once near the top of the page (above the featured-event card), wrapped so it only shows for non-installed users.
 
-In `src/integrations/supabase/client.server.ts`, keep the throw for `SUPABASE_SERVICE_ROLE_KEY` (that one IS secret and must never have a fallback), but apply the same hardcoded fallback for `SUPABASE_URL`. The URL is public; only the service role key is sensitive. This prevents server functions from crashing if `SUPABASE_URL` somehow isn't set in the Worker env, which would otherwise produce 500s on every server function call.
+**`src/routes/settings.tsx`** — render `<InstallButton />` in a new "App" section so users who dismissed the home banner can still install later.
 
-### Why this is safe
+**`src/components/attendance-hq/host-shell.tsx`** — two minor app-shell hardening tweaks:
+- The existing `pt-safe-1` on `<main>` is correct; no change needed there.
+- Bottom tab bar: keep as-is (already safe-area-padded with `pb-[max(0.6rem,env(safe-area-inset-bottom))]`).
+- Add `touch-action: manipulation` on the tab links to remove the 300 ms tap delay quirk on older WebKit.
 
-- The publishable key and project URL are **already public** — they're in `wrangler.jsonc` (committed), in `.env.example` guidance, and Vite inlines them into every browser bundle anyway. Putting them in `client.ts` as a fallback exposes nothing new.
-- Database security comes from **RLS policies**, not from hiding the publishable key. RLS is already in place across the schema.
-- The `SUPABASE_SERVICE_ROLE_KEY` (the actual secret) is untouched — it stays in Worker secrets and still throws if absent on the server.
-- After this change, the only way the app shows an error is for a *real* runtime failure (network down, RLS rejection, etc.), and those will surface as normal toasts/messages rather than the full-page "App isn't configured" wall.
+### Tabs: keep existing 5
 
-### Files touched
+Spec suggests Home / Events / Check-In / Attendees / Analytics. The existing tabs are **Home / Clubs / Events / Live / Settings**, where:
+- "Live" already serves as the live check-in operations screen → maps to Check-In.
+- "Clubs" replaces "Attendees" since this app's roster is club-membership-driven, not a flat attendee list.
+- There's no Analytics route built; bolting one on is out of scope for this PWA-lite pass.
 
-- `src/integrations/supabase/client.ts` — add hardcoded publishable fallback, remove the boot-time throw. (This file is auto-marked "do not edit" but the fallback we're adding is the same value the auto-generator already writes elsewhere; this is a one-time hardening.)
-- `src/integrations/supabase/client.server.ts` — add `SUPABASE_URL` fallback, keep service-role-key throw.
-- `src/routes/__root.tsx` — remove the `isConfigError` branch in `RootErrorComponent`; keep the generic error UI.
+So tab structure stays exactly as-is. The spec explicitly allows adapting to existing app structure ("If the current information architecture differs, adapt intelligently to the existing app structure").
 
-### After deployment
+### What is explicitly NOT changed
 
-You'll still need to publish once more so the new resilient bundle ships. From that point forward, even if a future publish runs in a misconfigured environment, the live site will not regress to the "App isn't configured" screen.
+- No service worker, no `vite-plugin-pwa`, no offline caching, no push notifications, no Capacitor.
+- No redesign of Home / Events / Live / Clubs / Settings screens — the existing iOS-style shell already meets the "premium native feel" criteria (large-title headers, grouped lists, action tiles, glass tab bar, hero washes). Re-skinning is out of scope; the gap is install behavior, not visual polish.
+- No new Analytics or Attendees routes (the existing data model uses Clubs + Events; an analytics screen is a separate feature).
+- No changes to auth, onboarding, routing, or business logic.
+- No changes to `src/integrations/supabase/*`, `wrangler.jsonc`, or env handling.
 
-### Out of scope
+### After this ships
 
-- No change to RLS, auth flow, Cloud connection, or any feature behavior.
-- No change to local `.env` workflow — `.env.example` still documents the recommended setup.
-- No change to `wrangler.jsonc` — Worker vars stay where they are.
+Republish once. On iPhone Safari → Share → Add to Home Screen → tap the icon → app opens full-screen, no Safari URL bar, status bar overlays cleanly, bottom tab bar floats above the home indicator. On Android Chrome → "Install" banner appears, one tap installs, opens like a native app from the launcher.
 
