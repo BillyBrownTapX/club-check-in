@@ -684,7 +684,7 @@ export function TemplateDialog({ open, onOpenChange, clubId, initialValues, onSu
             <TextInput type="number" label="Close offset minutes" error={form.formState.errors.defaultCheckInCloseOffsetMinutes?.message} {...form.register("defaultCheckInCloseOffsetMinutes", { valueAsNumber: true })} />
           </div>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          <PrimaryButton type="submit" className="w-full">{isEdit ? "Save Template" : "Create Template"}</PrimaryButton>
+          <PrimaryButton type="submit" className="w-full" disabled={isSubmitting}>{isSubmitting ? (isEdit ? "Saving…" : "Creating…") : (isEdit ? "Save Template" : "Create Template")}</PrimaryButton>
         </form>
       </DialogContent>
     </Dialog>
@@ -762,6 +762,7 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
   }, [endTime, eventDate, form, offsets.closeMinutesAfterEnd, offsets.openMinutesBeforeStart, startTime]);
 
   const submit = form.handleSubmit(async (values) => {
+    if (form.formState.isSubmitting) return;
     setError("");
     try {
       await onSubmit(values);
@@ -769,6 +770,7 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
       setError(getManagementErrorMessage(submitError, "Unable to save event."));
     }
   });
+  const isSubmitting = form.formState.isSubmitting;
 
   const selectedClubId = form.watch("clubId");
   const templatesForClub = useMemo(() => payload.templates.filter((template) => template.club_id === selectedClubId), [payload.templates, selectedClubId]);
