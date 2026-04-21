@@ -14,9 +14,12 @@ import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as EventsIndexRouteImport } from './routes/events.index'
+import { Route as ClubsIndexRouteImport } from './routes/clubs.index'
 import { Route as OnboardingEventRouteImport } from './routes/onboarding.event'
 import { Route as OnboardingClubRouteImport } from './routes/onboarding.club'
 import { Route as EventsEventIdRouteImport } from './routes/events.$eventId'
+import { Route as ClubsClubIdRouteImport } from './routes/clubs.$clubId'
 import { Route as CheckInQrTokenRouteImport } from './routes/check-in.$qrToken'
 
 const SignUpRoute = SignUpRouteImport.update({
@@ -44,6 +47,16 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EventsIndexRoute = EventsIndexRouteImport.update({
+  id: '/events/',
+  path: '/events/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClubsIndexRoute = ClubsIndexRouteImport.update({
+  id: '/clubs/',
+  path: '/clubs/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OnboardingEventRoute = OnboardingEventRouteImport.update({
   id: '/onboarding/event',
   path: '/onboarding/event',
@@ -59,6 +72,11 @@ const EventsEventIdRoute = EventsEventIdRouteImport.update({
   path: '/events/$eventId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClubsClubIdRoute = ClubsClubIdRouteImport.update({
+  id: '/clubs/$clubId',
+  path: '/clubs/$clubId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CheckInQrTokenRoute = CheckInQrTokenRouteImport.update({
   id: '/check-in/$qrToken',
   path: '/check-in/$qrToken',
@@ -72,9 +90,12 @@ export interface FileRoutesByFullPath {
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
+  '/clubs/$clubId': typeof ClubsClubIdRoute
   '/events/$eventId': typeof EventsEventIdRoute
   '/onboarding/club': typeof OnboardingClubRoute
   '/onboarding/event': typeof OnboardingEventRoute
+  '/clubs/': typeof ClubsIndexRoute
+  '/events/': typeof EventsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -83,9 +104,12 @@ export interface FileRoutesByTo {
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
+  '/clubs/$clubId': typeof ClubsClubIdRoute
   '/events/$eventId': typeof EventsEventIdRoute
   '/onboarding/club': typeof OnboardingClubRoute
   '/onboarding/event': typeof OnboardingEventRoute
+  '/clubs': typeof ClubsIndexRoute
+  '/events': typeof EventsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -95,9 +119,12 @@ export interface FileRoutesById {
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
+  '/clubs/$clubId': typeof ClubsClubIdRoute
   '/events/$eventId': typeof EventsEventIdRoute
   '/onboarding/club': typeof OnboardingClubRoute
   '/onboarding/event': typeof OnboardingEventRoute
+  '/clubs/': typeof ClubsIndexRoute
+  '/events/': typeof EventsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -108,9 +135,12 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/check-in/$qrToken'
+    | '/clubs/$clubId'
     | '/events/$eventId'
     | '/onboarding/club'
     | '/onboarding/event'
+    | '/clubs/'
+    | '/events/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -119,9 +149,12 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/check-in/$qrToken'
+    | '/clubs/$clubId'
     | '/events/$eventId'
     | '/onboarding/club'
     | '/onboarding/event'
+    | '/clubs'
+    | '/events'
   id:
     | '__root__'
     | '/'
@@ -130,9 +163,12 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/check-in/$qrToken'
+    | '/clubs/$clubId'
     | '/events/$eventId'
     | '/onboarding/club'
     | '/onboarding/event'
+    | '/clubs/'
+    | '/events/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -142,9 +178,12 @@ export interface RootRouteChildren {
   SignInRoute: typeof SignInRoute
   SignUpRoute: typeof SignUpRoute
   CheckInQrTokenRoute: typeof CheckInQrTokenRoute
+  ClubsClubIdRoute: typeof ClubsClubIdRoute
   EventsEventIdRoute: typeof EventsEventIdRoute
   OnboardingClubRoute: typeof OnboardingClubRoute
   OnboardingEventRoute: typeof OnboardingEventRoute
+  ClubsIndexRoute: typeof ClubsIndexRoute
+  EventsIndexRoute: typeof EventsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -184,6 +223,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/events/': {
+      id: '/events/'
+      path: '/events'
+      fullPath: '/events/'
+      preLoaderRoute: typeof EventsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/clubs/': {
+      id: '/clubs/'
+      path: '/clubs'
+      fullPath: '/clubs/'
+      preLoaderRoute: typeof ClubsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/onboarding/event': {
       id: '/onboarding/event'
       path: '/onboarding/event'
@@ -205,6 +258,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EventsEventIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/clubs/$clubId': {
+      id: '/clubs/$clubId'
+      path: '/clubs/$clubId'
+      fullPath: '/clubs/$clubId'
+      preLoaderRoute: typeof ClubsClubIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/check-in/$qrToken': {
       id: '/check-in/$qrToken'
       path: '/check-in/$qrToken'
@@ -222,9 +282,12 @@ const rootRouteChildren: RootRouteChildren = {
   SignInRoute: SignInRoute,
   SignUpRoute: SignUpRoute,
   CheckInQrTokenRoute: CheckInQrTokenRoute,
+  ClubsClubIdRoute: ClubsClubIdRoute,
   EventsEventIdRoute: EventsEventIdRoute,
   OnboardingClubRoute: OnboardingClubRoute,
   OnboardingEventRoute: OnboardingEventRoute,
+  ClubsIndexRoute: ClubsIndexRoute,
+  EventsIndexRoute: EventsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

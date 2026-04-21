@@ -4,11 +4,17 @@ import { notFound, redirect } from "@tanstack/react-router";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import {
   buildHostOnboardingState,
+  type ClubDetailPayload,
+  type ClubSummary,
   combineDateAndTime,
   createDeviceToken,
   createQrToken,
+  type EventFormPayload,
+  type EventFormValues,
   getCheckInStatus,
   maskEmail,
+  type ManagementEventSummary,
+  shiftTimeString,
   slugifyClubName,
   type AttendanceRow,
   type Club,
@@ -26,8 +32,12 @@ async function getSupabaseAdmin() {
 
 import {
   clubSchema,
+  clubUpdateSchema,
   eventSchema,
+  eventListFilterSchema,
   eventTemplateSchema,
+  eventTemplateUpdateSchema,
+  eventUpdateSchema,
   fastCheckInSchema,
   forgotPasswordSchema,
   removeAttendanceSchema,
@@ -38,6 +48,7 @@ import {
   studentRegistrationSchema,
   validatedEventSchema,
 } from "@/lib/attendance-hq-schemas";
+import { z } from "zod";
 
 async function ensureHostProfile(userId: string, fallback?: { fullName?: string | null; email?: string | null }) {
   const { data: existingProfile, error: existingError } = await (await getSupabaseAdmin())
@@ -184,53 +195,201 @@ export const completePasswordReset = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+function toManagementEventSummary(event: EventSummary): ManagementEventSummary {
+  return {
+    ...event,
+    attendanceCount: event.attendance_records?.length ?? 0,
+    checkInStatus: getCheckInStatus(event),
+  };
+}
+
+async function getOwnedClubIds(userId: string) {
+  const admin = await getSupabaseAdmin();
+  const { data, error } = await admin.from("clubs").select("id").eq("host_id", userId);
+  if (error) throw new Error(error.message);
+  return (data ?? []).map((club) => club.id);
+}
+
+async function requireOwnedClub(userId: string, clubId: string) {
+  const admin = await getSupabaseAdmin();
+  const { data, error } = await admin.from("clubs").select("*").eq("id", clubId).eq("host_id", userId).maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) throw notFound();
+  return data as Club;
+}
+
+async function requireOwnedEvent(userId: string, eventId: string) {
+  const admin = await getSupabaseAdmin();
+  const { data, error } = await admin
+    .from("events")
+    .select("*, clubs(id, club_name, club_slug, description, host_id)")
+    .eq("id", eventId)
+    .maybeSingle();
+
+  if (error) throw new Error(error.message);
+  const event = data as (EventWithClub & { clubs: (EventWithClub["clubs"] & { host_id?: string }) | null }) | null;
+  if (!event || !event.clubs || event.clubs.host_id !== userId) throw notFound();
+  return event;
+}
+
 export const getHostWorkspace = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const profile = await ensureHostProfile(context.userId);
-    const admin = await getSupabaseAdmin();
-
-    const [{ data: clubs }, { data: templates }, { data: events }] = await Promise.all([
-      admin.from("clubs").select("*").eq("host_id", context.userId).order("created_at", { ascending: false }),
-      admin
-        .from("event_templates")
-        .select("*, clubs(id, club_name, club_slug)")
-        .in(
-          "club_id",
-          (await admin.from("clubs").select("id").eq("host_id", context.userId)).data?.map((club) => club.id) ?? ["00000000-0000-0000-0000-000000000000"],
-        )
-        .order("created_at", { ascending: false }),
-      admin
-        .from("events")
-        .select("*, clubs(id, club_name, club_slug), attendance_records(id, checked_in_at, student_id)")
-        .in(
-          "club_id",
-          (await admin.from("clubs").select("id").eq("host_id", context.userId)).data?.map((club) => club.id) ?? ["00000000-0000-0000-0000-000000000000"],
-        )
-        .order("event_date", { ascending: true }),
-    ]);
+    const clubs = await getHostClubSummaries();
+    const events = await getHostEvents({ data: { clubId: "", status: "all", query: "" } });
+    const templates = await getHostTemplates({ data: { clubId: "" } });
 
     return {
       profile,
-      clubs: (clubs ?? []) as Club[],
-      templates: (templates ?? []) as EventTemplateWithClub[],
-      events: (events ?? []) as EventSummary[],
+      clubs,
+      templates,
+      events,
     };
   });
 
-export const createClub = createServerFn({ method: "POST" })
+export const getHostClubSummaries = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const admin = await getSupabaseAdmin();
+    const { data: clubs, error: clubsError } = await admin
+      .from("clubs")
+      .select("*")
+      .eq("host_id", context.userId)
+      .order("created_at", { ascending: true });
+
+    if (clubsError) throw new Error(clubsError.message);
+
+    const clubIds = (clubs ?? []).map((club) => club.id);
+    const { data: events, error: eventsError } = clubIds.length
+      ? await admin
+          .from("events")
+          .select("id, club_id, event_date, check_in_opens_at, check_in_closes_at, is_active, is_archived, attendance_records(id)")
+          .in("club_id", clubIds)
+      : { data: [], error: null };
+
+    if (eventsError) throw new Error(eventsError.message);
+
+    const now = new Date().toISOString().slice(0, 10);
+    const counts = new Map();
+    for (const club of clubs ?? []) {
+      counts.set(club.id, { upcomingEventsCount: 0, pastEventsCount: 0, totalCheckIns: 0 });
+    }
+
+    for (const event of events ?? []) {
+      const current = counts.get(event.club_id);
+      if (!current) continue;
+      if (event.event_date >= now) current.upcomingEventsCount += 1;
+      else current.pastEventsCount += 1;
+      current.totalCheckIns += event.attendance_records?.length ?? 0;
+    }
+
+    return ((clubs ?? []) as Club[]).map((club) => ({
+      ...club,
+      ...(counts.get(club.id) ?? { upcomingEventsCount: 0, pastEventsCount: 0, totalCheckIns: 0 }),
+    })) as ClubSummary[];
+  });
+
+export const getHostTemplates = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { clubId?: string }) => ({ clubId: input.clubId ?? "" }))
+  .handler(async ({ data, context }) => {
+    const admin = await getSupabaseAdmin();
+    const clubIds = data.clubId ? [data.clubId] : await getOwnedClubIds(context.userId);
+    if (!clubIds.length) return [] as EventTemplateWithClub[];
+
+    const { data: templates, error } = await admin
+      .from("event_templates")
+      .select("*, clubs(id, club_name, club_slug)")
+      .in("club_id", clubIds)
+      .order("created_at", { ascending: false });
+
+    if (error) throw new Error(error.message);
+    return (templates ?? []) as EventTemplateWithClub[];
+  });
+
+export const getHostEvents = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(eventListFilterSchema)
+  .handler(async ({ data, context }) => {
+    const admin = await getSupabaseAdmin();
+    const clubIds = data.clubId ? [data.clubId] : await getOwnedClubIds(context.userId);
+    if (!clubIds.length) return [] as ManagementEventSummary[];
+
+    let query = admin
+      .from("events")
+      .select("*, clubs(id, club_name, club_slug), attendance_records(id)")
+      .in("club_id", clubIds)
+      .order("event_date", { ascending: data.status !== "past" })
+      .order("start_time", { ascending: true });
+
+    if (data.query) query = query.ilike("event_name", `%${data.query}%`);
+
+    const { data: events, error } = await query;
+    if (error) throw new Error(error.message);
+
+    const today = new Date().toISOString().slice(0, 10);
+    return ((events ?? []) as EventSummary[])
+      .filter((event) => {
+        if (data.status === "upcoming") return event.event_date >= today;
+        if (data.status === "past") return event.event_date < today;
+        return true;
+      })
+      .map(toManagementEventSummary);
+  });
+
+export const getClubDetail = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { clubId: string }) => input)
+  .handler(async ({ data, context }) => {
+    const admin = await getSupabaseAdmin();
+    const club = await requireOwnedClub(context.userId, data.clubId);
+
+    const [{ data: events, error: eventsError }, { data: templates, error: templatesError }] = await Promise.all([
+      admin
+        .from("events")
+        .select("*, clubs(id, club_name, club_slug), attendance_records(id)")
+        .eq("club_id", club.id)
+        .order("event_date", { ascending: false })
+        .order("start_time", { ascending: false }),
+      admin
+        .from("event_templates")
+        .select("*, clubs(id, club_name, club_slug)")
+        .eq("club_id", club.id)
+        .order("created_at", { ascending: false }),
+    ]);
+
+    if (eventsError) throw new Error(eventsError.message);
+    if (templatesError) throw new Error(templatesError.message);
+
+    const today = new Date().toISOString().slice(0, 10);
+    const normalizedEvents = ((events ?? []) as EventSummary[]).map(toManagementEventSummary);
+    const upcomingEvents = normalizedEvents.filter((event) => event.event_date >= today);
+    const pastEvents = normalizedEvents.filter((event) => event.event_date < today);
+    const totalCheckIns = normalizedEvents.reduce((sum, event) => sum + event.attendanceCount, 0);
+
+    return {
+      club,
+      stats: {
+        upcomingEvents: upcomingEvents.length,
+        pastEvents: pastEvents.length,
+        totalCheckIns,
+      },
+      upcomingEvents,
+      pastEvents,
+      templates: (templates ?? []) as EventTemplateWithClub[],
+    } as ClubDetailPayload;
+  });
+
+export const createClubManagement = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(clubSchema)
   .handler(async ({ data, context }) => {
-    const existingClubState = await resolveHostOnboardingState(context.userId);
-    if (existingClubState.club) {
-      return { club: existingClubState.club, onboarding: existingClubState };
-    }
-
+    const admin = await getSupabaseAdmin();
     const baseSlug = slugifyClubName(data.clubName);
     const slug = `${baseSlug || "club"}-${Math.random().toString(36).slice(2, 6)}`;
 
-    const { data: club, error } = await (await getSupabaseAdmin())
+    const { data: club, error } = await admin
       .from("clubs")
       .insert({
         host_id: context.userId,
@@ -241,22 +400,42 @@ export const createClub = createServerFn({ method: "POST" })
       .select("*")
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error || !club) throw new Error(error?.message ?? "Unable to create club");
+    return club as Club;
+  });
 
-    return {
-      club: club as Club,
-      onboarding: await resolveHostOnboardingState(context.userId),
-    };
+export const updateClub = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(clubUpdateSchema)
+  .handler(async ({ data, context }) => {
+    await requireOwnedClub(context.userId, data.clubId);
+    const admin = await getSupabaseAdmin();
+    const nextSlug = `${slugifyClubName(data.clubName) || "club"}-${data.clubId.slice(0, 4)}`;
+
+    const { data: club, error } = await admin
+      .from("clubs")
+      .update({
+        club_name: data.clubName.trim(),
+        club_slug: nextSlug,
+        description: data.description?.trim() || null,
+        is_active: data.isActive,
+      })
+      .eq("id", data.clubId)
+      .select("*")
+      .single();
+
+    if (error || !club) throw new Error(error?.message ?? "Unable to update club");
+    return club as Club;
   });
 
 export const createEventTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(eventTemplateSchema)
   .handler(async ({ data, context }) => {
-    const { data: club } = await (await getSupabaseAdmin()).from("clubs").select("id").eq("id", data.clubId).eq("host_id", context.userId).maybeSingle();
-    if (!club) throw new Error("Club not found");
+    await requireOwnedClub(context.userId, data.clubId);
+    const admin = await getSupabaseAdmin();
 
-    const { data: template, error } = await (await getSupabaseAdmin())
+    const { data: template, error } = await admin
       .from("event_templates")
       .insert({
         club_id: data.clubId,
@@ -271,18 +450,152 @@ export const createEventTemplate = createServerFn({ method: "POST" })
       .select("*, clubs(id, club_name, club_slug)")
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error || !template) throw new Error(error?.message ?? "Unable to create template");
     return template as EventTemplateWithClub;
+  });
+
+export const updateEventTemplate = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(eventTemplateUpdateSchema)
+  .handler(async ({ data, context }) => {
+    await requireOwnedClub(context.userId, data.clubId);
+    const admin = await getSupabaseAdmin();
+
+    const { data: template, error } = await admin
+      .from("event_templates")
+      .update({
+        template_name: data.templateName.trim(),
+        default_event_name: data.defaultEventName?.trim() || null,
+        default_location: data.defaultLocation?.trim() || null,
+        default_start_time: data.defaultStartTime || null,
+        default_end_time: data.defaultEndTime || null,
+        default_check_in_open_offset_minutes: data.defaultCheckInOpenOffsetMinutes,
+        default_check_in_close_offset_minutes: data.defaultCheckInCloseOffsetMinutes,
+      })
+      .eq("id", data.templateId)
+      .eq("club_id", data.clubId)
+      .select("*, clubs(id, club_name, club_slug)")
+      .single();
+
+    if (error || !template) throw new Error(error?.message ?? "Unable to update template");
+    return template as EventTemplateWithClub;
+  });
+
+export const duplicateEventTemplate = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { templateId: string }) => input)
+  .handler(async ({ data, context }) => {
+    const admin = await getSupabaseAdmin();
+    const { data: template, error } = await admin
+      .from("event_templates")
+      .select("*, clubs(id, club_name, club_slug, host_id)")
+      .eq("id", data.templateId)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    if (!template || template.clubs?.host_id !== context.userId) throw notFound();
+
+    const { data: duplicated, error: duplicateError } = await admin
+      .from("event_templates")
+      .insert({
+        club_id: template.club_id,
+        template_name: `${template.template_name} copy`,
+        default_event_name: template.default_event_name,
+        default_location: template.default_location,
+        default_start_time: template.default_start_time,
+        default_end_time: template.default_end_time,
+        default_check_in_open_offset_minutes: template.default_check_in_open_offset_minutes,
+        default_check_in_close_offset_minutes: template.default_check_in_close_offset_minutes,
+      })
+      .select("*, clubs(id, club_name, club_slug)")
+      .single();
+
+    if (duplicateError || !duplicated) throw new Error(duplicateError?.message ?? "Unable to duplicate template");
+    return duplicated as EventTemplateWithClub;
+  });
+
+export const getEventFormPayload = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { eventId?: string; duplicateFrom?: string; clubId?: string; templateId?: string }) => ({
+    eventId: input.eventId ?? "",
+    duplicateFrom: input.duplicateFrom ?? "",
+    clubId: input.clubId ?? "",
+    templateId: input.templateId ?? "",
+  }))
+  .handler(async ({ data, context }) => {
+    const admin = await getSupabaseAdmin();
+    const clubIds = await getOwnedClubIds(context.userId);
+    const clubs = clubIds.length
+      ? ((await admin.from("clubs").select("*").in("id", clubIds).order("club_name", { ascending: true })).data ?? [])
+      : [];
+    const templates = clubIds.length
+      ? ((await admin.from("event_templates").select("*, clubs(id, club_name, club_slug)").in("club_id", clubIds).order("template_name", { ascending: true })).data ?? [])
+      : [];
+
+    let initialValues: EventFormValues = {
+      clubId: data.clubId,
+      eventTemplateId: "",
+      eventName: "",
+      eventDate: buildEventDefaults().eventDate,
+      startTime: buildEventDefaults().startTime,
+      endTime: buildEventDefaults().endTime,
+      location: "",
+      checkInOpensAt: buildEventDefaults().checkInOpensAt,
+      checkInClosesAt: buildEventDefaults().checkInClosesAt,
+    };
+
+    if (!initialValues.clubId && clubs.length) initialValues.clubId = (clubs[0] as Club).id;
+
+    if (data.templateId) {
+      const template = (templates as EventTemplateWithClub[]).find((item) => item.id === data.templateId);
+      if (template) {
+        const defaults = buildEventDefaults();
+        const startTime = template.default_start_time || defaults.startTime;
+        initialValues = {
+          ...initialValues,
+          clubId: template.club_id,
+          eventTemplateId: template.id,
+          eventName: template.default_event_name || "",
+          location: template.default_location || "",
+          startTime,
+          endTime: template.default_end_time || defaults.endTime,
+          checkInOpensAt: combineDateAndTime(defaults.eventDate, `${shiftTimeString(startTime, -Math.abs(template.default_check_in_open_offset_minutes))}:00`),
+          checkInClosesAt: combineDateAndTime(defaults.eventDate, `${shiftTimeString(startTime, template.default_check_in_close_offset_minutes)}:00`),
+        };
+      }
+    }
+
+    if (data.eventId || data.duplicateFrom) {
+      const sourceEvent = await requireOwnedEvent(context.userId, data.eventId || data.duplicateFrom);
+      initialValues = {
+        clubId: sourceEvent.club_id,
+        eventTemplateId: sourceEvent.event_template_id || "",
+        eventName: sourceEvent.event_name,
+        eventDate: sourceEvent.event_date,
+        startTime: sourceEvent.start_time,
+        endTime: sourceEvent.end_time,
+        location: sourceEvent.location || "",
+        checkInOpensAt: sourceEvent.check_in_opens_at,
+        checkInClosesAt: sourceEvent.check_in_closes_at,
+      };
+    }
+
+    return {
+      clubs: clubs as Club[],
+      templates: templates as EventTemplateWithClub[],
+      initialValues,
+      sourceEventId: data.duplicateFrom || undefined,
+    } as EventFormPayload;
   });
 
 export const createEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(validatedEventSchema)
   .handler(async ({ data, context }) => {
-    const { data: club } = await (await getSupabaseAdmin()).from("clubs").select("id").eq("id", data.clubId).eq("host_id", context.userId).maybeSingle();
-    if (!club) throw new Error("Club not found");
+    await requireOwnedClub(context.userId, data.clubId);
+    const admin = await getSupabaseAdmin();
 
-    const { data: event, error } = await (await getSupabaseAdmin())
+    const { data: event, error } = await admin
       .from("events")
       .insert({
         club_id: data.clubId,
@@ -299,11 +612,55 @@ export const createEvent = createServerFn({ method: "POST" })
       .select("*, clubs(id, club_name, club_slug, description)")
       .single();
 
-    if (error) throw new Error(error.message);
+    if (error || !event) throw new Error(error?.message ?? "Unable to create event");
     return {
       event: event as EventWithClub,
       onboarding: await resolveHostOnboardingState(context.userId),
     };
+  });
+
+export const updateEvent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(eventUpdateSchema)
+  .handler(async ({ data, context }) => {
+    const existing = await requireOwnedEvent(context.userId, data.eventId);
+    await requireOwnedClub(context.userId, data.clubId);
+    const admin = await getSupabaseAdmin();
+
+    const { data: event, error } = await admin
+      .from("events")
+      .update({
+        club_id: data.clubId,
+        event_template_id: data.eventTemplateId || null,
+        event_name: data.eventName.trim(),
+        event_date: data.eventDate,
+        start_time: data.startTime,
+        end_time: data.endTime,
+        location: data.location?.trim() || null,
+        check_in_opens_at: data.checkInOpensAt,
+        check_in_closes_at: data.checkInClosesAt,
+        qr_token: existing.qr_token,
+      })
+      .eq("id", data.eventId)
+      .select("*, clubs(id, club_name, club_slug, description)")
+      .single();
+
+    if (error || !event) throw new Error(error?.message ?? "Unable to update event");
+    return event as EventWithClub;
+  });
+
+export const duplicateEvent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(eventSchema.extend({ sourceEventId: z.string().uuid() }).refine((value) => value.endTime > value.startTime, {
+    message: "End time must be after start time",
+    path: ["endTime"],
+  }).refine((value) => new Date(value.checkInClosesAt).getTime() > new Date(value.checkInOpensAt).getTime(), {
+    message: "Check-in close must be after open",
+    path: ["checkInClosesAt"],
+  }))
+  .handler(async ({ data, context }) => {
+    await requireOwnedEvent(context.userId, data.sourceEventId);
+    return createEvent({ data, headers: undefined as never });
   });
 
 export const getEventOperations = createServerFn({ method: "GET" })
