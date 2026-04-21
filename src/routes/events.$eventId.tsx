@@ -449,12 +449,12 @@ function EventDetailRoute() {
 
   return (
     <ManagementPageShell>
-      <div className="space-y-6 pb-20 md:pb-0">
+      <div className="space-y-5 pb-20 md:pb-0">
         <PageHeader
           title={event.event_name}
           description={event.clubs?.club_name ?? "Club event"}
           action={
-            <div className="flex flex-wrap gap-2">
+            <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
               <SecondaryButton asChild>
                 <Link to="/events/$eventId/edit" params={{ eventId }} search={{ created: "" }}>
                   <Pencil className="h-4 w-4" />
@@ -502,7 +502,7 @@ function EventDetailRoute() {
           <StatsCard label="Check-in closes" value={Number.isNaN(closesAt.getTime()) ? "—" : closesAt.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} hint={status === "open" ? "Open right now" : status === "upcoming" ? "Not open yet" : "Closed / archived"} />
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_24rem]">
+        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.7fr)_24rem]">
           <div className="space-y-6">
             <Card className="rounded-2xl border-border/70 shadow-sm">
               <CardContent className="space-y-4 p-5 sm:p-6">
