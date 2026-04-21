@@ -69,20 +69,16 @@ function EventEditRoute() {
   if (error) return <EventEditError error={new Error(error)} />;
 
   return (
-    <>
-      <EventForm
-        payload={payload}
-        title="Edit Event"
-        description="Update the event details while keeping the current QR code active."
-        submitLabel="Save Changes"
-        cancelAction={<SecondaryButton asChild><Link to="/events/$eventId" params={{ eventId }} search={{ created: "" }}>Cancel</Link></SecondaryButton>}
-        onSubmit={async (values) => {
-          const result = await updateEventMutation({ data: { ...values, eventId } });
-          navigate({ to: "/events/$eventId", params: { eventId: result.id }, search: { created: "" } });
-        }}
-      />
-      <ManagementPageShell>
-        <div className="flex justify-center pb-8">
+    <EventForm
+      payload={payload}
+      title="Edit Event"
+      description="Update the event details while keeping the current QR code active."
+      submitLabel="Save Changes"
+      cancelAction={
+        <div className="flex flex-wrap gap-2">
+          <SecondaryButton asChild>
+            <Link to="/events/$eventId" params={{ eventId }} search={{ created: "" }}>Cancel</Link>
+          </SecondaryButton>
           <DeleteConfirmButton
             trigger={
               <Button
@@ -103,7 +99,11 @@ function EventEditRoute() {
             }}
           />
         </div>
-      </ManagementPageShell>
-    </>
+      }
+      onSubmit={async (values) => {
+        const result = await updateEventMutation({ data: { ...values, eventId } });
+        navigate({ to: "/events/$eventId", params: { eventId: result.id }, search: { created: "" } });
+      }}
+    />
   );
 }
