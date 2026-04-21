@@ -5,7 +5,7 @@ import { useAttendanceAuth } from "@/components/attendance-hq/auth-provider";
 import type { AttendanceRow, EventWithClub } from "@/lib/attendance-hq";
 import { getHostEventDetail } from "@/lib/host-onboarding-client";
 
-export const Route = createFileRoute("/events/")({
+export const Route = createFileRoute("/events/$eventId")({
   validateSearch: (search: Record<string, unknown>) => ({
     created: typeof search.created === "string" ? search.created : "",
   }),
