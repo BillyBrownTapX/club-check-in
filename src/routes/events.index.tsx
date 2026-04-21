@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import { EventCard, EmptyStateBlock, FilterBar, ManagementPageShell, PageHeader, PrimaryButton, SearchInput, SelectInput, getManagementErrorMessage, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
@@ -17,7 +17,7 @@ function EventsError({ error }: { error: Error }) {
 export const Route = createFileRoute("/events/")({
   validateSearch: (search: Record<string, unknown>) => ({
     clubId: typeof search.clubId === "string" ? search.clubId : "",
-    status: (search.status === "upcoming" || search.status === "past" ? search.status : "all") as EventListStatusFilter,
+    status: (["active", "upcoming", "past"].includes(String(search.status)) ? search.status : "all") as EventListStatusFilter,
     query: typeof search.query === "string" ? search.query : "",
   }),
   errorComponent: EventsError,
@@ -71,6 +71,22 @@ function EventsRoute() {
     };
   }, [getClubs, getEvents, loading, search, user]);
 
+  const groupedEvents = useMemo(() => {
+    const groups = {
+      open: [] as ManagementEventSummary[],
+      upcoming: [] as ManagementEventSummary[],
+      past: [] as ManagementEventSummary[],
+      archived: [] as ManagementEventSummary[],
+    };
+    for (const event of events) {
+      if (event.checkInStatus === "open") groups.open.push(event);
+      else if (event.checkInStatus === "upcoming") groups.upcoming.push(event);
+      else if (event.checkInStatus === "archived") groups.archived.push(event);
+      else groups.past.push(event);
+    }
+    return groups;
+  }, [events]);
+
   if (loading || !user) return <ManagementPageShell><div className="py-16 text-center text-sm text-muted-foreground">Loading your events…</div></ManagementPageShell>;
 
   return (
@@ -78,7 +94,7 @@ function EventsRoute() {
       <div className="space-y-6 pb-20 md:pb-0">
         <PageHeader
           title="Events"
-          description="View and manage upcoming and past events."
+          description="Run live meetings, track attendance, and jump into the right ops console fast."
           action={<PrimaryButton asChild><Link to="/events/new" search={{ clubId: "", templateId: "", duplicateFrom: "" }}><Plus className="h-4 w-4" />Create Event</Link></PrimaryButton>}
         />
         <FilterBar>
@@ -90,11 +106,16 @@ function EventsRoute() {
             options={[{ value: "", label: "All Clubs" }, ...clubs.map((club: ClubSummary) => ({ value: club.id, label: club.club_name }))]}
           />
           <SelectInput
-            label="Status"
+            label="Focus"
             value={search.status}
             onValueChange={(status) => navigate({ search: (prev) => ({ ...prev, status: status as EventListStatusFilter }) })}
             placeholder="All"
-            options={[{ value: "all", label: "All" }, { value: "upcoming", label: "Upcoming" }, { value: "past", label: "Past" }]}
+            options={[
+              { value: "all", label: "All Events" },
+              { value: "active", label: "Open + Upcoming" },
+              { value: "upcoming", label: "Upcoming Only" },
+              { value: "past", label: "Past + Closed" },
+            ]}
           />
           <SearchInput value={search.query} onChange={(query) => navigate({ search: (prev) => ({ ...prev, query }) })} />
         </FilterBar>
@@ -103,9 +124,18 @@ function EventsRoute() {
         ) : error ? (
           <EventsError error={new Error(error)} />
         ) : events.length ? (
-          <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-            {events.map((event: ManagementEventSummary) => <EventCard key={event.id} event={event} onDuplicate={(eventId) => navigate({ to: "/events/new", search: { clubId: event.club_id, templateId: "", duplicateFrom: eventId } })} />)}
-          </div>
+          search.status === "all" ? (
+            <div className="space-y-8">
+              <EventSection title="Open now" description="These meetings are actively accepting check-ins." events={groupedEvents.open} navigate={navigate} />
+              <EventSection title="Upcoming" description="Ready for the next student arrival wave." events={groupedEvents.upcoming} navigate={navigate} />
+              <EventSection title="Review queue" description="Closed or inactive events ready for export and cleanup." events={groupedEvents.past} navigate={navigate} />
+              {groupedEvents.archived.length ? <EventSection title="Archived" description="Stored for historical reference." events={groupedEvents.archived} navigate={navigate} /> : null}
+            </div>
+          ) : (
+            <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+              {events.map((event) => <EventCard key={event.id} event={event} onDuplicate={(eventId) => navigate({ to: "/events/new", search: { clubId: event.club_id, templateId: "", duplicateFrom: eventId } })} />)}
+            </div>
+          )
         ) : (
           <EmptyStateBlock
             title={search.clubId || search.status !== "all" || search.query ? "No matching events" : "No events yet"}
@@ -115,5 +145,30 @@ function EventsRoute() {
         )}
       </div>
     </ManagementPageShell>
+  );
+}
+
+function EventSection({
+  title,
+  description,
+  events,
+  navigate,
+}: {
+  title: string;
+  description: string;
+  events: ManagementEventSummary[];
+  navigate: ReturnType<typeof useNavigate>;
+}) {
+  if (!events.length) return null;
+  return (
+    <section className="space-y-3">
+      <div className="space-y-1">
+        <h2 className="text-lg font-semibold text-foreground">{title}</h2>
+        <p className="text-sm text-muted-foreground">{description}</p>
+      </div>
+      <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+        {events.map((event) => <EventCard key={event.id} event={event} onDuplicate={(eventId) => navigate({ to: "/events/new", search: { clubId: event.club_id, templateId: "", duplicateFrom: eventId } })} />)}
+      </div>
+    </section>
   );
 }

@@ -6,6 +6,7 @@ export type EventTemplate = Tables<"event_templates">;
 export type Event = Tables<"events">;
 export type Student = Tables<"students">;
 export type AttendanceRecord = Tables<"attendance_records">;
+export type AttendanceAction = Tables<"attendance_actions">;
 export type DeviceSession = Tables<"student_device_sessions">;
 
 export type EventSummary = Event & {
@@ -50,6 +51,35 @@ export type AttendanceRow = AttendanceRecord & {
   students: Pick<Student, "id" | "first_name" | "last_name" | "student_email" | "nine_hundred_number"> | null;
 };
 
+export type AttendanceActionStudentSnapshot = Pick<Student, "id" | "first_name" | "last_name" | "student_email" | "nine_hundred_number">;
+
+export type AttendanceActionLog = AttendanceAction & {
+  student: AttendanceActionStudentSnapshot | null;
+  checkedInAt: string | null;
+  attendanceRecordId: string | null;
+};
+
+export type EventAttendanceSummary = {
+  total: number;
+  recent: number;
+  removedCount: number;
+  lastActionAt: string | null;
+  methodBreakdown: {
+    firstScan: number;
+    returning: number;
+    remembered: number;
+    manual: number;
+  };
+};
+
+export type EventOperationsPayload = {
+  event: EventWithClub;
+  attendance: AttendanceRow[];
+  removedAttendance: AttendanceActionLog[];
+  recentActions: AttendanceActionLog[];
+  summary: EventAttendanceSummary;
+};
+
 export type CheckInStatus =
   | "open"
   | "upcoming"
@@ -80,7 +110,7 @@ export type HostOnboardingState = {
   nextPath: string;
 };
 
-export type EventListStatusFilter = "all" | "upcoming" | "past";
+export type EventListStatusFilter = "all" | "active" | "upcoming" | "past";
 
 export type EventFormValues = {
   clubId: string;
@@ -115,13 +145,10 @@ export function slugifyClubName(name: string) {
     .slice(0, 60);
 }
 
-// 64-char URL-safe alphabet. 256 % 64 === 0, so masking the byte with 0x3f
-// gives an unbiased index.
 const URL_SAFE_ALPHABET =
   "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
 
 function getRandomBytes(length: number): Uint8Array {
-  // Available in modern Node, browsers, and Cloudflare Workers (Web Crypto).
   const cryptoObj: Crypto | undefined =
     typeof globalThis !== "undefined" ? (globalThis as { crypto?: Crypto }).crypto : undefined;
   if (!cryptoObj || typeof cryptoObj.getRandomValues !== "function") {
@@ -143,12 +170,10 @@ function generateSecureToken(length: number): string {
   return out;
 }
 
-// 24 chars from a 64-symbol alphabet = 144 bits of entropy. URL-safe.
 export function createQrToken() {
   return generateSecureToken(24);
 }
 
-// 36 chars from a 64-symbol alphabet = 216 bits of entropy. URL-safe.
 export function createDeviceToken() {
   return generateSecureToken(36);
 }
@@ -192,6 +217,14 @@ export function getCheckInStatus(event: Pick<Event, "check_in_opens_at" | "check
   if (now < opens) return "upcoming";
   if (now > closes) return "closed";
   return "open";
+}
+
+export function getCheckInMethodLabel(method: string | null | undefined) {
+  if (method === "qr_scan") return "First scan";
+  if (method === "returning_lookup") return "Returning";
+  if (method === "remembered_device") return "Remembered";
+  if (method === "host_correction") return "Manual";
+  return "Manual";
 }
 
 export function maskEmail(email: string) {
@@ -311,11 +344,6 @@ export function shiftTimeString(time: string, minutes: number) {
   return `${nextHours}:${nextMinutes}`;
 }
 
-// Canonical default-event factory. Single source of truth — do NOT redefine
-// in attendance-hq.functions.ts or anywhere else. The check-in window is
-// derived from start/end via shiftTimeString so the relationship (open 15 min
-// before start, close 15 min after end) is explicit rather than encoded in
-// magic time strings that drift between copies.
 export function buildEventDefaults(date = new Date()) {
   const eventDate = date.toISOString().slice(0, 10);
   const startTime = "18:00";

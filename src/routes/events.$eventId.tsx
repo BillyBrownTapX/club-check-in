@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import {
   AlertCircle,
+  Archive,
   CalendarDays,
   Clock3,
   Copy,
@@ -10,7 +11,10 @@ import {
   MapPin,
   Maximize2,
   Pencil,
+  Plus,
   RefreshCw,
+  RotateCcw,
+  Search,
   Trash2,
   X,
 } from "lucide-react";
@@ -28,6 +32,16 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
 import {
   ManagementPageShell,
@@ -43,29 +57,40 @@ import {
   duplicateEvent,
   exportEventAttendance,
   getEventOperations,
+  manualCheckIn,
   removeAttendance,
+  restoreAttendance,
+  toggleEventArchive,
 } from "@/lib/attendance-hq.functions";
 import {
   formatEventDate,
   formatEventTime,
   formatTimestamp,
+  getCheckInMethodLabel,
   getCheckInStatus,
+  type AttendanceActionLog,
   type AttendanceRow,
+  type EventAttendanceSummary,
   type EventWithClub,
 } from "@/lib/attendance-hq";
 
-// How often the ops console re-fetches attendance + event metadata while the
-// page is mounted. 5s is responsive enough for a check-in dashboard without
-// abusing the server fn endpoint. We pause polling while the tab is hidden.
 const POLL_INTERVAL_MS = 5000;
 
-// Friendly labels for the public-flow method enum the server records on each
-// attendance row. Anything else (legacy / future) falls back to a neutral
-// "Manual" badge so the row still renders cleanly.
-const METHOD_LABEL: Record<string, string> = {
-  qr_scan: "First scan",
-  returning_lookup: "Returning",
-  remembered_device: "Remembered",
+type RosterMethodFilter = "all" | "qr_scan" | "returning_lookup" | "remembered_device" | "host_correction";
+type RosterSort = "newest" | "oldest" | "name";
+
+type ManualFormState = {
+  firstName: string;
+  lastName: string;
+  studentEmail: string;
+  nineHundredNumber: string;
+};
+
+const EMPTY_MANUAL_FORM: ManualFormState = {
+  firstName: "",
+  lastName: "",
+  studentEmail: "",
+  nineHundredNumber: "",
 };
 
 function EventDetailHardError({ message, onRetry }: { message: string; onRetry?: () => void }) {
@@ -128,32 +153,43 @@ function EventDetailRoute() {
 
   const loadOperations = useAuthorizedServerFn(getEventOperations);
   const removeAttendanceMutation = useAuthorizedServerFn(removeAttendance);
+  const restoreAttendanceMutation = useAuthorizedServerFn(restoreAttendance);
+  const manualCheckInMutation = useAuthorizedServerFn(manualCheckIn);
   const closeEarlyMutation = useAuthorizedServerFn(closeCheckInEarly);
   const duplicateEventMutation = useAuthorizedServerFn(duplicateEvent);
   const exportAttendanceFn = useAuthorizedServerFn(exportEventAttendance);
+  const toggleArchiveMutation = useAuthorizedServerFn(toggleEventArchive);
 
   const [event, setEvent] = useState<EventWithClub | null>(null);
   const [attendance, setAttendance] = useState<AttendanceRow[]>([]);
+  const [removedAttendance, setRemovedAttendance] = useState<AttendanceActionLog[]>([]);
+  const [recentActions, setRecentActions] = useState<AttendanceActionLog[]>([]);
+  const [summary, setSummary] = useState<EventAttendanceSummary | null>(null);
   const [hardError, setHardError] = useState<string | null>(null);
   const [softError, setSoftError] = useState<string | null>(null);
   const [initialLoaded, setInitialLoaded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [pendingRemoveId, setPendingRemoveId] = useState<string | null>(null);
+  const [pendingRemoveRow, setPendingRemoveRow] = useState<AttendanceRow | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [closeEarlyOpen, setCloseEarlyOpen] = useState(false);
   const [closingEarly, setClosingEarly] = useState(false);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [archiving, setArchiving] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [manualDialogOpen, setManualDialogOpen] = useState(false);
+  const [manualSubmitting, setManualSubmitting] = useState(false);
+  const [manualError, setManualError] = useState<string | null>(null);
+  const [manualForm, setManualForm] = useState<ManualFormState>(EMPTY_MANUAL_FORM);
+  const [restoringStudentId, setRestoringStudentId] = useState<string | null>(null);
   const [lastRefreshAt, setLastRefreshAt] = useState<Date | null>(null);
+  const [rosterQuery, setRosterQuery] = useState("");
+  const [methodFilter, setMethodFilter] = useState<RosterMethodFilter>("all");
+  const [sortMode, setSortMode] = useState<RosterSort>("newest");
 
   const createdToastFired = useRef(false);
-  // Dedupe overlapping fetches. The polling tick and a manual refresh button
-  // can race; we only ever want one in-flight fetch and we always honour the
-  // most recent one's payload.
   const inFlightRef = useRef<Promise<void> | null>(null);
 
-  // ?created=1 toast — fired once on mount, then the search param is cleared
-  // so a refresh doesn't re-toast.
   useEffect(() => {
     if (search.created !== "1" || createdToastFired.current) return;
     createdToastFired.current = true;
@@ -168,19 +204,16 @@ function EventDetailRoute() {
         const next = await loadOperations({ data: { eventId } });
         setEvent(next.event as EventWithClub);
         setAttendance(next.attendance);
+        setRemovedAttendance(next.removedAttendance);
+        setRecentActions(next.recentActions);
+        setSummary(next.summary);
         setSoftError(null);
         setHardError(null);
         setLastRefreshAt(new Date());
       } catch (error) {
         const message = getManagementErrorMessage(error, "Unable to load event.");
-        // First load failure becomes a full-page error so the host sees it.
-        // Subsequent failures (we already have data) become a soft banner so
-        // the host can keep operating instead of staring at a blank page.
-        if (!event) {
-          setHardError(message);
-        } else {
-          setSoftError(message);
-        }
+        if (!event) setHardError(message);
+        else setSoftError(message);
       } finally {
         inFlightRef.current = null;
       }
@@ -199,22 +232,15 @@ function EventDetailRoute() {
     return () => {
       cancelled = true;
     };
-    // We intentionally do not depend on `refresh` (which closes over `event`)
-    // here — that would re-run the initial load on every successful fetch.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, user, eventId]);
+  }, [loading, refresh, user]);
 
-  // Poll while the tab is visible. Pausing on hidden tabs saves a lot of
-  // wasted requests when a host leaves the page open in a background tab.
   useEffect(() => {
     if (!initialLoaded) return;
     const id = window.setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
       void refresh();
     }, POLL_INTERVAL_MS);
-    return () => {
-      window.clearInterval(id);
-    };
+    return () => window.clearInterval(id);
   }, [initialLoaded, refresh]);
 
   const checkInUrl = useMemo(() => {
@@ -224,60 +250,60 @@ function EventDetailRoute() {
       : `${window.location.origin}/check-in/${event.qr_token}`;
   }, [event]);
 
+  const filteredAttendance = useMemo(() => {
+    const normalizedQuery = rosterQuery.trim().toLowerCase();
+    const rows = attendance.filter((row) => {
+      if (methodFilter !== "all" && row.check_in_method !== methodFilter) return false;
+      if (!normalizedQuery) return true;
+      const searchable = [
+        row.students?.first_name,
+        row.students?.last_name,
+        row.students?.student_email,
+        row.students?.nine_hundred_number,
+      ]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+      return searchable.includes(normalizedQuery);
+    });
+
+    return rows.sort((a, b) => {
+      if (sortMode === "name") {
+        const aName = `${a.students?.last_name ?? ""} ${a.students?.first_name ?? ""}`.trim();
+        const bName = `${b.students?.last_name ?? ""} ${b.students?.first_name ?? ""}`.trim();
+        return aName.localeCompare(bName);
+      }
+      const aTime = new Date(a.checked_in_at).getTime();
+      const bTime = new Date(b.checked_in_at).getTime();
+      return sortMode === "oldest" ? aTime - bTime : bTime - aTime;
+    });
+  }, [attendance, methodFilter, rosterQuery, sortMode]);
+
+  const recentCheckIns = useMemo(() => attendance.slice(0, 5), [attendance]);
+
   if (loading || !user) {
-    return (
-      <ManagementPageShell>
-        <div className="py-16 text-center text-sm text-muted-foreground">Loading event…</div>
-      </ManagementPageShell>
-    );
+    return <ManagementPageShell><div className="py-16 text-center text-sm text-muted-foreground">Loading event…</div></ManagementPageShell>;
   }
 
   if (!initialLoaded) {
-    return (
-      <ManagementPageShell>
-        <div className="py-16 text-center text-sm text-muted-foreground">Loading event…</div>
-      </ManagementPageShell>
-    );
+    return <ManagementPageShell><div className="py-16 text-center text-sm text-muted-foreground">Loading event…</div></ManagementPageShell>;
   }
 
-  if (hardError && !event) {
-    return <EventDetailHardError message={hardError} onRetry={() => void refresh()} />;
-  }
+  if (hardError && !event) return <EventDetailHardError message={hardError} onRetry={() => void refresh()} />;
   if (!event) return <EventDetailNotFound />;
 
   const status = getCheckInStatus(event);
   const opensAt = new Date(event.check_in_opens_at);
   const closesAt = new Date(event.check_in_closes_at);
-  const statusBanner = (() => {
-    if (status === "open") {
-      return {
-        tone: "open" as const,
-        title: "Check-in is open",
-        body: `Closes at ${formatTimestamp(event.check_in_closes_at)}.`,
-      };
-    }
-    if (status === "upcoming") {
-      return {
-        tone: "upcoming" as const,
-        title: "Check-in not open yet",
-        body: `Opens at ${formatTimestamp(event.check_in_opens_at)}.`,
-      };
-    }
-    if (status === "archived") {
-      return {
-        tone: "closed" as const,
-        title: "Event archived",
-        body: "This event is archived. Students cannot check in.",
-      };
-    }
-    return {
-      tone: "closed" as const,
-      title: "Check-in is closed",
-      body: status === "inactive"
-        ? "This event has been deactivated."
-        : `Closed at ${formatTimestamp(event.check_in_closes_at)}.`,
-    };
-  })();
+  const statusBanner = status === "open"
+    ? { tone: "open" as const, title: "Check-in is open", body: `Students can check in until ${formatTimestamp(event.check_in_closes_at)}.` }
+    : status === "upcoming"
+      ? { tone: "upcoming" as const, title: "Check-in opens soon", body: `Students can start checking in at ${formatTimestamp(event.check_in_opens_at)}.` }
+      : status === "archived"
+        ? { tone: "closed" as const, title: "Event archived", body: "This event is stored for record keeping and is no longer active." }
+        : status === "inactive"
+          ? { tone: "closed" as const, title: "Closed early", body: "The event was manually closed. Edit the event to reopen the window." }
+          : { tone: "closed" as const, title: "Check-in closed", body: `Closed at ${formatTimestamp(event.check_in_closes_at)}.` };
 
   const handleCopyLink = async () => {
     try {
@@ -289,16 +315,11 @@ function EventDetailRoute() {
   };
 
   const handleExportCsv = async () => {
-    if (!event || exporting) return;
+    if (exporting) return;
     setExporting(true);
     try {
-      // Server fn re-checks ownership and produces the canonical CSV from a
-      // fresh DB read, so the file always matches server truth — not whatever
-      // the last 5s poll happened to capture.
       const result = await exportAttendanceFn({ data: { eventId } });
-      // BOM keeps Excel honest about UTF-8 (otherwise non-ASCII names get
-      // mangled the moment a host opens the file in Excel on Windows).
-      const blob = new Blob(["\ufeff", result.csv], { type: "text/csv;charset=utf-8" });
+      const blob = new Blob(["﻿", result.csv], { type: "text/csv;charset=utf-8" });
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -307,11 +328,8 @@ function EventDetailRoute() {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      if (result.count === 0) {
-        toast.message("Exported empty attendance file", { description: "No one has checked in yet." });
-      } else {
-        toast.success(`Exported ${result.count} attendance ${result.count === 1 ? "record" : "records"}`);
-      }
+      if (result.count === 0) toast.message("Exported empty attendance file", { description: "No one has checked in yet." });
+      else toast.success(`Exported ${result.count} attendance ${result.count === 1 ? "record" : "records"}`);
     } catch (error) {
       toast.error(getManagementErrorMessage(error, "Unable to export attendance."));
     } finally {
@@ -320,16 +338,14 @@ function EventDetailRoute() {
   };
 
   const handleConfirmRemove = async () => {
-    if (!pendingRemoveId) return;
-    setRemovingId(pendingRemoveId);
-    const removeId = pendingRemoveId;
-    // Optimistic remove for snappy UX. We re-fetch on success so
-    // server-derived fields stay correct.
+    if (!pendingRemoveRow) return;
+    setRemovingId(pendingRemoveRow.id);
+    const row = pendingRemoveRow;
     const previous = attendance;
-    setAttendance((prev) => prev.filter((row) => row.id !== removeId));
-    setPendingRemoveId(null);
+    setAttendance((prev) => prev.filter((item) => item.id !== row.id));
+    setPendingRemoveRow(null);
     try {
-      await removeAttendanceMutation({ data: { attendanceRecordId: removeId, eventId } });
+      await removeAttendanceMutation({ data: { attendanceRecordId: row.id, eventId } });
       toast.success("Attendance removed");
       await refresh();
     } catch (error) {
@@ -337,6 +353,37 @@ function EventDetailRoute() {
       toast.error(getManagementErrorMessage(error, "Unable to remove attendance."));
     } finally {
       setRemovingId(null);
+    }
+  };
+
+  const handleRestore = async (studentId: string) => {
+    setRestoringStudentId(studentId);
+    try {
+      await restoreAttendanceMutation({ data: { eventId, studentId } });
+      toast.success("Attendance restored");
+      await refresh();
+    } catch (error) {
+      toast.error(getManagementErrorMessage(error, "Unable to restore attendance."));
+    } finally {
+      setRestoringStudentId(null);
+    }
+  };
+
+  const handleManualCheckIn = async () => {
+    setManualSubmitting(true);
+    setManualError(null);
+    try {
+      await manualCheckInMutation({ data: { eventId, ...manualForm } });
+      toast.success("Manual check-in saved");
+      setManualDialogOpen(false);
+      setManualForm(EMPTY_MANUAL_FORM);
+      await refresh();
+    } catch (error) {
+      const message = getManagementErrorMessage(error, "Unable to save manual check-in.");
+      setManualError(message);
+      toast.error(message);
+    } finally {
+      setManualSubmitting(false);
     }
   };
 
@@ -351,6 +398,20 @@ function EventDetailRoute() {
       toast.error(getManagementErrorMessage(error, "Unable to close check-in."));
     } finally {
       setClosingEarly(false);
+    }
+  };
+
+  const handleArchiveToggle = async () => {
+    setArchiving(true);
+    try {
+      await toggleArchiveMutation({ data: { eventId, isArchived: !event.is_archived } });
+      toast.success(event.is_archived ? "Event reopened" : "Event archived");
+      await refresh();
+      setArchiveDialogOpen(false);
+    } catch (error) {
+      toast.error(getManagementErrorMessage(error, "Unable to update event status."));
+    } finally {
+      setArchiving(false);
     }
   };
 
@@ -372,11 +433,7 @@ function EventDetailRoute() {
         },
       });
       toast.success("Event duplicated");
-      navigate({
-        to: "/events/$eventId/edit",
-        params: { eventId: result.event.id },
-        search: { created: "" },
-      });
+      navigate({ to: "/events/$eventId/edit", params: { eventId: result.event.id }, search: { created: "" } });
     } catch (error) {
       toast.error(getManagementErrorMessage(error, "Unable to duplicate event."));
     } finally {
@@ -414,12 +471,10 @@ function EventDetailRoute() {
                   <span className="hidden sm:inline">Display QR</span>
                 </Link>
               </SecondaryButton>
-              <PrimaryButton asChild>
-                <Link to="/check-in/$qrToken" params={{ qrToken: event.qr_token }} target="_blank" rel="noreferrer">
-                  <ExternalLink className="h-4 w-4" />
-                  <span className="hidden sm:inline">Open student view</span>
-                  <span className="sm:hidden">Student view</span>
-                </Link>
+              <PrimaryButton type="button" onClick={() => setManualDialogOpen(true)}>
+                <Plus className="h-4 w-4" />
+                <span className="hidden sm:inline">Manual check-in</span>
+                <span className="sm:hidden">Manual</span>
               </PrimaryButton>
             </div>
           }
@@ -440,152 +495,273 @@ function EventDetailRoute() {
           </div>
         ) : null}
 
-        <div className="grid gap-4 sm:grid-cols-3">
-          <StatsCard label="Attendance" value={attendance.length} hint="Live across all check-in methods" />
-          <StatsCard
-            label="Check-in opens"
-            value={Number.isNaN(opensAt.getTime()) ? "—" : opensAt.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
-            hint={formatEventDate(event.event_date)}
-          />
-          <StatsCard
-            label="Check-in closes"
-            value={Number.isNaN(closesAt.getTime()) ? "—" : closesAt.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}
-            hint={status === "open" ? "Open right now" : status === "upcoming" ? "Not open yet" : "Closed"}
-          />
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <StatsCard label="Attendance" value={summary?.total ?? attendance.length} hint="Total checked in" />
+          <StatsCard label="Recent arrivals" value={summary?.recent ?? 0} hint="Last 15 minutes" />
+          <StatsCard label="Check-in opens" value={Number.isNaN(opensAt.getTime()) ? "—" : opensAt.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} hint={formatEventDate(event.event_date)} />
+          <StatsCard label="Check-in closes" value={Number.isNaN(closesAt.getTime()) ? "—" : closesAt.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} hint={status === "open" ? "Open right now" : status === "upcoming" ? "Not open yet" : "Closed / archived"} />
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_22rem]">
-          <Card className="rounded-2xl border-border/70 shadow-sm">
-            <CardContent className="space-y-4 p-5 sm:p-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-xl font-semibold text-foreground">Attendance ({attendance.length})</h2>
-                    <LiveDot active={initialLoaded && !softError} />
+        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_24rem]">
+          <div className="space-y-6">
+            <Card className="rounded-2xl border-border/70 shadow-sm">
+              <CardContent className="space-y-4 p-5 sm:p-6">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-xl font-semibold text-foreground">Live roster</h2>
+                      <LiveDot active={initialLoaded && !softError} />
+                    </div>
+                    <p className="text-sm text-muted-foreground">Auto-refreshes every {POLL_INTERVAL_MS / 1000}s{lastRefreshAt ? ` · last update ${formatTime(lastRefreshAt)}` : ""}</p>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Auto-refreshes every {POLL_INTERVAL_MS / 1000}s
-                    {lastRefreshAt ? ` · last update ${formatTime(lastRefreshAt)}` : ""}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <SecondaryButton type="button" onClick={() => void handleManualRefresh()} disabled={refreshing}>
-                    <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-                    <span className="hidden sm:inline">Refresh</span>
-                  </SecondaryButton>
-                  <SecondaryButton
-                    type="button"
-                    onClick={() => void handleExportCsv()}
-                    disabled={exporting}
-                    aria-label="Export attendance as CSV"
-                  >
-                    <Download className={`h-4 w-4 ${exporting ? "animate-pulse" : ""}`} />
-                    <span className="hidden sm:inline">{exporting ? "Exporting…" : "Export CSV"}</span>
-                  </SecondaryButton>
-                  {status === "open" ? (
-                    <SecondaryButton type="button" onClick={() => setCloseEarlyOpen(true)}>
-                      <X className="h-4 w-4" />
-                      <span className="hidden sm:inline">Close check-in</span>
+                  <div className="flex flex-wrap gap-2">
+                    <SecondaryButton type="button" onClick={() => void handleManualRefresh()} disabled={refreshing}>
+                      <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+                      <span className="hidden sm:inline">Refresh</span>
                     </SecondaryButton>
-                  ) : null}
+                    <SecondaryButton type="button" onClick={() => void handleExportCsv()} disabled={exporting} aria-label="Export attendance as CSV">
+                      <Download className={`h-4 w-4 ${exporting ? "animate-pulse" : ""}`} />
+                      <span className="hidden sm:inline">{exporting ? "Exporting…" : "Export CSV"}</span>
+                    </SecondaryButton>
+                    {status === "open" ? (
+                      <SecondaryButton type="button" onClick={() => setCloseEarlyOpen(true)}>
+                        <X className="h-4 w-4" />
+                        <span className="hidden sm:inline">Close check-in</span>
+                      </SecondaryButton>
+                    ) : null}
+                    <SecondaryButton type="button" onClick={() => setArchiveDialogOpen(true)}>
+                      <Archive className="h-4 w-4" />
+                      <span className="hidden sm:inline">{event.is_archived ? "Reopen" : "Archive"}</span>
+                    </SecondaryButton>
+                  </div>
                 </div>
-              </div>
 
-              {attendance.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-border/80 px-4 py-12 text-center">
-                  <p className="text-sm font-medium text-foreground">No one has checked in yet.</p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {status === "open"
-                      ? "Share the QR code or check-in link to start collecting attendance."
-                      : status === "upcoming"
-                        ? `Check-in opens at ${formatTimestamp(event.check_in_opens_at)}.`
-                        : "Check-in is closed for this event."}
-                  </p>
+                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_12rem_12rem]">
+                  <div className="relative">
+                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input value={rosterQuery} onChange={(event) => setRosterQuery(event.target.value)} placeholder="Search by name, email, or 900 number" className="h-11 rounded-xl pl-9" />
+                  </div>
+                  <Select value={methodFilter} onValueChange={(value) => setMethodFilter(value as RosterMethodFilter)}>
+                    <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder="Method" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All methods</SelectItem>
+                      <SelectItem value="qr_scan">First scan</SelectItem>
+                      <SelectItem value="returning_lookup">Returning</SelectItem>
+                      <SelectItem value="remembered_device">Remembered</SelectItem>
+                      <SelectItem value="host_correction">Manual</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <Select value={sortMode} onValueChange={(value) => setSortMode(value as RosterSort)}>
+                    <SelectTrigger className="h-11 rounded-xl"><SelectValue placeholder="Sort" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="newest">Newest first</SelectItem>
+                      <SelectItem value="oldest">Oldest first</SelectItem>
+                      <SelectItem value="name">Name</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
-              ) : (
-                <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/70">
-                  {attendance.map((row) => (
-                    <li key={row.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="min-w-0 flex-1 space-y-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-medium text-foreground">
-                            {row.students?.first_name} {row.students?.last_name}
-                          </p>
-                          <MethodBadge method={row.check_in_method} />
-                        </div>
-                        <p className="truncate text-sm text-muted-foreground">
-                          {row.students?.student_email}
-                          {row.students?.nine_hundred_number ? ` · ${row.students.nine_hundred_number}` : ""}
+
+                <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.9fr)]">
+                  <div className="space-y-3">
+                    {filteredAttendance.length === 0 ? (
+                      <div className="rounded-2xl border border-dashed border-border/80 px-4 py-12 text-center">
+                        <p className="text-sm font-medium text-foreground">No matching attendance yet.</p>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {attendance.length === 0
+                            ? status === "open"
+                              ? "Share the QR code or use manual check-in to start collecting attendance."
+                              : status === "upcoming"
+                                ? `Check-in opens at ${formatTimestamp(event.check_in_opens_at)}.`
+                                : "Check-in is closed for this event."
+                            : "Try changing your roster filters."}
                         </p>
                       </div>
-                      <div className="flex items-center justify-between gap-3 sm:justify-end sm:gap-4">
-                        <span className="shrink-0 text-sm text-muted-foreground">
-                          {formatTimestamp(row.checked_in_at)}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive"
-                          onClick={() => setPendingRemoveId(row.id)}
-                          disabled={removingId === row.id}
-                          aria-label={`Remove attendance for ${row.students?.first_name} ${row.students?.last_name}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                          <span className="hidden sm:inline">Remove</span>
-                        </Button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
+                    ) : (
+                      <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/70">
+                        {filteredAttendance.map((row) => (
+                          <li key={row.id} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="min-w-0 flex-1 space-y-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="font-medium text-foreground">{row.students?.first_name} {row.students?.last_name}</p>
+                                <MethodBadge method={row.check_in_method} />
+                              </div>
+                              <p className="truncate text-sm text-muted-foreground">
+                                {row.students?.student_email}
+                                {row.students?.nine_hundred_number ? ` · ${row.students.nine_hundred_number}` : ""}
+                              </p>
+                            </div>
+                            <div className="flex items-center justify-between gap-3 sm:justify-end sm:gap-4">
+                              <span className="shrink-0 text-sm text-muted-foreground">{formatTimestamp(row.checked_in_at)}</span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                onClick={() => setPendingRemoveRow(row)}
+                                disabled={removingId === row.id}
+                                aria-label={`Remove attendance for ${row.students?.first_name} ${row.students?.last_name}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                <span className="hidden sm:inline">Remove</span>
+                              </Button>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
 
-          <Card className="rounded-2xl border-border/70 shadow-sm">
-            <CardContent className="space-y-4 p-5 sm:p-6">
-              <div className="space-y-1">
-                <h2 className="text-base font-semibold text-foreground">QR check-in</h2>
-                <p className="text-sm text-muted-foreground">Print, project, or share the link below.</p>
-              </div>
+                  <div className="space-y-4">
+                    <PanelCard title="Recent arrivals" description="See who just came through the door.">
+                      {recentCheckIns.length ? (
+                        <ul className="space-y-3">
+                          {recentCheckIns.map((row) => (
+                            <li key={row.id} className="rounded-xl bg-secondary/50 px-3 py-3">
+                              <div className="flex items-center justify-between gap-3">
+                                <div>
+                                  <p className="font-medium text-foreground">{row.students?.first_name} {row.students?.last_name}</p>
+                                  <p className="text-sm text-muted-foreground">{getCheckInMethodLabel(row.check_in_method)}</p>
+                                </div>
+                                <p className="text-sm text-muted-foreground">{formatTimestamp(row.checked_in_at)}</p>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Recent activity will appear here as students check in.</p>
+                      )}
+                    </PanelCard>
 
-              <div className="mx-auto w-full max-w-[16rem] rounded-2xl bg-white p-4">
-                {checkInUrl ? <QRCode value={checkInUrl} size={224} className="h-auto w-full" /> : null}
-              </div>
-
-              <div className="space-y-2 rounded-2xl bg-secondary p-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Check-in URL</p>
-                <p className="break-all text-xs text-foreground">{checkInUrl}</p>
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" variant="outline" className="flex-1 rounded-xl" onClick={() => void handleCopyLink()}>
-                    <Copy className="h-4 w-4" />Copy link
-                  </Button>
-                  <Button asChild type="button" variant="outline" className="flex-1 rounded-xl">
-                    <Link to="/events/$eventId/display" params={{ eventId }} search={{ created: "" }}>
-                      <Maximize2 className="h-4 w-4" />Full screen
-                    </Link>
-                  </Button>
+                    <PanelCard title="Restore removed" description="Bring back accidental removals without leaving the page.">
+                      {removedAttendance.length ? (
+                        <ul className="space-y-3">
+                          {removedAttendance.map((action) => (
+                            <li key={action.id} className="rounded-xl bg-secondary/50 px-3 py-3">
+                              <div className="space-y-2">
+                                <div>
+                                  <p className="font-medium text-foreground">{action.student?.first_name} {action.student?.last_name}</p>
+                                  <p className="text-sm text-muted-foreground">Removed {formatTimestamp(action.created_at)}</p>
+                                </div>
+                                <Button type="button" variant="outline" className="w-full rounded-xl" onClick={() => void handleRestore(action.student!.id)} disabled={restoringStudentId === action.student?.id}>
+                                  <RotateCcw className="h-4 w-4" />
+                                  {restoringStudentId === action.student?.id ? "Restoring…" : "Restore attendance"}
+                                </Button>
+                              </div>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">No removed attendance waiting for review.</p>
+                      )}
+                    </PanelCard>
+                  </div>
                 </div>
-              </div>
+              </CardContent>
+            </Card>
 
-              <div className="space-y-2 text-sm text-muted-foreground">
-                <div className="flex items-center gap-2"><CalendarDays className="h-4 w-4" />{formatEventDate(event.event_date)}</div>
-                <div className="flex items-center gap-2"><Clock3 className="h-4 w-4" />{formatEventTime(event.start_time, event.end_time)}</div>
-                {event.location ? (
-                  <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />{event.location}</div>
-                ) : null}
-              </div>
-            </CardContent>
-          </Card>
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
+              <PanelCard title="Post-event review" description="Keep a clean operational snapshot for follow-up and exports.">
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <ReviewStat label="First scan" value={summary?.methodBreakdown.firstScan ?? 0} />
+                  <ReviewStat label="Returning" value={summary?.methodBreakdown.returning ?? 0} />
+                  <ReviewStat label="Remembered" value={summary?.methodBreakdown.remembered ?? 0} />
+                  <ReviewStat label="Manual" value={summary?.methodBreakdown.manual ?? 0} />
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <MetaRow icon={<CalendarDays className="h-4 w-4" />} label={formatEventDate(event.event_date)} />
+                  <MetaRow icon={<Clock3 className="h-4 w-4" />} label={formatEventTime(event.start_time, event.end_time)} />
+                  {event.location ? <MetaRow icon={<MapPin className="h-4 w-4" />} label={event.location} /> : null}
+                  <MetaRow icon={<Download className="h-4 w-4" />} label="CSV export is the canonical roster" />
+                </div>
+              </PanelCard>
+
+              <PanelCard title="Recent actions" description="Audit host corrections and recovery work.">
+                {recentActions.length ? (
+                  <ul className="space-y-3">
+                    {recentActions.slice(0, 8).map((action) => (
+                      <li key={action.id} className="rounded-xl bg-secondary/50 px-3 py-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="font-medium text-foreground">{actionLabel(action)}</p>
+                            <p className="text-sm text-muted-foreground">{action.student?.first_name} {action.student?.last_name}</p>
+                          </div>
+                          <p className="text-xs text-muted-foreground">{formatTimestamp(action.created_at)}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Manual actions and removals will appear here.</p>
+                )}
+              </PanelCard>
+            </div>
+          </div>
+
+          <div className="space-y-6">
+            <Card className="rounded-2xl border-border/70 shadow-sm">
+              <CardContent className="space-y-4 p-5 sm:p-6">
+                <div className="space-y-1">
+                  <h2 className="text-base font-semibold text-foreground">QR check-in</h2>
+                  <p className="text-sm text-muted-foreground">Print, project, or share the link below.</p>
+                </div>
+                <div className="mx-auto w-full max-w-[16rem] rounded-2xl bg-white p-4">
+                  {checkInUrl ? <QRCode value={checkInUrl} size={224} className="h-auto w-full" /> : null}
+                </div>
+                <div className="space-y-2 rounded-2xl bg-secondary p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Check-in URL</p>
+                  <p className="break-all text-xs text-foreground">{checkInUrl}</p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="outline" className="flex-1 rounded-xl" onClick={() => void handleCopyLink()}>
+                      <Copy className="h-4 w-4" />Copy link
+                    </Button>
+                    <Button asChild type="button" variant="outline" className="flex-1 rounded-xl">
+                      <Link to="/events/$eventId/display" params={{ eventId }} search={{ created: "" }}>
+                        <Maximize2 className="h-4 w-4" />Full screen
+                      </Link>
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <PrimaryButton asChild>
+                    <Link to="/check-in/$qrToken" params={{ qrToken: event.qr_token }} target="_blank" rel="noreferrer">
+                      <ExternalLink className="h-4 w-4" />Open student view
+                    </Link>
+                  </PrimaryButton>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
 
-      <AlertDialog open={pendingRemoveId !== null} onOpenChange={(open) => !open && setPendingRemoveId(null)}>
+      <Dialog open={manualDialogOpen} onOpenChange={setManualDialogOpen}>
+        <DialogContent className="rounded-2xl sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Manual check-in</DialogTitle>
+            <DialogDescription>Use this when a student cannot complete the QR flow but still needs to be counted.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="First name"><Input className="h-11 rounded-xl" value={manualForm.firstName} onChange={(event) => setManualForm((prev) => ({ ...prev, firstName: event.target.value }))} /></Field>
+              <Field label="Last name"><Input className="h-11 rounded-xl" value={manualForm.lastName} onChange={(event) => setManualForm((prev) => ({ ...prev, lastName: event.target.value }))} /></Field>
+            </div>
+            <Field label="Student email"><Input className="h-11 rounded-xl" type="email" value={manualForm.studentEmail} onChange={(event) => setManualForm((prev) => ({ ...prev, studentEmail: event.target.value }))} /></Field>
+            <Field label="900 number"><Input className="h-11 rounded-xl" inputMode="numeric" value={manualForm.nineHundredNumber} onChange={(event) => setManualForm((prev) => ({ ...prev, nineHundredNumber: event.target.value }))} /></Field>
+            {manualError ? <p className="text-sm text-destructive">{manualError}</p> : null}
+            <div className="flex justify-end gap-2">
+              <SecondaryButton type="button" onClick={() => setManualDialogOpen(false)}>Cancel</SecondaryButton>
+              <PrimaryButton type="button" onClick={() => void handleManualCheckIn()} disabled={manualSubmitting}>{manualSubmitting ? "Saving…" : "Save manual check-in"}</PrimaryButton>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={pendingRemoveRow !== null} onOpenChange={(open) => !open && setPendingRemoveRow(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Remove this attendance?</AlertDialogTitle>
             <AlertDialogDescription>
-              This deletes the attendance record. The action is recorded in the audit log and the student can re-check in if check-in is still open.
+              This deletes the attendance record. The action is recorded in the audit log and the student can be restored or re-check in later.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -605,9 +781,24 @@ function EventDetailRoute() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => void handleCloseEarly()} disabled={closingEarly}>
-              {closingEarly ? "Closing…" : "Close check-in"}
-            </AlertDialogAction>
+            <AlertDialogAction onClick={() => void handleCloseEarly()} disabled={closingEarly}>{closingEarly ? "Closing…" : "Close check-in"}</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={archiveDialogOpen} onOpenChange={setArchiveDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{event.is_archived ? "Reopen this event?" : "Archive this event?"}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {event.is_archived
+                ? "Reopening makes the event active again. Edit the time window if you want students to check in again."
+                : "Archiving removes the event from active operations while keeping the attendance history available for review."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => void handleArchiveToggle()} disabled={archiving}>{archiving ? "Saving…" : event.is_archived ? "Reopen event" : "Archive event"}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -615,9 +806,38 @@ function EventDetailRoute() {
   );
 }
 
-type BannerProps = {
-  banner: { tone: "open" | "upcoming" | "closed"; title: string; body: string };
-};
+function PanelCard({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
+  return (
+    <Card className="rounded-2xl border-border/70 shadow-sm">
+      <CardContent className="space-y-4 p-5 sm:p-6">
+        <div className="space-y-1">
+          <h2 className="text-base font-semibold text-foreground">{title}</h2>
+          <p className="text-sm text-muted-foreground">{description}</p>
+        </div>
+        {children}
+      </CardContent>
+    </Card>
+  );
+}
+
+function ReviewStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-xl bg-secondary/50 px-4 py-3">
+      <p className="text-sm text-muted-foreground">{label}</p>
+      <p className="mt-1 text-xl font-semibold text-foreground">{value}</p>
+    </div>
+  );
+}
+
+function MetaRow({ icon, label }: { icon: React.ReactNode; label: string }) {
+  return <div className="flex items-center gap-2 rounded-xl bg-secondary/50 px-4 py-3 text-sm text-foreground">{icon}<span>{label}</span></div>;
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return <div className="space-y-2"><Label className="text-sm font-medium text-foreground">{label}</Label>{children}</div>;
+}
+
+type BannerProps = { banner: { tone: "open" | "upcoming" | "closed"; title: string; body: string } };
 
 function StatusBanner({ banner }: BannerProps) {
   const toneClasses = {
@@ -635,9 +855,7 @@ function StatusBanner({ banner }: BannerProps) {
 }
 
 function LiveDot({ active }: { active: boolean }) {
-  if (!active) {
-    return <span className="h-2 w-2 rounded-full bg-muted-foreground/40" aria-hidden />;
-  }
+  if (!active) return <span className="h-2 w-2 rounded-full bg-muted-foreground/40" aria-hidden />;
   return (
     <span className="relative flex h-2 w-2" aria-label="Live">
       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success/60 opacity-75" />
@@ -647,12 +865,17 @@ function LiveDot({ active }: { active: boolean }) {
 }
 
 function MethodBadge({ method }: { method: string | null | undefined }) {
-  const label = method ? METHOD_LABEL[method] ?? "Manual" : "Manual";
   return (
     <span className="inline-flex items-center rounded-full border border-border/70 bg-muted px-2 py-0.5 text-[0.7rem] font-medium uppercase tracking-wide text-muted-foreground">
-      {label}
+      {getCheckInMethodLabel(method)}
     </span>
   );
+}
+
+function actionLabel(action: AttendanceActionLog) {
+  if (action.action_type === "removed") return "Removed attendance";
+  if (action.action_type === "restored") return "Restored attendance";
+  return "Manual check-in";
 }
 
 function formatTime(date: Date) {

@@ -8,22 +8,12 @@ import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider"
 import { getManagementErrorMessage, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
 import { buildEventDefaults, combineDateAndTime, shiftTimeString } from "@/lib/attendance-hq";
 import { createEvent, getHostOnboardingState } from "@/lib/attendance-hq.functions";
+import { validatedEventSchema } from "@/lib/attendance-hq-schemas";
 
-const formSchema = z.object({
-  eventName: z.string().trim().min(2, "Enter an event name").max(160, "Event name is too long"),
-  eventDate: z.string().min(1, "Choose a date"),
-  startTime: z.string().min(1, "Choose a start time"),
-  endTime: z.string().min(1, "Choose an end time"),
-  location: z.string().trim().max(160, "Location is too long").optional().or(z.literal("")),
-  checkInOpensAt: z.string().min(1, "Choose when check-in opens"),
-  checkInClosesAt: z.string().min(1, "Choose when check-in closes"),
-}).refine((value) => value.endTime > value.startTime, {
-  message: "End time must be after start time",
-  path: ["endTime"],
-}).refine((value) => new Date(value.checkInClosesAt).getTime() > new Date(value.checkInOpensAt).getTime(), {
-  message: "Check-in close must be after open",
-  path: ["checkInClosesAt"],
-});
+const formSchema = validatedEventSchema.extend({
+  openMinutesBeforeStart: z.coerce.number().int().min(0).max(1440),
+  closeMinutesAfterEnd: z.coerce.number().int().min(0).max(1440),
+}).omit({ clubId: true, eventTemplateId: true });
 type FormValues = z.infer<typeof formSchema>;
 
 export const Route = createFileRoute("/onboarding/event")({
@@ -54,29 +44,30 @@ function OnboardingEventRoute() {
       location: "",
       checkInOpensAt: defaults.checkInOpensAt,
       checkInClosesAt: defaults.checkInClosesAt,
+      openMinutesBeforeStart: 15,
+      closeMinutesAfterEnd: 15,
     },
   });
 
   const eventDate = form.watch("eventDate");
   const startTime = form.watch("startTime");
   const endTime = form.watch("endTime");
+  const openMinutesBeforeStart = form.watch("openMinutesBeforeStart");
+  const closeMinutesAfterEnd = form.watch("closeMinutesAfterEnd");
 
   useEffect(() => {
     if (!eventDate || !startTime || !endTime) return;
-    // Mirror the canonical buildEventDefaults() relationship:
-    //   open  = start − 15 min
-    //   close = end   + 15 min
     form.setValue(
       "checkInOpensAt",
-      combineDateAndTime(eventDate, `${shiftTimeString(startTime, -15)}:00`),
+      combineDateAndTime(eventDate, `${shiftTimeString(startTime, -openMinutesBeforeStart)}:00`),
       { shouldValidate: true },
     );
     form.setValue(
       "checkInClosesAt",
-      combineDateAndTime(eventDate, `${shiftTimeString(endTime, 15)}:00`),
+      combineDateAndTime(eventDate, `${shiftTimeString(endTime, closeMinutesAfterEnd)}:00`),
       { shouldValidate: true },
     );
-  }, [eventDate, endTime, form, startTime]);
+  }, [closeMinutesAfterEnd, endTime, eventDate, form, openMinutesBeforeStart, startTime]);
 
   useEffect(() => {
     if (loading || !user) return;
@@ -143,6 +134,10 @@ function OnboardingEventRoute() {
           <TimeInput label="Start time" error={form.formState.errors.startTime?.message} {...form.register("startTime")} />
           <TimeInput label="End time" error={form.formState.errors.endTime?.message} {...form.register("endTime")} />
           <TextInput label="Location" error={form.formState.errors.location?.message} {...form.register("location")} />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <TextInput type="number" label="Open minutes before start" error={form.formState.errors.openMinutesBeforeStart?.message} {...form.register("openMinutesBeforeStart", { valueAsNumber: true })} />
+            <TextInput type="number" label="Close minutes after end" error={form.formState.errors.closeMinutesAfterEnd?.message} {...form.register("closeMinutesAfterEnd", { valueAsNumber: true })} />
+          </div>
           <DateTimeDisplay label="Check-in opens at" value={form.watch("checkInOpensAt")} />
           <DateTimeDisplay label="Check-in closes at" value={form.watch("checkInClosesAt")} />
           <InlineErrorMessage message={submitError ?? undefined} />
