@@ -73,7 +73,7 @@ function SignUpRoute() {
   return (
     <AuthShell>
       <AuthCard>
-        <PageHeadingBlock eyebrow="Get started" title="Create your account" description="Set up your club, launch your first QR check-in, and manage attendance with a polished mobile workflow." />
+        <PageHeadingBlock eyebrow="Get started" title="Create your account" description="Launch a stronger mobile attendance system for your organization in just a few guided steps." />
         {confirmEmailNotice ? <SuccessBanner message={confirmEmailNotice} /> : null}
         <form className="space-y-4" onSubmit={(event) => void onSubmit(event)}>
           <TextInput label="Full name" autoComplete="name" error={form.formState.errors.fullName?.message} {...form.register("fullName")} />
