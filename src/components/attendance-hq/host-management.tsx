@@ -59,8 +59,75 @@ import {
 } from "@/lib/attendance-hq-schemas";
 import { cn } from "@/lib/utils";
 
-export function ManagementPageShell({ children }: { children: React.ReactNode }) {
-  return <HostAppShell>{children}</HostAppShell>;
+export function ManagementPageShell({ children, hideTabBar }: { children: React.ReactNode; hideTabBar?: boolean }) {
+  return <HostAppShell hideTabBar={hideTabBar}>{children}</HostAppShell>;
+}
+
+/* ─── Mobile action sheet (bottom drawer) ─────────────────────────────
+ * Use for overflow menus on cards / detail screens. Children should be
+ * a list of <ActionSheetItem /> rows. */
+export function ActionSheet({
+  trigger,
+  title,
+  description,
+  children,
+}: {
+  trigger: React.ReactNode;
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Drawer>
+      <DrawerTrigger asChild>{trigger}</DrawerTrigger>
+      <DrawerContent className="rounded-t-[1.75rem] border-border/80 bg-card pb-safe-1">
+        <DrawerHeader className="text-left">
+          <DrawerTitle className="font-display text-[17px] font-extrabold text-foreground">{title}</DrawerTitle>
+          {description ? <p className="text-[13px] text-muted-foreground">{description}</p> : null}
+        </DrawerHeader>
+        <div className="px-3 pb-3">
+          <div className="ios-grouped">{children}</div>
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+}
+
+export function ActionSheetItem({
+  icon: Icon,
+  label,
+  onClick,
+  destructive,
+}: {
+  icon?: React.ComponentType<{ className?: string }>;
+  label: string;
+  onClick?: () => void;
+  destructive?: boolean;
+}) {
+  return (
+    <DrawerClose asChild>
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "ios-list-row w-full text-left",
+          destructive && "text-destructive",
+        )}
+      >
+        {Icon ? (
+          <span className={cn(
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
+            destructive ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary",
+          )}>
+            <Icon className="h-[18px] w-[18px]" />
+          </span>
+        ) : null}
+        <span className={cn("flex-1 text-[15px] font-medium", destructive ? "text-destructive" : "text-foreground")}>
+          {label}
+        </span>
+      </button>
+    </DrawerClose>
+  );
 }
 
 // Centralized error → user message mapping for the host UI.
