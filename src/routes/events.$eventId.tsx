@@ -201,6 +201,7 @@ function EventDetailRoute() {
   const [rosterQuery, setRosterQuery] = useState("");
   const [methodFilter, setMethodFilter] = useState<RosterMethodFilter>("all");
   const [sortMode, setSortMode] = useState<RosterSort>("newest");
+  const [historyTab, setHistoryTab] = useState<"recent" | "removed" | "actions" | "review">("recent");
 
   const createdToastFired = useRef(false);
   const inFlightRef = useRef<Promise<void> | null>(null);
@@ -943,80 +944,8 @@ function ReviewTile({ label, value }: { label: string; value: number }) {
   );
 }
 
-function PanelCard({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
-  return (
-    <Card className="rounded-[1.8rem] border-border/80 bg-card/95 shadow-[0_22px_48px_-34px_color-mix(in_oklab,var(--color-primary)_28%,transparent)]">
-      <CardContent className="space-y-4 p-5 sm:p-6">
-        <div className="space-y-1">
-          <h2 className="text-base font-semibold text-foreground">{title}</h2>
-          <p className="text-sm text-muted-foreground">{description}</p>
-        </div>
-        {children}
-      </CardContent>
-    </Card>
-  );
-}
-
-function OpsMetric({ label, value, detail }: { label: string; value: string; detail: string }) {
-  return (
-    <div className="rounded-[1.5rem] border border-border/80 bg-surface/70 px-4 py-4 shadow-[0_18px_36px_-30px_color-mix(in_oklab,var(--color-primary)_22%,transparent)]">
-      <p className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
-      <p className="mt-2 text-sm font-semibold text-foreground">{value}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
-    </div>
-  );
-}
-
-function ReviewStat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-xl bg-secondary/50 px-4 py-3">
-      <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="mt-1 text-xl font-semibold text-foreground">{value}</p>
-    </div>
-  );
-}
-
-function MetaRow({ icon, label }: { icon: React.ReactNode; label: string }) {
-  return <div className="flex items-center gap-2 rounded-xl bg-secondary/50 px-4 py-3 text-sm text-foreground">{icon}<span>{label}</span></div>;
-}
-
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return <div className="space-y-2"><Label className="text-sm font-medium text-foreground">{label}</Label>{children}</div>;
-}
-
-type BannerProps = { banner: { tone: "open" | "upcoming" | "closed"; title: string; body: string } };
-
-function StatusBanner({ banner }: BannerProps) {
-  const toneClasses = {
-    open: "border-success/30 bg-success/10 text-foreground",
-    upcoming: "border-accent bg-accent/40 text-foreground",
-    closed: "border-border bg-muted text-foreground",
-  }[banner.tone];
-
-  return (
-    <div className={`flex flex-col gap-1 rounded-2xl border px-4 py-3 ${toneClasses}`}>
-      <p className="text-sm font-semibold">{banner.title}</p>
-      <p className="text-sm text-muted-foreground">{banner.body}</p>
-    </div>
-  );
-}
-
-function LiveDot({ active }: { active: boolean }) {
-  if (!active) return <span className="h-2 w-2 rounded-full bg-muted-foreground/40" aria-hidden />;
-  return (
-    <span className="relative flex h-2 w-2" aria-label="Live">
-      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-success/60 opacity-75" />
-      <span className="relative inline-flex h-2 w-2 rounded-full bg-success" />
-    </span>
-  );
-}
-
-function MethodBadge({ method }: { method: string | null | undefined }) {
-  return (
-    <span className="inline-flex items-center rounded-full border border-border/70 bg-muted px-2 py-0.5 text-[0.7rem] font-medium uppercase tracking-wide text-muted-foreground">
-      {getCheckInMethodLabel(method)}
-    </span>
-  );
 }
 
 function actionLabel(action: AttendanceActionLog) {
