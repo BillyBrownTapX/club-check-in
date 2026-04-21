@@ -223,16 +223,26 @@ async function requireOwnedClub(supabase: AppSupabaseClient, userId: string, clu
 }
 
 async function requireOwnedEvent(supabase: AppSupabaseClient, userId: string, eventId: string) {
-  const { data, error } = await supabase
+  const { data: event, error: eventError } = await supabase
     .from("events")
-    .select("*, clubs(id, club_name, club_slug, description, host_id)")
+    .select("*")
     .eq("id", eventId)
     .maybeSingle();
 
-  if (error) throw new Error(safeMessage(error));
-  const event = data as (EventWithClub & { clubs: (EventWithClub["clubs"] & { host_id?: string }) | null }) | null;
-  if (!event || !event.clubs || event.clubs.host_id !== userId) throw notFound();
-  return event as EventWithClub;
+  if (eventError) throw new Error(safeMessage(eventError, undefined, "read"));
+  if (!event) throw notFound();
+
+  const club = await requireOwnedClub(supabase, userId, event.club_id);
+
+  return {
+    ...(event as Database["public"]["Tables"]["events"]["Row"]),
+    clubs: {
+      id: club.id,
+      club_name: club.club_name,
+      club_slug: club.club_slug,
+      description: club.description,
+    },
+  } as EventWithClub;
 }
 
 async function getHostClubSummariesForUser(supabase: AppSupabaseClient, userId: string): Promise<ClubSummary[]> {
