@@ -109,10 +109,15 @@ function ClubsRoute() {
 
 function ClubRowCard({ club }: { club: ClubSummary }) {
   const initials = club.club_name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("");
+  const logoUrl = useSignedLogoUrl(club.logo_url ?? null);
   return (
     <Link to="/clubs/$clubId" params={{ clubId: club.id }} className="ios-card ios-press flex items-center gap-4 rounded-2xl p-4">
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-brand font-display text-[15px] font-extrabold text-primary-foreground">
-        {initials || "C"}
+      <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-brand font-display text-[15px] font-extrabold text-primary-foreground">
+        {logoUrl ? (
+          <img src={logoUrl} alt={`${club.club_name} logo`} className="h-full w-full object-cover" />
+        ) : (
+          <span>{initials || "C"}</span>
+        )}
       </div>
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
