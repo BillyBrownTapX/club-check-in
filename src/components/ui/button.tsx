@@ -4,25 +4,35 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-semibold transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 active:scale-[0.99] [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-2xl text-[15px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50 active:scale-[0.97] [&_svg]:pointer-events-none [&_svg]:size-[18px] [&_svg]:shrink-0 select-none",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground shadow-[0_18px_40px_-24px_color-mix(in_oklab,var(--color-primary)_52%,transparent)] hover:bg-[color:color-mix(in_oklab,var(--color-primary)_90%,white)]",
-        hero: "bg-accent text-accent-foreground shadow-[0_20px_44px_-24px_color-mix(in_oklab,var(--color-ung-gold)_48%,transparent)] hover:bg-[color:color-mix(in_oklab,var(--color-ung-gold-light)_92%,white)]",
-        gold: "bg-accent text-accent-foreground shadow-[0_18px_40px_-24px_color-mix(in_oklab,var(--color-ung-gold)_42%,transparent)] hover:bg-[color:color-mix(in_oklab,var(--color-ung-gold)_86%,white)]",
-        "gold-outline": "border border-accent/50 bg-transparent text-accent hover:bg-accent/12 hover:text-accent-foreground",
-        destructive: "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
-        outline: "border border-primary/15 bg-card text-foreground shadow-[0_10px_28px_-20px_color-mix(in_oklab,var(--color-primary)_20%,transparent)] hover:bg-secondary",
-        secondary: "bg-secondary text-secondary-foreground shadow-[0_12px_28px_-22px_color-mix(in_oklab,var(--color-primary)_18%,transparent)] hover:bg-[color:color-mix(in_oklab,var(--color-secondary)_88%,white)]",
+        default:
+          "bg-primary text-primary-foreground ios-cta-shadow hover:bg-[color:color-mix(in_oklab,var(--color-primary)_92%,white)]",
+        hero:
+          "bg-accent text-accent-foreground ios-cta-shadow-gold hover:bg-[color:color-mix(in_oklab,var(--color-ung-gold-light)_92%,white)]",
+        gold:
+          "bg-accent text-accent-foreground ios-cta-shadow-gold hover:bg-[color:color-mix(in_oklab,var(--color-ung-gold)_88%,white)]",
+        "gold-outline":
+          "border border-accent/50 bg-accent/8 text-accent-foreground hover:bg-accent/15",
+        destructive:
+          "bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90",
+        outline:
+          "border border-border bg-card text-foreground hover:bg-secondary",
+        secondary:
+          "bg-secondary text-secondary-foreground hover:bg-[color:color-mix(in_oklab,var(--color-secondary)_88%,var(--color-primary))]",
+        tonal:
+          "bg-primary/10 text-primary hover:bg-primary/15",
         ghost: "text-primary hover:bg-primary/10 hover:text-primary",
         link: "text-primary underline-offset-4 hover:underline",
       },
       size: {
-        default: "h-11 px-5 py-2.5",
-        sm: "h-9 rounded-lg px-3.5 text-xs",
-        lg: "h-12 px-6 text-base",
-        icon: "h-11 w-11",
+        default: "h-12 px-5 py-2.5",
+        sm: "h-9 rounded-xl px-3.5 text-[13px]",
+        lg: "h-14 px-6 text-base",
+        pill: "h-13 px-6 rounded-full text-[15px]",
+        icon: "h-12 w-12",
       },
     },
     defaultVariants: {
