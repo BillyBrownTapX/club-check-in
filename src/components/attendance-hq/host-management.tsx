@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { CalendarDays, Clock3, Copy, MapPin, Plus, Search, WandSparkles } from "lucide-react";
+import { CalendarDays, ChevronRight, Clock3, Copy, MapPin, Plus, Search, WandSparkles } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
@@ -9,7 +9,7 @@ import { HostAppShell } from "@/components/attendance-hq/host-shell";
 import { getHostOnboardingState } from "@/lib/attendance-hq.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -106,27 +106,28 @@ export function getManagementErrorMessage(error: unknown, fallback = "Something 
 
 export function PageHeader({ title, description, action }: { title: string; description: string; action?: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="flex flex-col gap-4 rounded-[1.75rem] border border-border/70 bg-card/90 px-4 py-4 shadow-[0_10px_32px_-24px_color-mix(in_oklab,var(--color-primary)_40%,transparent)] backdrop-blur sm:px-5 sm:py-5">
       <div className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">{title}</h1>
-        <p className="max-w-2xl text-sm text-muted-foreground">{description}</p>
+        <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Attendance HQ</p>
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-[2.1rem]">{title}</h1>
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{description}</p>
       </div>
-      {action}
+      {action ? <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">{action}</div> : null}
     </div>
   );
 }
 
 export function FormCard({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <Card className={cn("rounded-2xl border-border/70 shadow-sm", className)}><CardContent className="p-5 sm:p-6">{children}</CardContent></Card>;
+  return <Card className={cn("rounded-[1.75rem] border-border/70 bg-card/95 shadow-[0_18px_40px_-28px_color-mix(in_oklab,var(--color-primary)_38%,transparent)]", className)}><CardContent className="p-5 sm:p-6">{children}</CardContent></Card>;
 }
 
 export function StatsCard({ label, value, hint }: { label: string; value: string | number; hint: string }) {
   return (
-    <Card className="rounded-2xl border-border/70 shadow-sm">
+    <Card className="rounded-[1.6rem] border-border/70 bg-card/95 shadow-[0_14px_34px_-26px_color-mix(in_oklab,var(--color-primary)_32%,transparent)]">
       <CardContent className="space-y-2 p-5">
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <p className="text-3xl font-semibold tracking-tight text-foreground">{value}</p>
-        <p className="text-sm text-muted-foreground">{hint}</p>
+        <p className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
+        <p className="text-3xl font-semibold tracking-tight text-foreground sm:text-[2.1rem]">{value}</p>
+        <p className="text-sm leading-6 text-muted-foreground">{hint}</p>
       </CardContent>
     </Card>
   );
@@ -135,8 +136,8 @@ export function StatsCard({ label, value, hint }: { label: string; value: string
 export function StatusBadge({ active, activeLabel = "Active", inactiveLabel = "Inactive" }: { active: boolean; activeLabel?: string; inactiveLabel?: string }) {
   return (
     <span className={cn(
-      "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold",
-      active ? "bg-secondary text-foreground" : "bg-muted text-muted-foreground",
+      "inline-flex min-h-8 items-center rounded-full px-3 py-1 text-xs font-semibold",
+      active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
     )}>
       {active ? activeLabel : inactiveLabel}
     </span>
@@ -144,18 +145,18 @@ export function StatusBadge({ active, activeLabel = "Active", inactiveLabel = "I
 }
 
 export function PrimaryButton(props: React.ComponentProps<typeof Button>) {
-  return <Button {...props} className={cn("h-11 rounded-xl px-4", props.className)} />;
+  return <Button {...props} className={cn("h-12 rounded-2xl px-4 text-sm font-semibold shadow-[0_14px_30px_-20px_color-mix(in_oklab,var(--color-primary)_60%,transparent)]", props.className)} />;
 }
 
 export function SecondaryButton(props: React.ComponentProps<typeof Button>) {
-  return <Button variant="outline" {...props} className={cn("h-11 rounded-xl px-4", props.className)} />;
+  return <Button variant="outline" {...props} className={cn("h-12 rounded-2xl border-border/80 bg-background/80 px-4 text-sm font-semibold", props.className)} />;
 }
 
 export function TextInput({ label, error, className, ...props }: React.ComponentProps<typeof Input> & { label: string; error?: string }) {
   return (
     <div className="space-y-2">
-      <Label className="text-sm font-medium text-foreground">{label}</Label>
-      <Input {...props} className={cn("h-11 rounded-xl", className)} />
+      <Label className="text-sm font-semibold text-foreground">{label}</Label>
+      <Input {...props} className={cn("h-12 rounded-2xl border-border/80 bg-background/90 px-4 text-base", className)} />
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </div>
   );
@@ -164,8 +165,8 @@ export function TextInput({ label, error, className, ...props }: React.Component
 export function TextAreaInput({ label, error, className, ...props }: React.ComponentProps<typeof Textarea> & { label: string; error?: string }) {
   return (
     <div className="space-y-2">
-      <Label className="text-sm font-medium text-foreground">{label}</Label>
-      <Textarea {...props} className={cn("min-h-28 rounded-xl", className)} />
+      <Label className="text-sm font-semibold text-foreground">{label}</Label>
+      <Textarea {...props} className={cn("min-h-28 rounded-2xl border-border/80 bg-background/90 px-4 py-3 text-base", className)} />
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </div>
   );
@@ -183,7 +184,7 @@ export function SearchInput({ value, onChange }: { value: string; onChange: (val
   return (
     <div className="relative flex-1 min-w-[12rem]">
       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-      <Input value={value} onChange={(event) => onChange(event.target.value)} placeholder="Search events" className="h-11 rounded-xl pl-9" />
+      <Input value={value} onChange={(event) => onChange(event.target.value)} placeholder="Search events" className="h-12 rounded-2xl border-border/80 bg-background/90 pl-9 text-base" />
     </div>
   );
 }
@@ -192,10 +193,10 @@ const EMPTY_SELECT_VALUE = "__empty__";
 
 export function SelectInput({ label, value, onValueChange, placeholder, options }: { label: string; value: string; onValueChange: (value: string) => void; placeholder: string; options: { value: string; label: string }[] }) {
   return (
-    <div className="space-y-2 min-w-[10rem]">
-      <Label className="text-sm font-medium text-foreground">{label}</Label>
+      <div className="space-y-2 min-w-[10rem]">
+      <Label className="text-sm font-semibold text-foreground">{label}</Label>
       <Select value={value || EMPTY_SELECT_VALUE} onValueChange={(nextValue) => onValueChange(nextValue === EMPTY_SELECT_VALUE ? "" : nextValue)}>
-        <SelectTrigger className="h-11 rounded-xl">
+        <SelectTrigger className="h-12 rounded-2xl border-border/80 bg-background/90">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
@@ -208,10 +209,10 @@ export function SelectInput({ label, value, onValueChange, placeholder, options 
 
 export function EmptyStateBlock({ title, description, action }: { title: string; description: string; action?: React.ReactNode }) {
   return (
-    <Card className="rounded-2xl border-dashed border-border/80 shadow-none">
+    <Card className="rounded-[1.75rem] border-dashed border-border/80 bg-card/80 shadow-none">
       <CardContent className="flex flex-col items-center justify-center gap-3 p-8 text-center">
-        <div className="text-lg font-semibold text-foreground">{title}</div>
-        <div className="max-w-md text-sm text-muted-foreground">{description}</div>
+        <div className="text-xl font-semibold text-foreground">{title}</div>
+        <div className="max-w-md text-sm leading-6 text-muted-foreground">{description}</div>
         {action}
       </CardContent>
     </Card>
@@ -219,17 +220,17 @@ export function EmptyStateBlock({ title, description, action }: { title: string;
 }
 
 export function FilterBar({ children }: { children: React.ReactNode }) {
-  return <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-card p-4 sm:flex-row sm:flex-wrap sm:items-end">{children}</div>;
+  return <div className="flex flex-col gap-3 rounded-[1.6rem] border border-border/70 bg-card/95 p-4 shadow-[0_14px_36px_-28px_color-mix(in_oklab,var(--color-primary)_28%,transparent)] sm:flex-row sm:flex-wrap sm:items-end">{children}</div>;
 }
 
 export function ClubCard({ club }: { club: ClubSummary }) {
   return (
-    <Card className="rounded-2xl border-border/70 shadow-sm">
-      <CardContent className="space-y-4 p-5">
+    <Card className="rounded-[1.75rem] border-border/70 bg-card/95 shadow-[0_18px_40px_-28px_color-mix(in_oklab,var(--color-primary)_38%,transparent)]">
+      <CardContent className="space-y-5 p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1">
-            <h2 className="text-lg font-semibold text-foreground">{club.club_name}</h2>
-            <p className="text-sm text-muted-foreground">{club.description || "No description added yet."}</p>
+            <h2 className="text-xl font-semibold text-foreground">{club.club_name}</h2>
+            <p className="text-sm leading-6 text-muted-foreground">{club.description || "No description added yet."}</p>
           </div>
           <StatusBadge active={club.is_active} />
         </div>
@@ -237,7 +238,7 @@ export function ClubCard({ club }: { club: ClubSummary }) {
           <MetaPill label="Upcoming" value={club.upcomingEventsCount} />
           <MetaPill label="Past" value={club.pastEventsCount} />
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="flex flex-col gap-2">
           <SecondaryButton asChild className="flex-1"><Link to="/clubs/$clubId" params={{ clubId: club.id }}>Manage Club</Link></SecondaryButton>
           <PrimaryButton asChild className="flex-1"><Link to="/events/new" search={{ clubId: club.id, templateId: "", duplicateFrom: "" }}>Create Event</Link></PrimaryButton>
         </div>
@@ -268,7 +269,7 @@ export function EventCard({ event, showClub = true, onDuplicate }: { event: Mana
           : "Review and export attendance";
 
   return (
-    <Card className="rounded-2xl border-border/70 shadow-sm">
+    <Card className="rounded-[1.75rem] border-border/70 bg-card/95 shadow-[0_18px_40px_-28px_color-mix(in_oklab,var(--color-primary)_38%,transparent)]">
       <CardContent className="space-y-4 p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1 min-w-0">
@@ -287,7 +288,7 @@ export function EventCard({ event, showClub = true, onDuplicate }: { event: Mana
           <MetaPill label="Status" value={statusLabel} />
         </div>
         <p className="text-sm text-muted-foreground">{statusHint}</p>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <SecondaryButton asChild><Link to="/events/$eventId" params={{ eventId: event.id }} search={{ created: "" }}>Manage</Link></SecondaryButton>
           <SecondaryButton asChild><Link to="/events/$eventId/edit" params={{ eventId: event.id }} search={{ created: "" }}>Edit</Link></SecondaryButton>
           <SecondaryButton type="button" onClick={() => onDuplicate?.(event.id)}>Duplicate</SecondaryButton>
@@ -320,7 +321,7 @@ export function TemplateCard({ template, onUse, onEdit, onDuplicate }: { templat
 }
 
 function MetaPill({ label, value }: { label: string; value: string | number }) {
-  return <div className="rounded-xl bg-secondary px-4 py-3"><div className="text-muted-foreground">{label}</div><div className="mt-1 text-base font-semibold text-foreground">{value}</div></div>;
+  return <div className="rounded-2xl bg-secondary/80 px-4 py-3"><div className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{label}</div><div className="mt-1 text-base font-semibold text-foreground">{value}</div></div>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -440,16 +441,19 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, title,
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg rounded-2xl">
+      <DialogContent className="max-h-[92vh] overflow-y-auto rounded-[2rem] border-border/70 p-0 sm:max-w-lg">
+        <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-muted" />
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <div className="px-6 pt-3">
+            <DialogTitle className="text-left text-2xl font-semibold text-foreground">{title}</DialogTitle>
+            <DialogDescription className="mt-2 text-left text-sm leading-6 text-muted-foreground">{description}</DialogDescription>
+          </div>
         </DialogHeader>
-        <form className="space-y-4" onSubmit={(event) => void submit(event)}>
+        <form className="space-y-4 px-6 pb-6 pt-2" onSubmit={(event) => void submit(event)}>
           <TextInput label="Club name" error={form.formState.errors.clubName?.message} {...form.register("clubName")} />
           <TextAreaInput label="Description" error={form.formState.errors.description?.message} {...form.register("description")} />
           {isEdit ? (
-            <div className="flex items-center justify-between rounded-xl border border-border px-4 py-3">
+            <div className="flex items-center justify-between rounded-2xl border border-border/70 bg-secondary/35 px-4 py-4">
               <div>
                 <p className="text-sm font-medium text-foreground">Club active</p>
                 <p className="text-sm text-muted-foreground">Hide inactive clubs from day-to-day management.</p>
@@ -532,12 +536,15 @@ export function TemplateDialog({ open, onOpenChange, clubId, initialValues, onSu
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg rounded-2xl">
+      <DialogContent className="max-h-[92vh] overflow-y-auto rounded-[2rem] border-border/70 p-0 sm:max-w-lg">
+        <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-muted" />
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit Template" : "Create Template"}</DialogTitle>
-          <DialogDescription>Save lightweight defaults for recurring events.</DialogDescription>
+          <div className="px-6 pt-3">
+            <DialogTitle className="text-left text-2xl font-semibold text-foreground">{isEdit ? "Edit Template" : "Create Template"}</DialogTitle>
+            <DialogDescription className="mt-2 text-left text-sm leading-6 text-muted-foreground">Save lightweight defaults for recurring events.</DialogDescription>
+          </div>
         </DialogHeader>
-        <form className="space-y-4" onSubmit={(event) => void submit(event)}>
+        <form className="space-y-4 px-6 pb-6 pt-2" onSubmit={(event) => void submit(event)}>
           <TextInput label="Template name" error={form.formState.errors.templateName?.message} {...form.register("templateName")} />
           <TextInput label="Default event name" error={form.formState.errors.defaultEventName?.message} {...form.register("defaultEventName")} />
           <TextInput label="Default location" error={form.formState.errors.defaultLocation?.message} {...form.register("defaultLocation")} />
@@ -578,8 +585,8 @@ function DateTimeReadonly({ label, value }: { label: string; value: string }) {
     : date.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
   return (
-    <div className="space-y-2 rounded-xl border border-border/70 bg-secondary/40 px-4 py-3">
-      <p className="text-sm font-medium text-foreground">{label}</p>
+    <div className="space-y-2 rounded-2xl border border-border/70 bg-secondary/40 px-4 py-3">
+      <p className="text-sm font-semibold text-foreground">{label}</p>
       <p className="text-sm text-muted-foreground">{formatted}</p>
     </div>
   );
@@ -629,19 +636,19 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
 
   return (
     <ManagementPageShell>
-      <div className="space-y-6 pb-20 md:pb-0">
+      <div className="space-y-5 pb-20 md:pb-0">
         <PageHeader title={title} description={description} action={<SecondaryButton asChild><Link to="/events" search={{ clubId: "", status: "all", query: "" }}>Back to Events</Link></SecondaryButton>} />
         <div className="space-y-4">
           {templatesForClub.length ? (
             <FormCard>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-3">
                 <div>
-                  <p className="text-sm font-medium text-foreground">Start from template</p>
-                  <p className="text-sm text-muted-foreground">Use a recurring setup without rebuilding the form from scratch.</p>
+                  <p className="text-sm font-semibold text-foreground">Start from template</p>
+                  <p className="text-sm leading-6 text-muted-foreground">Use a recurring setup without rebuilding the form from scratch.</p>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex snap-x gap-2 overflow-x-auto pb-1">
                   {templatesForClub.slice(0, 3).map((template) => (
-                    <SecondaryButton key={template.id} type="button" onClick={() => navigate({ to: "/events/new", search: { clubId: selectedClubId || "", templateId: template.id, duplicateFrom: "" } })}>
+                    <SecondaryButton key={template.id} type="button" className="min-w-fit snap-start" onClick={() => navigate({ to: "/events/new", search: { clubId: selectedClubId || "", templateId: template.id, duplicateFrom: "" } })}>
                       <WandSparkles className="h-4 w-4" />
                       {template.template_name}
                     </SecondaryButton>
@@ -660,20 +667,20 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
                 options={payload.clubs.map((club) => ({ value: club.id, label: club.club_name }))}
               />
               <TextInput label="Event name" error={form.formState.errors.eventName?.message} {...form.register("eventName")} />
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4">
                 <DateInput label="Event date" error={form.formState.errors.eventDate?.message} {...form.register("eventDate")} />
                 <TextInput label="Location" error={form.formState.errors.location?.message} {...form.register("location")} />
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4">
                 <TimeInput label="Start time" error={form.formState.errors.startTime?.message} {...form.register("startTime")} />
                 <TimeInput label="End time" error={form.formState.errors.endTime?.message} {...form.register("endTime")} />
               </div>
-              <div className="space-y-3 rounded-2xl border border-border/70 bg-card px-4 py-4">
+              <div className="space-y-3 rounded-[1.6rem] border border-border/70 bg-secondary/25 px-4 py-4">
                 <div>
-                  <p className="text-sm font-medium text-foreground">Check-in timing</p>
-                  <p className="text-sm text-muted-foreground">Tune the window for early arrivals, walk-ins, and post-event cleanup.</p>
+                  <p className="text-sm font-semibold text-foreground">Check-in timing</p>
+                  <p className="text-sm leading-6 text-muted-foreground">Tune the window for early arrivals, walk-ins, and post-event cleanup.</p>
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4">
                   <TextInput
                     type="number"
                     min={0}
@@ -691,7 +698,7 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
                 </div>
                 <input type="hidden" {...form.register("checkInOpensAt")} />
                 <input type="hidden" {...form.register("checkInClosesAt")} />
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4">
                   <DateTimeReadonly label="Check-in opens" value={form.watch("checkInOpensAt")} />
                   <DateTimeReadonly label="Check-in closes" value={form.watch("checkInClosesAt")} />
                 </div>
@@ -699,9 +706,9 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
               {form.formState.errors.checkInOpensAt?.message ? <p className="text-sm text-destructive">{form.formState.errors.checkInOpensAt.message}</p> : null}
               {form.formState.errors.checkInClosesAt?.message ? <p className="text-sm text-destructive">{form.formState.errors.checkInClosesAt.message}</p> : null}
               {error ? <p className="text-sm text-destructive">{error}</p> : null}
-              <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-                <p className="text-sm text-muted-foreground">Saving changes reactivates the event and uses the updated check-in window.</p>
-                <div className="flex gap-2">
+              <div className="sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 -mx-2 rounded-[1.6rem] border border-border/70 bg-background/92 p-3 shadow-[0_18px_40px_-24px_color-mix(in_oklab,var(--color-primary)_35%,transparent)] backdrop-blur md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:shadow-none">
+                <p className="mb-3 text-sm leading-6 text-muted-foreground md:mb-2">Saving changes reactivates the event and uses the updated check-in window.</p>
+                <div className="flex flex-col gap-2 md:flex-row md:justify-end">
                   {cancelAction ?? <SecondaryButton asChild><Link to="/events" search={{ clubId: "", status: "all", query: "" }}>Cancel</Link></SecondaryButton>}
                   <PrimaryButton type="submit">{submitLabel}</PrimaryButton>
                 </div>

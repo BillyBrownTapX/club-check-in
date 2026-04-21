@@ -143,21 +143,33 @@ function EventDisplayRoute() {
           : `Check-in closed at ${formatTimestamp(event.check_in_closes_at)}`;
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center gap-8 bg-background px-6 py-10 sm:py-16">
-      <div className="absolute left-4 top-4 flex gap-2">
+    <div className="relative flex min-h-screen flex-col gap-6 bg-background px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:px-6 sm:py-8">
+      <div className="flex items-center justify-between gap-3 rounded-[1.8rem] border border-border/70 bg-background/88 px-4 py-3 shadow-[0_16px_40px_-24px_color-mix(in_oklab,var(--color-primary)_35%,transparent)] backdrop-blur">
+        <Button asChild variant="ghost" className="rounded-2xl">
+          <Link to="/events/$eventId" params={{ eventId }} search={{ created: "" }}>
+            <ArrowLeft className="h-4 w-4" />Back
+          </Link>
+        </Button>
+        <Button type="button" variant="outline" className="rounded-2xl border-border/80" onClick={() => void handleEnterFullscreen()}>
+          <Maximize2 className="h-4 w-4" />Fullscreen
+        </Button>
+      </div>
+
+      <div className="flex flex-1 flex-col items-center justify-center gap-6 sm:gap-8">
+      <div className="absolute left-4 top-4 flex gap-2 sr-only">
         <Button asChild variant="ghost" className="rounded-xl">
           <Link to="/events/$eventId" params={{ eventId }} search={{ created: "" }}>
             <ArrowLeft className="h-4 w-4" />Back
           </Link>
         </Button>
       </div>
-      <div className="absolute right-4 top-4">
+      <div className="absolute right-4 top-4 sr-only">
         <Button type="button" variant="ghost" className="rounded-xl" onClick={() => void handleEnterFullscreen()}>
           <Maximize2 className="h-4 w-4" />Fullscreen
         </Button>
       </div>
 
-      <div className="space-y-3 text-center">
+      <div className="space-y-3 px-2 text-center">
         <p className="text-base font-semibold uppercase tracking-[0.18em] text-muted-foreground sm:text-lg">
           {event.clubs?.club_name ?? "Club event"}
         </p>
@@ -168,12 +180,12 @@ function EventDisplayRoute() {
         <p className="text-sm text-muted-foreground sm:text-base">{statusCopy}</p>
       </div>
 
-      <div className="grid w-full max-w-6xl gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-center">
-        <div className="flex items-center justify-center rounded-[2rem] bg-white p-6 shadow-lg sm:p-8">
+      <div className="grid w-full max-w-6xl gap-5 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-center">
+        <div className="flex items-center justify-center rounded-[2rem] bg-white p-5 shadow-[0_24px_60px_-28px_rgba(15,23,42,0.28)] sm:p-8">
           {checkInUrl ? <QRCode value={checkInUrl} size={420} className="h-auto w-full max-w-[28rem]" /> : null}
         </div>
         <div className="space-y-4">
-          <div className="rounded-[2rem] border border-border/70 bg-card px-6 py-8 text-center shadow-sm">
+          <div className="rounded-[2rem] border border-border/70 bg-card/95 px-6 py-8 text-center shadow-[0_18px_42px_-28px_color-mix(in_oklab,var(--color-primary)_38%,transparent)]">
             <div className="inline-flex items-center gap-3 text-muted-foreground">
               <Users className="h-5 w-5" />
               <span className="text-sm font-medium uppercase tracking-[0.18em]">Checked in</span>
@@ -181,7 +193,7 @@ function EventDisplayRoute() {
             <div className="mt-4 text-7xl font-bold leading-none text-foreground">{attendanceCount}</div>
             <p className="mt-3 text-sm text-muted-foreground">{summary?.recent ?? 0} in the last 15 minutes</p>
           </div>
-          <div className="rounded-2xl border border-border/70 bg-card px-5 py-4 shadow-sm">
+          <div className="rounded-[1.6rem] border border-border/70 bg-card/95 px-5 py-4 shadow-[0_18px_42px_-28px_color-mix(in_oklab,var(--color-primary)_38%,transparent)]">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Last updated</p>
             <p className="mt-2 text-lg font-semibold text-foreground">{lastUpdatedAt ? formatTimestamp(lastUpdatedAt) : "—"}</p>
             <p className="mt-1 text-sm text-muted-foreground">Polling every {DISPLAY_POLL_INTERVAL_MS / 1000}s while this screen is visible.</p>
@@ -193,6 +205,7 @@ function EventDisplayRoute() {
         <p className="max-w-2xl break-all text-center text-sm text-muted-foreground sm:text-base">
           {checkInUrl}
         </p>
+      </div>
       </div>
     </div>
   );

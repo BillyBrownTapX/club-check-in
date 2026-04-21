@@ -29,13 +29,13 @@ const statusMap: Record<CheckInStatus, { label: string; className: string }> = {
 export function AttendanceLogo({ compact = false }: { compact?: boolean }) {
   return (
     <Link to="/" className="inline-flex items-center gap-3">
-      <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
+      <span className="flex h-11 w-11 items-center justify-center rounded-[1.3rem] bg-primary text-primary-foreground shadow-[0_12px_24px_-16px_color-mix(in_oklab,var(--color-primary)_75%,transparent)]">
         <QrCode className="h-5 w-5" />
       </span>
       {!compact && (
         <span className="flex flex-col leading-none">
           <span className="text-sm font-semibold text-foreground">Attendance HQ</span>
-          <span className="text-xs text-muted-foreground">QR check-in for college clubs</span>
+          <span className="text-xs text-muted-foreground">UNG-ready QR attendance</span>
         </span>
       )}
     </Link>

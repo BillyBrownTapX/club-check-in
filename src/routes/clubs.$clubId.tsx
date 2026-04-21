@@ -74,7 +74,7 @@ function ClubDetailRoute() {
 
   return (
     <ManagementPageShell>
-      <div className="space-y-6 pb-20 md:pb-0">
+      <div className="space-y-5 pb-20 md:pb-0">
         <PageHeader
           title={title}
           description={data.club.description || "Manage upcoming events, past attendance, and recurring templates for this club."}
@@ -82,15 +82,15 @@ function ClubDetailRoute() {
         />
 
         <FormCard>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex flex-col gap-4">
             <div className="space-y-2">
               <div className="flex items-center gap-3">
                 <h2 className="text-xl font-semibold text-foreground">{data.club.club_name}</h2>
-                <span className="inline-flex items-center rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-foreground">{data.club.is_active ? "Active" : "Inactive"}</span>
+                <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{data.club.is_active ? "Active" : "Inactive"}</span>
               </div>
               <p className="text-sm text-muted-foreground">{data.club.description || "Add a short description to help your team identify this club."}</p>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <PrimaryButton asChild><Link to="/events/new" search={{ clubId: data.club.id, templateId: "", duplicateFrom: "" }}>Create Event</Link></PrimaryButton>
               <SecondaryButton type="button" onClick={() => { setEditingTemplate(null); setTemplateDialogOpen(true); }}>Create Template</SecondaryButton>
               <SecondaryButton type="button" onClick={() => setClubDialogOpen(true)}>Edit Club</SecondaryButton>
@@ -98,7 +98,7 @@ function ClubDetailRoute() {
           </div>
         </FormCard>
 
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4">
           <StatsCard label="Upcoming Events" value={data.stats.upcomingEvents} hint="What’s scheduled next" />
           <StatsCard label="Past Events" value={data.stats.pastEvents} hint="History for this club" />
           <StatsCard label="Total Check-Ins" value={data.stats.totalCheckIns} hint="Attendance captured so far" />
@@ -110,7 +110,7 @@ function ClubDetailRoute() {
             <SecondaryButton asChild><Link to="/events" search={{ clubId: data.club.id, status: "upcoming", query: "" }}>View All</Link></SecondaryButton>
           </div>
           {data.upcomingEvents.length ? (
-            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="grid gap-4">
                {data.upcomingEvents.map((event: ManagementEventSummary) => <EventCard key={event.id} event={event} showClub={false} onDuplicate={(eventId) => navigate({ to: "/events/new", search: { clubId: data.club.id, templateId: "", duplicateFrom: eventId } })} />)}
             </div>
           ) : (
@@ -124,7 +124,7 @@ function ClubDetailRoute() {
             <SecondaryButton asChild><Link to="/events" search={{ clubId: data.club.id, status: "past", query: "" }}>View All</Link></SecondaryButton>
           </div>
           {data.pastEvents.length ? (
-            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="grid gap-4">
                {data.pastEvents.map((event: ManagementEventSummary) => <EventCard key={event.id} event={event} showClub={false} onDuplicate={(eventId) => navigate({ to: "/events/new", search: { clubId: data.club.id, templateId: "", duplicateFrom: eventId } })} />)}
             </div>
           ) : (
@@ -138,7 +138,7 @@ function ClubDetailRoute() {
             <SecondaryButton type="button" onClick={() => { setEditingTemplate(null); setTemplateDialogOpen(true); }}><Plus className="h-4 w-4" />Create Template</SecondaryButton>
           </div>
           {data.templates.length ? (
-            <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+              <div className="grid gap-4 xl:grid-cols-3">
               {data.templates.map((template: EventTemplateWithClub) => (
                 <TemplateCard
                   key={template.id}

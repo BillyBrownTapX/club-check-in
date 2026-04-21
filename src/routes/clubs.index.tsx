@@ -62,10 +62,10 @@ function ClubsRoute() {
 
   return (
     <ManagementPageShell>
-      <div className="space-y-6 pb-20 md:pb-0">
+      <div className="space-y-5 pb-20 md:pb-0">
         <PageHeader
           title="Clubs"
-          description="Manage the clubs and organizations you use to host events."
+          description="Manage your organizations, jump into the right meeting, and keep club operations easy from your phone."
           action={<PrimaryButton type="button" onClick={() => setOpen(true)}><Plus className="h-4 w-4" />Create Club</PrimaryButton>}
         />
         {fetching ? (
@@ -73,7 +73,7 @@ function ClubsRoute() {
         ) : error ? (
           <div className="py-16 text-center text-sm text-muted-foreground">{error}</div>
         ) : clubs.length ? (
-          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-4 xl:grid-cols-3">
             {clubs.map((club: ClubSummary) => <ClubCard key={club.id} club={club} />)}
           </div>
         ) : (
