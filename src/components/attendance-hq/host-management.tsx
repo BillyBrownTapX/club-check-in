@@ -13,6 +13,9 @@ import { HostAppShell } from "@/components/attendance-hq/host-shell";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Drawer, DrawerClose, DrawerContent, DrawerHeader, DrawerTitle, DrawerTrigger } from "@/components/ui/drawer";
+import { ActionTile, Chip, GroupedList, LargeTitleHeader, ListRow, SectionLabel, StickyCtaBar } from "@/components/attendance-hq/ios";
+import { ChevronDown, MoreHorizontal, Pencil, ArrowLeft } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -56,8 +59,75 @@ import {
 } from "@/lib/attendance-hq-schemas";
 import { cn } from "@/lib/utils";
 
-export function ManagementPageShell({ children }: { children: React.ReactNode }) {
-  return <HostAppShell>{children}</HostAppShell>;
+export function ManagementPageShell({ children, hideTabBar }: { children: React.ReactNode; hideTabBar?: boolean }) {
+  return <HostAppShell hideTabBar={hideTabBar}>{children}</HostAppShell>;
+}
+
+/* ─── Mobile action sheet (bottom drawer) ─────────────────────────────
+ * Use for overflow menus on cards / detail screens. Children should be
+ * a list of <ActionSheetItem /> rows. */
+export function ActionSheet({
+  trigger,
+  title,
+  description,
+  children,
+}: {
+  trigger: React.ReactNode;
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Drawer>
+      <DrawerTrigger asChild>{trigger}</DrawerTrigger>
+      <DrawerContent className="rounded-t-[1.75rem] border-border/80 bg-card pb-safe-1">
+        <DrawerHeader className="text-left">
+          <DrawerTitle className="font-display text-[17px] font-extrabold text-foreground">{title}</DrawerTitle>
+          {description ? <p className="text-[13px] text-muted-foreground">{description}</p> : null}
+        </DrawerHeader>
+        <div className="px-3 pb-3">
+          <div className="ios-grouped">{children}</div>
+        </div>
+      </DrawerContent>
+    </Drawer>
+  );
+}
+
+export function ActionSheetItem({
+  icon: Icon,
+  label,
+  onClick,
+  destructive,
+}: {
+  icon?: React.ComponentType<{ className?: string }>;
+  label: string;
+  onClick?: () => void;
+  destructive?: boolean;
+}) {
+  return (
+    <DrawerClose asChild>
+      <button
+        type="button"
+        onClick={onClick}
+        className={cn(
+          "ios-list-row w-full text-left",
+          destructive && "text-destructive",
+        )}
+      >
+        {Icon ? (
+          <span className={cn(
+            "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl",
+            destructive ? "bg-destructive/10 text-destructive" : "bg-primary/10 text-primary",
+          )}>
+            <Icon className="h-[18px] w-[18px]" />
+          </span>
+        ) : null}
+        <span className={cn("flex-1 text-[15px] font-medium", destructive ? "text-destructive" : "text-foreground")}>
+          {label}
+        </span>
+      </button>
+    </DrawerClose>
+  );
 }
 
 // Centralized error → user message mapping for the host UI.
@@ -265,92 +335,154 @@ export function ClubCard({ club }: { club: ClubSummary }) {
 }
 
 export function EventCard({ event, showClub = true, onDuplicate, onDelete }: { event: ManagementEventSummary; showClub?: boolean; onDuplicate?: (eventId: string) => void; onDelete?: (eventId: string) => Promise<void> }) {
+  const navigate = useNavigate();
   const statusLabel = event.checkInStatus === "open"
-    ? "Open"
+    ? "Live"
     : event.checkInStatus === "upcoming"
-      ? "Upcoming"
+      ? "Soon"
       : event.checkInStatus === "inactive"
-        ? "Inactive"
+        ? "Closed"
         : event.checkInStatus === "archived"
           ? "Archived"
-          : "Closed";
+          : "Past";
 
-  const statusHint = event.checkInStatus === "open"
-    ? "Actively accepting check-ins"
+  const statusTone: React.ComponentProps<typeof Chip>["tone"] = event.checkInStatus === "open"
+    ? "success"
     : event.checkInStatus === "upcoming"
-      ? "Ready for the next meeting"
-      : event.checkInStatus === "inactive"
-        ? "Closed early by a host"
-        : event.checkInStatus === "archived"
-          ? "Stored for record keeping"
-          : "Review and export attendance";
+      ? "gold"
+      : "muted";
+
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   return (
-    <Card className="rounded-[1.9rem] border border-primary/10 bg-card/95 shadow-[0_24px_52px_-34px_color-mix(in_oklab,var(--color-primary)_20%,transparent)]">
-      <CardContent className="space-y-4 p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="space-y-1 min-w-0">
-            <h3 className="truncate text-lg font-semibold text-foreground">{event.event_name}</h3>
-            {showClub ? <p className="text-sm text-muted-foreground">{event.clubs?.club_name}</p> : null}
+    <div className="ios-card relative rounded-2xl p-4">
+      <Link
+        to="/events/$eventId"
+        params={{ eventId: event.id }}
+        search={{ created: "" }}
+        className="ios-press block pr-10"
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate text-[16px] font-semibold leading-tight text-foreground">{event.event_name}</h3>
+            {showClub && event.clubs?.club_name ? (
+              <p className="mt-0.5 truncate text-[12.5px] text-muted-foreground">{event.clubs.club_name}</p>
+            ) : null}
           </div>
-          <StatusBadge active={event.checkInStatus === "open" || event.checkInStatus === "upcoming"} activeLabel={statusLabel} inactiveLabel={statusLabel} />
+          <Chip tone={statusTone} className="shrink-0">{statusLabel}</Chip>
         </div>
-        <div className="space-y-2 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2"><CalendarDays className="h-4 w-4" />{formatEventDate(event.event_date)}</div>
-          <div className="flex items-center gap-2"><Clock3 className="h-4 w-4" />{formatEventTime(event.start_time, event.end_time)}</div>
-          {event.location ? <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />{event.location}</div> : null}
+        <p className="mt-2 truncate text-[13px] text-muted-foreground">
+          {formatEventDate(event.event_date)} · {formatEventTime(event.start_time, event.end_time)}
+          {event.location ? ` · ${event.location}` : ""}
+        </p>
+        <div className="mt-3 flex items-center justify-between">
+          <span className="text-[13px] font-semibold text-foreground">{event.attendanceCount ?? 0} checked in</span>
         </div>
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <MetaPill label="Attendance" value={event.attendanceCount} />
-          <MetaPill label="Status" value={statusLabel} />
-        </div>
-        <p className="text-sm text-muted-foreground">{statusHint}</p>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <PrimaryButton asChild><Link to="/events/$eventId" params={{ eventId: event.id }} search={{ created: "" }}>Manage</Link></PrimaryButton>
-          <SecondaryButton asChild><Link to="/events/$eventId/edit" params={{ eventId: event.id }} search={{ created: "" }}>Edit</Link></SecondaryButton>
-          <SecondaryButton type="button" onClick={() => onDuplicate?.(event.id)}>Duplicate</SecondaryButton>
-        </div>
-        {onDelete ? (
-          <DeleteConfirmButton
-            trigger={
-              <Button
-                type="button"
-                variant="outline"
-                className="h-11 w-full rounded-xl border-destructive/30 text-sm font-semibold text-destructive hover:bg-destructive/10 hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-                Delete Event
-              </Button>
-            }
-            title="Delete this event?"
-            description="This permanently removes the event, its attendance records, and action history. This cannot be undone."
-            onConfirm={() => onDelete(event.id)}
+      </Link>
+      <div className="absolute right-3 top-3">
+        <ActionSheet
+          trigger={
+            <button
+              type="button"
+              aria-label="Event actions"
+              className="ios-press flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreHorizontal className="h-5 w-5" />
+            </button>
+          }
+          title={event.event_name}
+          description="Event actions"
+        >
+          <ActionSheetItem
+            icon={ChevronRight}
+            label="Manage event"
+            onClick={() => navigate({ to: "/events/$eventId", params: { eventId: event.id }, search: { created: "" } })}
           />
-        ) : null}
-      </CardContent>
-    </Card>
+          <ActionSheetItem
+            icon={Pencil}
+            label="Edit event"
+            onClick={() => navigate({ to: "/events/$eventId/edit", params: { eventId: event.id }, search: { created: "" } })}
+          />
+          {onDuplicate ? (
+            <ActionSheetItem icon={Copy} label="Duplicate" onClick={() => onDuplicate(event.id)} />
+          ) : null}
+          {onDelete ? (
+            <ActionSheetItem
+              icon={Trash2}
+              label="Delete event"
+              destructive
+              onClick={() => setConfirmDeleteOpen(true)}
+            />
+          ) : null}
+        </ActionSheet>
+      </div>
+      {onDelete ? (
+        <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete this event?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This permanently removes the event, its attendance records, and action history. This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={async () => {
+                  try { await onDelete(event.id); } catch (e) { toast.error(getManagementErrorMessage(e, "Unable to delete.")); }
+                }}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      ) : null}
+    </div>
   );
 }
 
 export function TemplateCard({ template, onUse, onEdit, onDuplicate }: { template: EventTemplateWithClub; onUse: (templateId: string) => void; onEdit: (template: EventTemplateWithClub) => void; onDuplicate: (templateId: string) => void }) {
   return (
-    <Card className="rounded-[1.75rem] border border-primary/10 bg-card/95 shadow-[0_20px_48px_-32px_color-mix(in_oklab,var(--color-primary)_18%,transparent)]">
-      <CardContent className="space-y-4 p-5">
-        <div className="space-y-1">
-          <h3 className="text-base font-semibold text-foreground">{template.template_name}</h3>
-          <p className="text-sm text-muted-foreground">{template.default_location || "Location not set"}</p>
-        </div>
-        <div className="space-y-1 text-sm text-muted-foreground">
-          <p>{template.default_start_time && template.default_end_time ? formatEventTime(template.default_start_time, template.default_end_time) : "Time not set"}</p>
-          <p>Open {template.default_check_in_open_offset_minutes} min · Close {template.default_check_in_close_offset_minutes} min</p>
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          <SecondaryButton type="button" onClick={() => onUse(template.id)}>Use</SecondaryButton>
-          <SecondaryButton type="button" onClick={() => onEdit(template)}>Edit</SecondaryButton>
-          <SecondaryButton type="button" onClick={() => onDuplicate(template.id)}>Duplicate</SecondaryButton>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="ios-card relative rounded-2xl p-4">
+      <button
+        type="button"
+        onClick={() => onUse(template.id)}
+        className="ios-press block w-full pr-10 text-left"
+      >
+        <h3 className="text-[15.5px] font-semibold text-foreground">{template.template_name}</h3>
+        <p className="mt-0.5 text-[13px] text-muted-foreground">
+          {template.default_start_time && template.default_end_time
+            ? formatEventTime(template.default_start_time, template.default_end_time)
+            : "Time not set"}
+          {template.default_location ? ` · ${template.default_location}` : ""}
+        </p>
+        <p className="mt-1 text-[12px] text-muted-foreground">
+          Open {template.default_check_in_open_offset_minutes} min · Close {template.default_check_in_close_offset_minutes} min
+        </p>
+      </button>
+      <div className="absolute right-3 top-3">
+        <ActionSheet
+          trigger={
+            <button
+              type="button"
+              aria-label="Template actions"
+              className="ios-press flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground"
+            >
+              <MoreHorizontal className="h-5 w-5" />
+            </button>
+          }
+          title={template.template_name}
+          description="Template actions"
+        >
+          <ActionSheetItem icon={WandSparkles} label="Use template" onClick={() => onUse(template.id)} />
+          <ActionSheetItem icon={Pencil} label="Edit template" onClick={() => onEdit(template)} />
+          <ActionSheetItem icon={Copy} label="Duplicate" onClick={() => onDuplicate(template.id)} />
+        </ActionSheet>
+      </div>
+    </div>
   );
 }
 
@@ -855,7 +987,7 @@ function EventFormErrorSummary({ errors }: { errors: Record<string, { message?: 
   );
 }
 
-export function EventForm({ payload, title, description, submitLabel, onSubmit, cancelAction }: { payload: EventFormPayload; title: string; description: string; submitLabel: string; onSubmit: (values: EventValues | EventUpdateValues) => Promise<void>; cancelAction?: React.ReactNode }) {
+export function EventForm({ payload, title, description, submitLabel, onSubmit, cancelAction, secondaryAction }: { payload: EventFormPayload; title: string; description: string; submitLabel: string; onSubmit: (values: EventValues | EventUpdateValues) => Promise<void>; cancelAction?: React.ReactNode; secondaryAction?: React.ReactNode }) {
   const navigate = useNavigate();
   const form = useForm<EventFormValues>({
     resolver: zodResolver(validatedEventSchema),
@@ -929,97 +1061,130 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
   const selectedClub = useMemo(() => payload.clubs.find((club) => club.id === selectedClubId), [payload.clubs, selectedClubId]);
   const selectedUniversity = selectedClub?.universities?.name ?? "University needed";
 
+  const cancelLink = cancelAction ?? (
+    <Link to="/events" search={{ clubId: "", status: "all", query: "" }} className="text-[14px] font-semibold text-primary">
+      Cancel
+    </Link>
+  );
+
   return (
-    <ManagementPageShell>
-      <div className="space-y-5 pb-20 md:pb-0">
-        <PageHeader title={title} description={description} action={<SecondaryButton asChild><Link to="/events" search={{ clubId: "", status: "all", query: "" }}>Back to Events</Link></SecondaryButton>} />
-        <div className="space-y-4">
-          {templatesForClub.length ? (
-            <FormCard>
-              <div className="flex flex-col gap-4">
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Start from template</p>
-                  <p className="text-sm leading-6 text-muted-foreground">Use a recurring setup without rebuilding the form from scratch.</p>
-                </div>
-                <div className="flex snap-x gap-2 overflow-x-auto pb-1">
-                  {templatesForClub.slice(0, 3).map((template) => (
-                    <SecondaryButton key={template.id} type="button" className="min-w-fit snap-start" onClick={() => navigate({ to: "/events/new", search: { clubId: selectedClubId || "", templateId: template.id, duplicateFrom: "" } })}>
-                      <WandSparkles className="h-4 w-4" />
-                      {template.template_name}
-                    </SecondaryButton>
-                  ))}
-                </div>
-              </div>
-            </FormCard>
-          ) : null}
-          <FormCard>
-            <form className="space-y-5" onSubmit={handleSubmitClick}>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <MetaPill label="Club" value={selectedClub?.club_name ?? "Select club"} />
-                <MetaPill label="University" value={selectedUniversity} />
-                <MetaPill label="Check-in plan" value={`${offsets.openMinutesBeforeStart} / ${offsets.closeMinutesAfterEnd} min`} />
-              </div>
-              <FormSection title="Event basics" description="Name the meeting, attach it to the right club, and make the setup obvious at a glance.">
-                <SelectInput
-                  label="Club"
-                  value={form.watch("clubId")}
-                  onValueChange={(value) => form.setValue("clubId", value, { shouldValidate: true })}
-                  placeholder="Choose a club"
-                  options={payload.clubs.map((club) => ({ value: club.id, label: club.club_name }))}
-                  error={form.formState.errors.clubId?.message}
-                />
-                <TextInput label="Event name" error={form.formState.errors.eventName?.message} {...form.register("eventName")} />
-                <div className="grid gap-4">
-                  <DateInput label="Event date" error={form.formState.errors.eventDate?.message} {...form.register("eventDate")} />
-                  <TextInput label="Location" error={form.formState.errors.location?.message} {...form.register("location")} />
-                </div>
-              </FormSection>
-              <FormSection title="Schedule" description="Keep the meeting window easy to scan and comfortable to edit on a phone.">
-                <div className="grid gap-4">
-                  <TimeInput label="Start time" error={form.formState.errors.startTime?.message} {...form.register("startTime")} />
-                  <TimeInput label="End time" error={form.formState.errors.endTime?.message} {...form.register("endTime")} />
-                </div>
-              </FormSection>
-              <FormSection title="Check-in timing" description="Tune early access, walk-in handling, and post-event cleanup without losing clarity.">
-                <div className="grid gap-4">
-                  <TextInput
-                    type="number"
-                    min={0}
-                    label="Open minutes before start"
-                    value={String(offsets.openMinutesBeforeStart)}
-                    onChange={(event) => setOffsets((prev) => ({ ...prev, openMinutesBeforeStart: Math.max(0, Number(event.target.value || 0)) }))}
-                  />
-                  <TextInput
-                    type="number"
-                    min={0}
-                    label="Close minutes after end"
-                    value={String(offsets.closeMinutesAfterEnd)}
-                    onChange={(event) => setOffsets((prev) => ({ ...prev, closeMinutesAfterEnd: Math.max(0, Number(event.target.value || 0)) }))}
-                  />
-                </div>
-                <input type="hidden" {...form.register("checkInOpensAt")} />
-                <input type="hidden" {...form.register("checkInClosesAt")} />
-                <div className="grid gap-4">
-                  <DateTimeReadonly label="Check-in opens" value={form.watch("checkInOpensAt")} />
-                  <DateTimeReadonly label="Check-in closes" value={form.watch("checkInClosesAt")} />
-                </div>
-              </FormSection>
-              {form.formState.errors.checkInOpensAt?.message ? <p className="text-sm text-destructive">{form.formState.errors.checkInOpensAt.message}</p> : null}
-              {form.formState.errors.checkInClosesAt?.message ? <p className="text-sm text-destructive">{form.formState.errors.checkInClosesAt.message}</p> : null}
-              {error ? <p className="text-sm text-destructive">{error}</p> : null}
-              <EventFormErrorSummary errors={form.formState.errors} />
-              <div className="sticky bottom-[calc(5.8rem+env(safe-area-inset-bottom))] z-20 -mx-2 rounded-[1.75rem] border border-border/90 bg-card/96 p-3 shadow-[0_24px_52px_-28px_color-mix(in_oklab,var(--color-primary)_42%,transparent)] backdrop-blur md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:shadow-none">
-                <p className="mb-3 text-sm leading-6 text-muted-foreground md:mb-2">Save when the mobile summary looks right. Updated timing takes effect immediately on the live event.</p>
-                <div className="flex flex-col gap-2 md:flex-row md:justify-end">
-                  {cancelAction ?? <SecondaryButton asChild><Link to="/events" search={{ clubId: "", status: "all", query: "" }}>Cancel</Link></SecondaryButton>}
-                  <PrimaryButton type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving…" : submitLabel}</PrimaryButton>
-                </div>
-              </div>
-            </form>
-          </FormCard>
+    <ManagementPageShell hideTabBar>
+      <LargeTitleHeader
+        title={title}
+        subtitle={description}
+        trailing={
+          <Link
+            to="/events"
+            search={{ clubId: "", status: "all", query: "" }}
+            aria-label="Back to events"
+            className="ios-press inline-flex h-10 w-10 items-center justify-center rounded-full bg-muted text-foreground"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+        }
+      />
+
+      <form className="space-y-5 pb-2" onSubmit={handleSubmitClick}>
+        {templatesForClub.length ? (
+          <div className="ios-card rounded-2xl p-4">
+            <p className="text-[14px] font-semibold text-foreground">Start from template</p>
+            <p className="mt-0.5 text-[12.5px] leading-snug text-muted-foreground">Use a recurring setup without rebuilding the form from scratch.</p>
+            <div className="mt-3 -mx-1 flex snap-x gap-2 overflow-x-auto px-1 pb-1">
+              {templatesForClub.slice(0, 3).map((template) => (
+                <button
+                  key={template.id}
+                  type="button"
+                  onClick={() => navigate({ to: "/events/new", search: { clubId: selectedClubId || "", templateId: template.id, duplicateFrom: "" } })}
+                  className="ios-press inline-flex min-w-fit shrink-0 snap-start items-center gap-1.5 rounded-full bg-muted px-3 py-2 text-[13px] font-semibold text-foreground"
+                >
+                  <WandSparkles className="h-4 w-4 text-primary" />
+                  {template.template_name}
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        <div className="ios-card rounded-2xl p-4">
+          <div className="grid grid-cols-2 gap-3">
+            <SummaryPill label="Club" value={selectedClub?.club_name ?? "—"} />
+            <SummaryPill label="University" value={selectedUniversity} />
+          </div>
+          <div className="mt-3">
+            <SummaryPill label="Check-in window" value={`-${offsets.openMinutesBeforeStart} / +${offsets.closeMinutesAfterEnd} min`} full />
+          </div>
         </div>
-      </div>
+
+        <FormSection title="Event basics" description="Name the meeting and attach it to the right club.">
+          <SelectInput
+            label="Club"
+            value={form.watch("clubId")}
+            onValueChange={(value) => form.setValue("clubId", value, { shouldValidate: true })}
+            placeholder="Choose a club"
+            options={payload.clubs.map((club) => ({ value: club.id, label: club.club_name }))}
+            error={form.formState.errors.clubId?.message}
+          />
+          <TextInput label="Event name" error={form.formState.errors.eventName?.message} {...form.register("eventName")} />
+          <DateInput label="Event date" error={form.formState.errors.eventDate?.message} {...form.register("eventDate")} />
+          <TextInput label="Location" error={form.formState.errors.location?.message} {...form.register("location")} />
+        </FormSection>
+
+        <FormSection title="Schedule" description="Set the meeting window.">
+          <TimeInput label="Start time" error={form.formState.errors.startTime?.message} {...form.register("startTime")} />
+          <TimeInput label="End time" error={form.formState.errors.endTime?.message} {...form.register("endTime")} />
+        </FormSection>
+
+        <FormSection title="Check-in timing" description="Tune early access and post-event cleanup.">
+          <TextInput
+            type="number"
+            min={0}
+            label="Open minutes before start"
+            value={String(offsets.openMinutesBeforeStart)}
+            onChange={(event) => setOffsets((prev) => ({ ...prev, openMinutesBeforeStart: Math.max(0, Number(event.target.value || 0)) }))}
+          />
+          <TextInput
+            type="number"
+            min={0}
+            label="Close minutes after end"
+            value={String(offsets.closeMinutesAfterEnd)}
+            onChange={(event) => setOffsets((prev) => ({ ...prev, closeMinutesAfterEnd: Math.max(0, Number(event.target.value || 0)) }))}
+          />
+          <input type="hidden" {...form.register("checkInOpensAt")} />
+          <input type="hidden" {...form.register("checkInClosesAt")} />
+          <DateTimeReadonly label="Check-in opens" value={form.watch("checkInOpensAt")} />
+          <DateTimeReadonly label="Check-in closes" value={form.watch("checkInClosesAt")} />
+        </FormSection>
+
+        {form.formState.errors.checkInOpensAt?.message ? <p className="text-sm text-destructive">{form.formState.errors.checkInOpensAt.message}</p> : null}
+        {form.formState.errors.checkInClosesAt?.message ? <p className="text-sm text-destructive">{form.formState.errors.checkInClosesAt.message}</p> : null}
+        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+        <EventFormErrorSummary errors={form.formState.errors} />
+
+        {secondaryAction ? <div className="flex justify-center pt-1">{secondaryAction}</div> : null}
+        <div className="flex items-center justify-center gap-4 pt-1">
+          {cancelLink}
+        </div>
+
+        <StickyCtaBar>
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="h-12 w-full rounded-2xl bg-primary text-[15px] font-bold text-primary-foreground"
+          >
+            {isSubmitting ? "Saving…" : submitLabel}
+          </Button>
+        </StickyCtaBar>
+      </form>
     </ManagementPageShell>
+  );
+}
+
+function SummaryPill({ label, value, full }: { label: string; value: string; full?: boolean }) {
+  return (
+    <div className={cn("rounded-xl bg-muted/70 px-3 py-2", full && "w-full")}>
+      <div className="text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div className="mt-0.5 truncate text-[13.5px] font-semibold text-foreground">{value}</div>
+    </div>
   );
 }
 
