@@ -7,6 +7,7 @@ import { ClubDialog, useRequireHostRedirect, getManagementErrorMessage } from "@
 import { Chip, IosSearchField, LargeTitleHeader, SectionLabel } from "@/components/attendance-hq/ios";
 import { Button } from "@/components/ui/button";
 import { getHostClubSummaries, createClubManagement, getUniversitiesForHost } from "@/lib/attendance-hq.functions";
+import { useSignedLogoUrl } from "@/hooks/use-signed-logo";
 import type { ClubSummary, University } from "@/lib/attendance-hq";
 
 export const Route = createFileRoute("/clubs/")({
