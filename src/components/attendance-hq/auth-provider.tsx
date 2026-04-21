@@ -11,12 +11,17 @@ type AuthContextValue = {
   signOut: () => Promise<void>;
 };
 
+type AuthorizedServerFn<T extends (...args: any[]) => Promise<any>> = (options?: Parameters<T>[0]) => ReturnType<T>;
+
 const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AttendanceAuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut();
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -57,10 +62,8 @@ export function AttendanceAuthProvider({ children }: { children: React.ReactNode
     session,
     user,
     loading,
-    signOut: async () => {
-      await supabase.auth.signOut();
-    },
-  }), [loading, session, user]);
+    signOut,
+  }), [loading, session, signOut, user]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
@@ -89,7 +92,7 @@ function isAuthExpired(error: unknown): boolean {
 export function useAuthorizedServerFn<T extends (...args: any[]) => Promise<any>>(serverFn: T) {
   const { session, signOut } = useAttendanceAuth();
   const navigate = useNavigate();
-  const invoke = useServerFn(serverFn) as (...args: Parameters<T>) => ReturnType<T>;
+  const invoke = useServerFn(serverFn) as unknown as AuthorizedServerFn<T>;
   // Make sure two simultaneous 401s (e.g. polling + a button click) don't
   // race to trigger two redirects. The first one wins; the second silently
   // continues to surface its error so callers can still toast/log if they
@@ -108,7 +111,7 @@ export function useAuthorizedServerFn<T extends (...args: any[]) => Promise<any>
     navigate({ to: "/sign-in", search: { reason: "expired" } });
   }, [navigate, signOut]);
 
-  return (options?: Parameters<T>[0]) => {
+  const authorizedInvoke = useCallback((options?: Parameters<T>[0]) => {
     const resolveAccessToken = async () => {
       if (session?.access_token) return session.access_token;
       const { data } = await supabase.auth.getSession();
@@ -141,5 +144,7 @@ export function useAuthorizedServerFn<T extends (...args: any[]) => Promise<any>
         throw error;
       },
     ) as ReturnType<T>;
-  };
+  }, [handleAuthExpired, invoke, session?.access_token]);
+
+  return authorizedInvoke;
 }
