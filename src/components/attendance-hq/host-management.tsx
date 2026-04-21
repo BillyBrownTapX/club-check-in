@@ -28,6 +28,7 @@ import {
   type EventListStatusFilter,
   type EventTemplateWithClub,
   type ManagementEventSummary,
+  type University,
 } from "@/lib/attendance-hq";
 import {
   clubSchema,
@@ -230,6 +231,7 @@ export function ClubCard({ club }: { club: ClubSummary }) {
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1">
             <h2 className="text-xl font-semibold text-foreground">{club.club_name}</h2>
+            <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{club.universities?.name ?? "University needed"}</p>
             <p className="text-sm leading-6 text-muted-foreground">{club.description || "No description added yet."}</p>
           </div>
           <StatusBadge active={club.is_active} />
@@ -413,20 +415,20 @@ interface DialogBaseProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, title, description }: DialogBaseProps & { initialValues?: Partial<ClubUpdateValues>; onSubmit: (values: ClubCreateValues | ClubUpdateValues) => Promise<void>; title: string; description: string }) {
+export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, title, description, universities }: DialogBaseProps & { initialValues?: Partial<ClubUpdateValues>; onSubmit: (values: ClubCreateValues | ClubUpdateValues) => Promise<void>; title: string; description: string; universities: University[] }) {
   const isEdit = Boolean(initialValues?.clubId);
   const form = useForm<ClubCreateValues | ClubUpdateValues>({
     resolver: zodResolver(isEdit ? clubUpdateSchema : clubSchema),
     defaultValues: isEdit
-      ? { clubId: initialValues?.clubId ?? "", clubName: initialValues?.clubName ?? "", description: initialValues?.description ?? "", isActive: initialValues?.isActive ?? true }
-      : { clubName: "", description: "" },
+      ? { clubId: initialValues?.clubId ?? "", universityId: initialValues?.universityId ?? "", clubName: initialValues?.clubName ?? "", description: initialValues?.description ?? "", isActive: initialValues?.isActive ?? true }
+      : { universityId: "", clubName: "", description: "" },
   });
   const [error, setError] = useState("");
 
   useEffect(() => {
     form.reset(isEdit
-      ? { clubId: initialValues?.clubId ?? "", clubName: initialValues?.clubName ?? "", description: initialValues?.description ?? "", isActive: initialValues?.isActive ?? true }
-      : { clubName: "", description: "" });
+      ? { clubId: initialValues?.clubId ?? "", universityId: initialValues?.universityId ?? "", clubName: initialValues?.clubName ?? "", description: initialValues?.description ?? "", isActive: initialValues?.isActive ?? true }
+      : { universityId: "", clubName: "", description: "" });
   }, [form, initialValues, isEdit, open]);
 
   const submit = form.handleSubmit(async (values) => {
@@ -450,6 +452,7 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, title,
           </div>
         </DialogHeader>
         <form className="space-y-4 px-6 pb-6 pt-2" onSubmit={(event) => void submit(event)}>
+          <SelectInput label="University" value={form.watch("universityId") as string} onValueChange={(value) => form.setValue("universityId", value as never, { shouldValidate: true })} placeholder="Choose a university" options={universities.map((university) => ({ value: university.id, label: university.name }))} />
           <TextInput label="Club name" error={form.formState.errors.clubName?.message} {...form.register("clubName")} />
           <TextAreaInput label="Description" error={form.formState.errors.description?.message} {...form.register("description")} />
           {isEdit ? (
@@ -646,6 +649,7 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
   const selectedClubId = form.watch("clubId");
   const templatesForClub = useMemo(() => payload.templates.filter((template) => template.club_id === selectedClubId), [payload.templates, selectedClubId]);
   const selectedClub = useMemo(() => payload.clubs.find((club) => club.id === selectedClubId), [payload.clubs, selectedClubId]);
+  const selectedUniversity = selectedClub?.universities?.name ?? "University needed";
 
   return (
     <ManagementPageShell>
@@ -674,7 +678,7 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
             <form className="space-y-5" onSubmit={(event) => void submit(event)}>
               <div className="grid gap-3 sm:grid-cols-3">
                 <MetaPill label="Club" value={selectedClub?.club_name ?? "Select club"} />
-                <MetaPill label="Templates" value={templatesForClub.length} />
+                <MetaPill label="University" value={selectedUniversity} />
                 <MetaPill label="Check-in plan" value={`${offsets.openMinutesBeforeStart} / ${offsets.closeMinutesAfterEnd} min`} />
               </div>
               <FormSection title="Event basics" description="Name the meeting, attach it to the right club, and make the setup obvious at a glance.">

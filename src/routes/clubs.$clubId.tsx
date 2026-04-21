@@ -88,6 +88,7 @@ function ClubDetailRoute() {
                 <h2 className="text-xl font-semibold text-foreground">{data.club.club_name}</h2>
                 <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{data.club.is_active ? "Active" : "Inactive"}</span>
               </div>
+              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{data.club.universities?.name ?? "University needed"}</p>
               <p className="text-sm text-muted-foreground">{data.club.description || "Add a short description to help your team identify this club."}</p>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
@@ -162,7 +163,8 @@ function ClubDetailRoute() {
           onOpenChange={setClubDialogOpen}
           title="Edit Club"
           description="Keep this club’s details current."
-          initialValues={{ clubId: data.club.id, clubName: data.club.club_name, description: data.club.description ?? "", isActive: data.club.is_active }}
+          universities={data.universities}
+          initialValues={{ clubId: data.club.id, universityId: data.club.university_id ?? "", clubName: data.club.club_name, description: data.club.description ?? "", isActive: data.club.is_active }}
           onSubmit={async (values) => {
              await updateClubMutation({ data: values as never });
              setData(await getClub({ data: { clubId } }));
