@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { CalendarDays, Clock3, Copy, MapPin, Plus, Search, WandSparkles } from "lucide-react";
+import { CalendarDays, ChevronRight, Clock3, Copy, MapPin, Plus, Search, WandSparkles } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
@@ -9,7 +9,7 @@ import { HostAppShell } from "@/components/attendance-hq/host-shell";
 import { getHostOnboardingState } from "@/lib/attendance-hq.functions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -106,27 +106,28 @@ export function getManagementErrorMessage(error: unknown, fallback = "Something 
 
 export function PageHeader({ title, description, action }: { title: string; description: string; action?: React.ReactNode }) {
   return (
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+    <div className="flex flex-col gap-4 rounded-[1.75rem] border border-border/70 bg-card/90 px-4 py-4 shadow-[0_10px_32px_-24px_color-mix(in_oklab,var(--color-primary)_40%,transparent)] backdrop-blur sm:px-5 sm:py-5">
       <div className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground">{title}</h1>
-        <p className="max-w-2xl text-sm text-muted-foreground">{description}</p>
+        <p className="text-[0.72rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Attendance HQ</p>
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-[2.1rem]">{title}</h1>
+        <p className="max-w-2xl text-sm leading-6 text-muted-foreground">{description}</p>
       </div>
-      {action}
+      {action ? <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">{action}</div> : null}
     </div>
   );
 }
 
 export function FormCard({ children, className }: { children: React.ReactNode; className?: string }) {
-  return <Card className={cn("rounded-2xl border-border/70 shadow-sm", className)}><CardContent className="p-5 sm:p-6">{children}</CardContent></Card>;
+  return <Card className={cn("rounded-[1.75rem] border-border/70 bg-card/95 shadow-[0_18px_40px_-28px_color-mix(in_oklab,var(--color-primary)_38%,transparent)]", className)}><CardContent className="p-5 sm:p-6">{children}</CardContent></Card>;
 }
 
 export function StatsCard({ label, value, hint }: { label: string; value: string | number; hint: string }) {
   return (
-    <Card className="rounded-2xl border-border/70 shadow-sm">
+    <Card className="rounded-[1.6rem] border-border/70 bg-card/95 shadow-[0_14px_34px_-26px_color-mix(in_oklab,var(--color-primary)_32%,transparent)]">
       <CardContent className="space-y-2 p-5">
-        <p className="text-sm text-muted-foreground">{label}</p>
-        <p className="text-3xl font-semibold tracking-tight text-foreground">{value}</p>
-        <p className="text-sm text-muted-foreground">{hint}</p>
+        <p className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
+        <p className="text-3xl font-semibold tracking-tight text-foreground sm:text-[2.1rem]">{value}</p>
+        <p className="text-sm leading-6 text-muted-foreground">{hint}</p>
       </CardContent>
     </Card>
   );
@@ -135,8 +136,8 @@ export function StatsCard({ label, value, hint }: { label: string; value: string
 export function StatusBadge({ active, activeLabel = "Active", inactiveLabel = "Inactive" }: { active: boolean; activeLabel?: string; inactiveLabel?: string }) {
   return (
     <span className={cn(
-      "inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold",
-      active ? "bg-secondary text-foreground" : "bg-muted text-muted-foreground",
+      "inline-flex min-h-8 items-center rounded-full px-3 py-1 text-xs font-semibold",
+      active ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground",
     )}>
       {active ? activeLabel : inactiveLabel}
     </span>
@@ -144,18 +145,18 @@ export function StatusBadge({ active, activeLabel = "Active", inactiveLabel = "I
 }
 
 export function PrimaryButton(props: React.ComponentProps<typeof Button>) {
-  return <Button {...props} className={cn("h-11 rounded-xl px-4", props.className)} />;
+  return <Button {...props} className={cn("h-12 rounded-2xl px-4 text-sm font-semibold shadow-[0_14px_30px_-20px_color-mix(in_oklab,var(--color-primary)_60%,transparent)]", props.className)} />;
 }
 
 export function SecondaryButton(props: React.ComponentProps<typeof Button>) {
-  return <Button variant="outline" {...props} className={cn("h-11 rounded-xl px-4", props.className)} />;
+  return <Button variant="outline" {...props} className={cn("h-12 rounded-2xl border-border/80 bg-background/80 px-4 text-sm font-semibold", props.className)} />;
 }
 
 export function TextInput({ label, error, className, ...props }: React.ComponentProps<typeof Input> & { label: string; error?: string }) {
   return (
     <div className="space-y-2">
-      <Label className="text-sm font-medium text-foreground">{label}</Label>
-      <Input {...props} className={cn("h-11 rounded-xl", className)} />
+      <Label className="text-sm font-semibold text-foreground">{label}</Label>
+      <Input {...props} className={cn("h-12 rounded-2xl border-border/80 bg-background/90 px-4 text-base", className)} />
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </div>
   );
@@ -164,8 +165,8 @@ export function TextInput({ label, error, className, ...props }: React.Component
 export function TextAreaInput({ label, error, className, ...props }: React.ComponentProps<typeof Textarea> & { label: string; error?: string }) {
   return (
     <div className="space-y-2">
-      <Label className="text-sm font-medium text-foreground">{label}</Label>
-      <Textarea {...props} className={cn("min-h-28 rounded-xl", className)} />
+      <Label className="text-sm font-semibold text-foreground">{label}</Label>
+      <Textarea {...props} className={cn("min-h-28 rounded-2xl border-border/80 bg-background/90 px-4 py-3 text-base", className)} />
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </div>
   );
@@ -183,7 +184,7 @@ export function SearchInput({ value, onChange }: { value: string; onChange: (val
   return (
     <div className="relative flex-1 min-w-[12rem]">
       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-      <Input value={value} onChange={(event) => onChange(event.target.value)} placeholder="Search events" className="h-11 rounded-xl pl-9" />
+      <Input value={value} onChange={(event) => onChange(event.target.value)} placeholder="Search events" className="h-12 rounded-2xl border-border/80 bg-background/90 pl-9 text-base" />
     </div>
   );
 }
@@ -192,10 +193,10 @@ const EMPTY_SELECT_VALUE = "__empty__";
 
 export function SelectInput({ label, value, onValueChange, placeholder, options }: { label: string; value: string; onValueChange: (value: string) => void; placeholder: string; options: { value: string; label: string }[] }) {
   return (
-    <div className="space-y-2 min-w-[10rem]">
-      <Label className="text-sm font-medium text-foreground">{label}</Label>
+      <div className="space-y-2 min-w-[10rem]">
+      <Label className="text-sm font-semibold text-foreground">{label}</Label>
       <Select value={value || EMPTY_SELECT_VALUE} onValueChange={(nextValue) => onValueChange(nextValue === EMPTY_SELECT_VALUE ? "" : nextValue)}>
-        <SelectTrigger className="h-11 rounded-xl">
+        <SelectTrigger className="h-12 rounded-2xl border-border/80 bg-background/90">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
@@ -208,10 +209,10 @@ export function SelectInput({ label, value, onValueChange, placeholder, options 
 
 export function EmptyStateBlock({ title, description, action }: { title: string; description: string; action?: React.ReactNode }) {
   return (
-    <Card className="rounded-2xl border-dashed border-border/80 shadow-none">
+    <Card className="rounded-[1.75rem] border-dashed border-border/80 bg-card/80 shadow-none">
       <CardContent className="flex flex-col items-center justify-center gap-3 p-8 text-center">
-        <div className="text-lg font-semibold text-foreground">{title}</div>
-        <div className="max-w-md text-sm text-muted-foreground">{description}</div>
+        <div className="text-xl font-semibold text-foreground">{title}</div>
+        <div className="max-w-md text-sm leading-6 text-muted-foreground">{description}</div>
         {action}
       </CardContent>
     </Card>
@@ -219,17 +220,17 @@ export function EmptyStateBlock({ title, description, action }: { title: string;
 }
 
 export function FilterBar({ children }: { children: React.ReactNode }) {
-  return <div className="flex flex-col gap-3 rounded-2xl border border-border/70 bg-card p-4 sm:flex-row sm:flex-wrap sm:items-end">{children}</div>;
+  return <div className="flex flex-col gap-3 rounded-[1.6rem] border border-border/70 bg-card/95 p-4 shadow-[0_14px_36px_-28px_color-mix(in_oklab,var(--color-primary)_28%,transparent)] sm:flex-row sm:flex-wrap sm:items-end">{children}</div>;
 }
 
 export function ClubCard({ club }: { club: ClubSummary }) {
   return (
-    <Card className="rounded-2xl border-border/70 shadow-sm">
-      <CardContent className="space-y-4 p-5">
+    <Card className="rounded-[1.75rem] border-border/70 bg-card/95 shadow-[0_18px_40px_-28px_color-mix(in_oklab,var(--color-primary)_38%,transparent)]">
+      <CardContent className="space-y-5 p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1">
-            <h2 className="text-lg font-semibold text-foreground">{club.club_name}</h2>
-            <p className="text-sm text-muted-foreground">{club.description || "No description added yet."}</p>
+            <h2 className="text-xl font-semibold text-foreground">{club.club_name}</h2>
+            <p className="text-sm leading-6 text-muted-foreground">{club.description || "No description added yet."}</p>
           </div>
           <StatusBadge active={club.is_active} />
         </div>
@@ -237,7 +238,7 @@ export function ClubCard({ club }: { club: ClubSummary }) {
           <MetaPill label="Upcoming" value={club.upcomingEventsCount} />
           <MetaPill label="Past" value={club.pastEventsCount} />
         </div>
-        <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="flex flex-col gap-2">
           <SecondaryButton asChild className="flex-1"><Link to="/clubs/$clubId" params={{ clubId: club.id }}>Manage Club</Link></SecondaryButton>
           <PrimaryButton asChild className="flex-1"><Link to="/events/new" search={{ clubId: club.id, templateId: "", duplicateFrom: "" }}>Create Event</Link></PrimaryButton>
         </div>
@@ -268,7 +269,7 @@ export function EventCard({ event, showClub = true, onDuplicate }: { event: Mana
           : "Review and export attendance";
 
   return (
-    <Card className="rounded-2xl border-border/70 shadow-sm">
+    <Card className="rounded-[1.75rem] border-border/70 bg-card/95 shadow-[0_18px_40px_-28px_color-mix(in_oklab,var(--color-primary)_38%,transparent)]">
       <CardContent className="space-y-4 p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="space-y-1 min-w-0">
@@ -287,7 +288,7 @@ export function EventCard({ event, showClub = true, onDuplicate }: { event: Mana
           <MetaPill label="Status" value={statusLabel} />
         </div>
         <p className="text-sm text-muted-foreground">{statusHint}</p>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
           <SecondaryButton asChild><Link to="/events/$eventId" params={{ eventId: event.id }} search={{ created: "" }}>Manage</Link></SecondaryButton>
           <SecondaryButton asChild><Link to="/events/$eventId/edit" params={{ eventId: event.id }} search={{ created: "" }}>Edit</Link></SecondaryButton>
           <SecondaryButton type="button" onClick={() => onDuplicate?.(event.id)}>Duplicate</SecondaryButton>
@@ -320,7 +321,7 @@ export function TemplateCard({ template, onUse, onEdit, onDuplicate }: { templat
 }
 
 function MetaPill({ label, value }: { label: string; value: string | number }) {
-  return <div className="rounded-xl bg-secondary px-4 py-3"><div className="text-muted-foreground">{label}</div><div className="mt-1 text-base font-semibold text-foreground">{value}</div></div>;
+  return <div className="rounded-2xl bg-secondary/80 px-4 py-3"><div className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{label}</div><div className="mt-1 text-base font-semibold text-foreground">{value}</div></div>;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
