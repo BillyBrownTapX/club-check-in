@@ -242,15 +242,16 @@ function MetaPill({ label, value }: { label: string; value: string | number }) {
 
 export function useRequireHostRedirect() {
   const navigate = useNavigate();
-  const { user, loading } = useAttendanceAuth();
+  const { user, session, loading } = useAttendanceAuth();
+  const authLoading = loading || (!!user && !session);
 
   useEffect(() => {
-    if (!loading && !user) {
+    if (!authLoading && !user) {
       navigate({ to: "/sign-in" });
     }
-  }, [loading, navigate, user]);
+  }, [authLoading, navigate, user]);
 
-  return { user, loading };
+  return { user, session, loading: authLoading };
 }
 
 type ClubCreateValues = z.infer<typeof clubSchema>;
