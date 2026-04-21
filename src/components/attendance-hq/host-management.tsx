@@ -650,6 +650,7 @@ export function TemplateDialog({ open, onOpenChange, clubId, initialValues, onSu
   }, [clubId, form, initialValues, isEdit, open]);
 
   const submit = form.handleSubmit(async (values) => {
+    if (form.formState.isSubmitting) return;
     setError("");
     try {
       await onSubmit(values);
@@ -658,6 +659,7 @@ export function TemplateDialog({ open, onOpenChange, clubId, initialValues, onSu
       setError(getManagementErrorMessage(submitError, "Unable to save template."));
     }
   });
+  const isSubmitting = form.formState.isSubmitting;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
