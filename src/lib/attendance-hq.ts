@@ -12,7 +12,7 @@ export type DeviceSession = Tables<"student_device_sessions">;
 
 export type EventSummary = Event & {
   clubs: Pick<Club, "id" | "club_name" | "club_slug"> | null;
-  attendance_records?: Pick<AttendanceRecord, "id" | "checked_in_at" | "student_id">[];
+  attendance_records?: Pick<AttendanceRecord, "id">[];
 };
 
 export type ClubWithUniversity = Club & {
