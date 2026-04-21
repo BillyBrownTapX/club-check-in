@@ -202,3 +202,13 @@ function ClubDetailRoute() {
     </ManagementPageShell>
   );
 }
+
+function ClubHeaderLogo({ path, name }: { path: string | null; name: string }) {
+  const url = useSignedLogoUrl(path);
+  const initials = name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("") || "C";
+  return (
+    <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-brand font-display text-lg font-extrabold text-primary-foreground shadow-[0_14px_30px_-20px_color-mix(in_oklab,var(--color-primary)_40%,transparent)]">
+      {url ? <img src={url} alt={`${name} logo`} className="h-full w-full object-cover" /> : <span>{initials}</span>}
+    </div>
+  );
+}
