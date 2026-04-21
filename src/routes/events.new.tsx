@@ -66,7 +66,7 @@ function EventCreateRoute() {
   }, [loadPayload, loading, navigate, search, user]);
 
   if (loading || !user || !payload) {
-    return <ManagementPageShell><div className="py-16 text-center text-sm text-muted-foreground">Loading event form…</div></ManagementPageShell>;
+    return <ManagementPageShell hideTabBar><div className="py-16 text-center text-sm text-muted-foreground">Loading event form…</div></ManagementPageShell>;
   }
 
   if (error) return <EventCreateError error={new Error(error)} />;
