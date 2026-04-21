@@ -85,14 +85,14 @@ function OnboardingClubRoute() {
     <OnboardingShell>
       <FormCard>
         <ProgressIndicator step={1} total={2} label="Create your club" />
-        <PageHeadingBlock title="Create your first club" description="This is the club or organization you'll use to host events and track attendance." />
+        <PageHeadingBlock eyebrow="Setup" title="Create your first club" description="Add the club or organization you’ll manage most often so your workspace feels ready from day one." />
         <form className="space-y-4" onSubmit={(event) => void onSubmit(event)}>
           <TextInput label="Club name" autoComplete="organization" error={form.formState.errors.clubName?.message} {...form.register("clubName")} />
           <TextAreaField label="Description" placeholder="Optional" error={form.formState.errors.description?.message} {...form.register("description")} />
           <InlineErrorMessage message={submitError ?? undefined} />
           <PrimaryButton type="submit" disabled={form.formState.isSubmitting}>Continue</PrimaryButton>
         </form>
-        <div className="flex items-center justify-between gap-4 text-sm">
+        <div className="flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
           <p className="text-muted-foreground">You can edit these details later.</p>
           <SecondaryTextLink to="/sign-in">Back</SecondaryTextLink>
         </div>

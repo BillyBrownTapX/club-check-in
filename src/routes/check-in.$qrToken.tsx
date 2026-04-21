@@ -259,8 +259,8 @@ function CheckInRouteComponent() {
         <EventInfoCard event={event} status={status} />
         <EventContextRow event={event} />
         <section className="space-y-2 px-1">
-          <h1 className="text-[2rem] font-semibold leading-tight text-foreground">Student check-in</h1>
-          <p className="text-sm text-muted-foreground">Enter your first name, last name, student email, and 9-digit 900 number to record your attendance.</p>
+          <h1 className="text-[2.15rem] font-semibold leading-tight text-foreground">Student check-in</h1>
+          <p className="text-sm leading-6 text-muted-foreground">Enter your first name, last name, student email, and 9-digit 900 number to record your attendance.</p>
         </section>
         {rememberedStudent && rememberedDeviceToken ? (
           <CheckInFormCard>
@@ -311,8 +311,8 @@ function CheckInRouteComponent() {
       <>
         <EventContextRow event={event} />
         <section className="space-y-2 px-1">
-          <h1 className="text-[2rem] font-semibold leading-tight text-foreground">Returning check-in</h1>
-          <p className="text-sm text-muted-foreground">Enter your 900 number to continue</p>
+          <h1 className="text-[2.15rem] font-semibold leading-tight text-foreground">Returning check-in</h1>
+          <p className="text-sm leading-6 text-muted-foreground">Enter your 900 number to continue.</p>
         </section>
         <CheckInFormCard>
           <form className="space-y-4" onSubmit={(event) => void handleReturningSubmit(event)}>
