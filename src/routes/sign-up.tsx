@@ -23,7 +23,7 @@ export const Route = createFileRoute("/sign-up")({
 });
 
 function SignUpRoute() {
-  useRequireGuestRedirect();
+  const { loading: guardLoading } = useRequireGuestRedirect();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [confirmEmailNotice, setConfirmEmailNotice] = useState<string | null>(null);
   const [authSettling, setAuthSettling] = useState(false);
@@ -70,13 +70,13 @@ function SignUpRoute() {
           <p className="mt-2 text-sm leading-6 text-foreground">Create your account, connect your club to its university, then launch the first QR-ready event from the same mobile workflow.</p>
         </div>
         <form className="space-y-4" onSubmit={(event) => void onSubmit(event)}>
-          <TextInput label="Full name" autoComplete="name" error={form.formState.errors.fullName?.message} {...form.register("fullName")} />
-          <EmailInput label="Email" error={form.formState.errors.email?.message} {...form.register("email")} />
-          <PasswordInput label="Password" autoComplete="new-password" error={form.formState.errors.password?.message} {...form.register("password")} />
+          <TextInput label="Full name" autoComplete="name" disabled={guardLoading} error={form.formState.errors.fullName?.message} {...form.register("fullName")} />
+          <EmailInput label="Email" disabled={guardLoading} error={form.formState.errors.email?.message} {...form.register("email")} />
+          <PasswordInput label="Password" autoComplete="new-password" disabled={guardLoading} error={form.formState.errors.password?.message} {...form.register("password")} />
           <InlineErrorMessage message={submitError ?? undefined} />
-          <PrimaryButton type="submit" disabled={form.formState.isSubmitting || authSettling}>{authSettling ? "Finishing setup..." : "Create account"}</PrimaryButton>
+          <PrimaryButton type="submit" disabled={guardLoading || form.formState.isSubmitting || authSettling}>{guardLoading ? "Loading..." : authSettling ? "Finishing setup..." : "Create account"}</PrimaryButton>
         </form>
-        <AuthSupportLinks primary={<SecondaryTextLink to="/sign-in">Already have an account? Sign in</SecondaryTextLink>} secondary={<p className="text-xs text-muted-foreground">By continuing you can immediately set up your first club and event.</p>} />
+        <AuthSupportLinks primary={<SecondaryTextLink from="/" to="/sign-in">Already have an account? Sign in</SecondaryTextLink>} secondary={<p className="text-xs text-muted-foreground">By continuing you can immediately set up your first club and event.</p>} />
       </AuthCard>
     </AuthShell>
   );
