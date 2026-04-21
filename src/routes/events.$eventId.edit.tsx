@@ -63,7 +63,7 @@ function EventEditRoute() {
   }, [eventId, loadPayload, loading, user]);
 
   if (loading || !user || !payload) {
-    return <ManagementPageShell><div className="py-16 text-center text-sm text-muted-foreground">Loading event…</div></ManagementPageShell>;
+    return <ManagementPageShell hideTabBar><div className="py-16 text-center text-sm text-muted-foreground">Loading event…</div></ManagementPageShell>;
   }
 
   if (error) return <EventEditError error={new Error(error)} />;
