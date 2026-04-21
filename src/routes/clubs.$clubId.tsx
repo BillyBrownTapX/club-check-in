@@ -4,6 +4,7 @@ import { CalendarDays, Copy, Plus } from "lucide-react";
 import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
 import { ClubDialog, EmptyStateBlock, ManagementPageShell, PageHeader, PrimaryButton, SecondaryButton, StatsCard, TemplateCard, TemplateDialog, EventCard, FormCard, getManagementErrorMessage, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
 import { createEventTemplate, duplicateEventTemplate, getClubDetail, updateClub, updateEventTemplate } from "@/lib/attendance-hq.functions";
+import { useSignedLogoUrl } from "@/hooks/use-signed-logo";
 import type { EventTemplateWithClub, ManagementEventSummary } from "@/lib/attendance-hq";
 
 function ClubDetailNotFound() {
