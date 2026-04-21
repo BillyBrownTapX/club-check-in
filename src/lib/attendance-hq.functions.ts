@@ -1,7 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { getRequestHeader, setResponseHeader } from "@tanstack/react-start/server";
-import { notFound, redirect } from "@tanstack/react-router";
+import { notFound } from "@tanstack/react-router";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Database } from "@/integrations/supabase/types";
 import {
   buildHostOnboardingState,
   type ClubDetailPayload,
@@ -203,24 +205,53 @@ function toManagementEventSummary(event: EventSummary): ManagementEventSummary {
   };
 }
 
-async function getOwnedClubIds(userId: string) {
-  const admin = await getSupabaseAdmin();
-  const { data, error } = await admin.from("clubs").select("id").eq("host_id", userId);
+type AppSupabaseClient = SupabaseClient<Database>;
+
+async function resolveHostOnboardingStateWithClient(supabase: AppSupabaseClient, userId: string): Promise<HostOnboardingState> {
+  const [{ data: profile, error: profileError }, { data: club, error: clubError }] = await Promise.all([
+    supabase.from("host_profiles").select("*").eq("id", userId).maybeSingle(),
+    supabase.from("clubs").select("*").eq("host_id", userId).order("created_at", { ascending: true }).limit(1).maybeSingle(),
+  ]);
+
+  if (profileError) throw new Error(profileError.message);
+  if (clubError) throw new Error(clubError.message);
+
+  let event = null;
+  if (club?.id) {
+    const { data: firstEvent, error: eventError } = await supabase
+      .from("events")
+      .select("*")
+      .eq("club_id", club.id)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (eventError) throw new Error(eventError.message);
+    event = firstEvent;
+  }
+
+  return buildHostOnboardingState({
+    profile: (profile as HostProfile | null) ?? null,
+    club: (club as Club | null) ?? null,
+    event: (event as EventWithClub | null) ?? null,
+  });
+}
+
+async function getOwnedClubIds(supabase: AppSupabaseClient, userId: string) {
+  const { data, error } = await supabase.from("clubs").select("id").eq("host_id", userId);
   if (error) throw new Error(error.message);
   return (data ?? []).map((club) => club.id);
 }
 
-async function requireOwnedClub(userId: string, clubId: string) {
-  const admin = await getSupabaseAdmin();
-  const { data, error } = await admin.from("clubs").select("*").eq("id", clubId).eq("host_id", userId).maybeSingle();
+async function requireOwnedClub(supabase: AppSupabaseClient, userId: string, clubId: string) {
+  const { data, error } = await supabase.from("clubs").select("*").eq("id", clubId).eq("host_id", userId).maybeSingle();
   if (error) throw new Error(error.message);
   if (!data) throw notFound();
   return data as Club;
 }
 
-async function requireOwnedEvent(userId: string, eventId: string) {
-  const admin = await getSupabaseAdmin();
-  const { data, error } = await admin
+async function requireOwnedEvent(supabase: AppSupabaseClient, userId: string, eventId: string) {
+  const { data, error } = await supabase
     .from("events")
     .select("*, clubs(id, club_name, club_slug, description, host_id)")
     .eq("id", eventId)
@@ -229,16 +260,130 @@ async function requireOwnedEvent(userId: string, eventId: string) {
   if (error) throw new Error(error.message);
   const event = data as (EventWithClub & { clubs: (EventWithClub["clubs"] & { host_id?: string }) | null }) | null;
   if (!event || !event.clubs || event.clubs.host_id !== userId) throw notFound();
-  return event;
+  return event as EventWithClub;
+}
+
+async function getHostClubSummariesForUser(supabase: AppSupabaseClient, userId: string): Promise<ClubSummary[]> {
+  const { data: clubs, error: clubsError } = await supabase
+    .from("clubs")
+    .select("*")
+    .eq("host_id", userId)
+    .order("created_at", { ascending: true });
+
+  if (clubsError) throw new Error(clubsError.message);
+
+  const clubIds = (clubs ?? []).map((club) => club.id);
+  const { data: events, error: eventsError } = clubIds.length
+    ? await supabase
+        .from("events")
+        .select("id, club_id, event_date, check_in_opens_at, check_in_closes_at, is_active, is_archived, attendance_records(id)")
+        .in("club_id", clubIds)
+    : { data: [], error: null };
+
+  if (eventsError) throw new Error(eventsError.message);
+
+  const now = new Date().toISOString().slice(0, 10);
+  const counts = new Map<string, { upcomingEventsCount: number; pastEventsCount: number; totalCheckIns: number }>();
+  for (const club of clubs ?? []) {
+    counts.set(club.id, { upcomingEventsCount: 0, pastEventsCount: 0, totalCheckIns: 0 });
+  }
+
+  for (const event of events ?? []) {
+    const current = counts.get(event.club_id);
+    if (!current) continue;
+    if (event.event_date >= now) current.upcomingEventsCount += 1;
+    else current.pastEventsCount += 1;
+    current.totalCheckIns += event.attendance_records?.length ?? 0;
+  }
+
+  return ((clubs ?? []) as Club[]).map((club) => ({
+    ...club,
+    ...(counts.get(club.id) ?? { upcomingEventsCount: 0, pastEventsCount: 0, totalCheckIns: 0 }),
+  })) as ClubSummary[];
+}
+
+async function getHostTemplatesForUser(supabase: AppSupabaseClient, userId: string, clubId?: string) {
+  const clubIds = clubId ? [clubId] : await getOwnedClubIds(supabase, userId);
+  if (!clubIds.length) return [] as EventTemplateWithClub[];
+
+  const { data: templates, error } = await supabase
+    .from("event_templates")
+    .select("*, clubs(id, club_name, club_slug)")
+    .in("club_id", clubIds)
+    .order("created_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (templates ?? []) as EventTemplateWithClub[];
+}
+
+async function getHostEventsForUser(
+  supabase: AppSupabaseClient,
+  userId: string,
+  filters: { clubId?: string; status: "all" | "upcoming" | "past"; query?: string },
+) {
+  const clubIds = filters.clubId ? [filters.clubId] : await getOwnedClubIds(supabase, userId);
+  if (!clubIds.length) return [] as ManagementEventSummary[];
+
+  let query = supabase
+    .from("events")
+    .select("*, clubs(id, club_name, club_slug), attendance_records(id)")
+    .in("club_id", clubIds)
+    .order("event_date", { ascending: filters.status !== "past" })
+    .order("start_time", { ascending: true });
+
+  if (filters.query) query = query.ilike("event_name", `%${filters.query}%`);
+
+  const { data: events, error } = await query;
+  if (error) throw new Error(error.message);
+
+  const today = new Date().toISOString().slice(0, 10);
+  return ((events ?? []) as EventSummary[])
+    .filter((event) => {
+      if (filters.status === "upcoming") return event.event_date >= today;
+      if (filters.status === "past") return event.event_date < today;
+      return true;
+    })
+    .map(toManagementEventSummary);
+}
+
+async function createEventForUser(
+  supabase: AppSupabaseClient,
+  userId: string,
+  data: z.infer<typeof validatedEventSchema>,
+) {
+  await requireOwnedClub(supabase, userId, data.clubId);
+
+  const { data: event, error } = await supabase
+    .from("events")
+    .insert({
+      club_id: data.clubId,
+      event_template_id: data.eventTemplateId || null,
+      event_name: data.eventName.trim(),
+      event_date: data.eventDate,
+      start_time: data.startTime,
+      end_time: data.endTime,
+      location: data.location?.trim() || null,
+      check_in_opens_at: data.checkInOpensAt,
+      check_in_closes_at: data.checkInClosesAt,
+      qr_token: createQrToken(),
+    })
+    .select("*, clubs(id, club_name, club_slug, description)")
+    .single();
+
+  if (error || !event) throw new Error(error?.message ?? "Unable to create event");
+  return {
+    event: event as EventWithClub,
+    onboarding: await resolveHostOnboardingStateWithClient(supabase, userId),
+  };
 }
 
 export const getHostWorkspace = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const profile = await ensureHostProfile(context.userId);
-    const clubs = await getHostClubSummaries();
-    const events = await getHostEvents({ data: { clubId: "", status: "all", query: "" } });
-    const templates = await getHostTemplates({ data: { clubId: "" } });
+    const profile = await requireHostProfile(context.userId);
+    const clubs = await getHostClubSummariesForUser(context.supabase, context.userId);
+    const events = await getHostEventsForUser(context.supabase, context.userId, { clubId: "", status: "all", query: "" });
+    const templates = await getHostTemplatesForUser(context.supabase, context.userId);
 
     return {
       profile,
@@ -251,108 +396,37 @@ export const getHostWorkspace = createServerFn({ method: "GET" })
 export const getHostClubSummaries = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const admin = await getSupabaseAdmin();
-    const { data: clubs, error: clubsError } = await admin
-      .from("clubs")
-      .select("*")
-      .eq("host_id", context.userId)
-      .order("created_at", { ascending: true });
-
-    if (clubsError) throw new Error(clubsError.message);
-
-    const clubIds = (clubs ?? []).map((club) => club.id);
-    const { data: events, error: eventsError } = clubIds.length
-      ? await admin
-          .from("events")
-          .select("id, club_id, event_date, check_in_opens_at, check_in_closes_at, is_active, is_archived, attendance_records(id)")
-          .in("club_id", clubIds)
-      : { data: [], error: null };
-
-    if (eventsError) throw new Error(eventsError.message);
-
-    const now = new Date().toISOString().slice(0, 10);
-    const counts = new Map();
-    for (const club of clubs ?? []) {
-      counts.set(club.id, { upcomingEventsCount: 0, pastEventsCount: 0, totalCheckIns: 0 });
-    }
-
-    for (const event of events ?? []) {
-      const current = counts.get(event.club_id);
-      if (!current) continue;
-      if (event.event_date >= now) current.upcomingEventsCount += 1;
-      else current.pastEventsCount += 1;
-      current.totalCheckIns += event.attendance_records?.length ?? 0;
-    }
-
-    return ((clubs ?? []) as Club[]).map((club) => ({
-      ...club,
-      ...(counts.get(club.id) ?? { upcomingEventsCount: 0, pastEventsCount: 0, totalCheckIns: 0 }),
-    })) as ClubSummary[];
+    return getHostClubSummariesForUser(context.supabase, context.userId);
   });
 
 export const getHostTemplates = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { clubId?: string }) => ({ clubId: input.clubId ?? "" }))
   .handler(async ({ data, context }) => {
-    const admin = await getSupabaseAdmin();
-    const clubIds = data.clubId ? [data.clubId] : await getOwnedClubIds(context.userId);
-    if (!clubIds.length) return [] as EventTemplateWithClub[];
-
-    const { data: templates, error } = await admin
-      .from("event_templates")
-      .select("*, clubs(id, club_name, club_slug)")
-      .in("club_id", clubIds)
-      .order("created_at", { ascending: false });
-
-    if (error) throw new Error(error.message);
-    return (templates ?? []) as EventTemplateWithClub[];
+    return getHostTemplatesForUser(context.supabase, context.userId, data.clubId);
   });
 
 export const getHostEvents = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator(eventListFilterSchema)
   .handler(async ({ data, context }) => {
-    const admin = await getSupabaseAdmin();
-    const clubIds = data.clubId ? [data.clubId] : await getOwnedClubIds(context.userId);
-    if (!clubIds.length) return [] as ManagementEventSummary[];
-
-    let query = admin
-      .from("events")
-      .select("*, clubs(id, club_name, club_slug), attendance_records(id)")
-      .in("club_id", clubIds)
-      .order("event_date", { ascending: data.status !== "past" })
-      .order("start_time", { ascending: true });
-
-    if (data.query) query = query.ilike("event_name", `%${data.query}%`);
-
-    const { data: events, error } = await query;
-    if (error) throw new Error(error.message);
-
-    const today = new Date().toISOString().slice(0, 10);
-    return ((events ?? []) as EventSummary[])
-      .filter((event) => {
-        if (data.status === "upcoming") return event.event_date >= today;
-        if (data.status === "past") return event.event_date < today;
-        return true;
-      })
-      .map(toManagementEventSummary);
+    return getHostEventsForUser(context.supabase, context.userId, data);
   });
 
 export const getClubDetail = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { clubId: string }) => input)
   .handler(async ({ data, context }) => {
-    const admin = await getSupabaseAdmin();
-    const club = await requireOwnedClub(context.userId, data.clubId);
+    const club = await requireOwnedClub(context.supabase, context.userId, data.clubId);
 
     const [{ data: events, error: eventsError }, { data: templates, error: templatesError }] = await Promise.all([
-      admin
+      context.supabase
         .from("events")
         .select("*, clubs(id, club_name, club_slug), attendance_records(id)")
         .eq("club_id", club.id)
         .order("event_date", { ascending: false })
         .order("start_time", { ascending: false }),
-      admin
+      context.supabase
         .from("event_templates")
         .select("*, clubs(id, club_name, club_slug)")
         .eq("club_id", club.id)
@@ -385,11 +459,10 @@ export const createClubManagement = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(clubSchema)
   .handler(async ({ data, context }) => {
-    const admin = await getSupabaseAdmin();
     const baseSlug = slugifyClubName(data.clubName);
     const slug = `${baseSlug || "club"}-${Math.random().toString(36).slice(2, 6)}`;
 
-    const { data: club, error } = await admin
+    const { data: club, error } = await context.supabase
       .from("clubs")
       .insert({
         host_id: context.userId,
@@ -408,11 +481,10 @@ export const updateClub = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(clubUpdateSchema)
   .handler(async ({ data, context }) => {
-    await requireOwnedClub(context.userId, data.clubId);
-    const admin = await getSupabaseAdmin();
+    await requireOwnedClub(context.supabase, context.userId, data.clubId);
     const nextSlug = `${slugifyClubName(data.clubName) || "club"}-${data.clubId.slice(0, 4)}`;
 
-    const { data: club, error } = await admin
+    const { data: club, error } = await context.supabase
       .from("clubs")
       .update({
         club_name: data.clubName.trim(),
@@ -432,10 +504,9 @@ export const createEventTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(eventTemplateSchema)
   .handler(async ({ data, context }) => {
-    await requireOwnedClub(context.userId, data.clubId);
-    const admin = await getSupabaseAdmin();
+    await requireOwnedClub(context.supabase, context.userId, data.clubId);
 
-    const { data: template, error } = await admin
+    const { data: template, error } = await context.supabase
       .from("event_templates")
       .insert({
         club_id: data.clubId,
@@ -458,10 +529,9 @@ export const updateEventTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(eventTemplateUpdateSchema)
   .handler(async ({ data, context }) => {
-    await requireOwnedClub(context.userId, data.clubId);
-    const admin = await getSupabaseAdmin();
+    await requireOwnedClub(context.supabase, context.userId, data.clubId);
 
-    const { data: template, error } = await admin
+    const { data: template, error } = await context.supabase
       .from("event_templates")
       .update({
         template_name: data.templateName.trim(),
@@ -485,17 +555,16 @@ export const duplicateEventTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { templateId: string }) => input)
   .handler(async ({ data, context }) => {
-    const admin = await getSupabaseAdmin();
-    const { data: template, error } = await admin
+    const { data: template, error } = await context.supabase
       .from("event_templates")
-      .select("*, clubs(id, club_name, club_slug, host_id)")
+      .select("*")
       .eq("id", data.templateId)
       .maybeSingle();
 
     if (error) throw new Error(error.message);
-    if (!template || template.clubs?.host_id !== context.userId) throw notFound();
+    if (!template) throw notFound();
 
-    const { data: duplicated, error: duplicateError } = await admin
+    const { data: duplicated, error: duplicateError } = await context.supabase
       .from("event_templates")
       .insert({
         club_id: template.club_id,
@@ -523,13 +592,12 @@ export const getEventFormPayload = createServerFn({ method: "GET" })
     templateId: input.templateId ?? "",
   }))
   .handler(async ({ data, context }) => {
-    const admin = await getSupabaseAdmin();
-    const clubIds = await getOwnedClubIds(context.userId);
+    const clubIds = await getOwnedClubIds(context.supabase, context.userId);
     const clubs = clubIds.length
-      ? ((await admin.from("clubs").select("*").in("id", clubIds).order("club_name", { ascending: true })).data ?? [])
+      ? ((await context.supabase.from("clubs").select("*").in("id", clubIds).order("club_name", { ascending: true })).data ?? [])
       : [];
     const templates = clubIds.length
-      ? ((await admin.from("event_templates").select("*, clubs(id, club_name, club_slug)").in("club_id", clubIds).order("template_name", { ascending: true })).data ?? [])
+      ? ((await context.supabase.from("event_templates").select("*, clubs(id, club_name, club_slug)").in("club_id", clubIds).order("template_name", { ascending: true })).data ?? [])
       : [];
 
     let initialValues: EventFormValues = {
@@ -566,7 +634,7 @@ export const getEventFormPayload = createServerFn({ method: "GET" })
     }
 
     if (data.eventId || data.duplicateFrom) {
-      const sourceEvent = await requireOwnedEvent(context.userId, data.eventId || data.duplicateFrom);
+      const sourceEvent = await requireOwnedEvent(context.supabase, context.userId, data.eventId || data.duplicateFrom);
       initialValues = {
         clubId: sourceEvent.club_id,
         eventTemplateId: sourceEvent.event_template_id || "",
@@ -592,42 +660,17 @@ export const createEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(validatedEventSchema)
   .handler(async ({ data, context }) => {
-    await requireOwnedClub(context.userId, data.clubId);
-    const admin = await getSupabaseAdmin();
-
-    const { data: event, error } = await admin
-      .from("events")
-      .insert({
-        club_id: data.clubId,
-        event_template_id: data.eventTemplateId || null,
-        event_name: data.eventName.trim(),
-        event_date: data.eventDate,
-        start_time: data.startTime,
-        end_time: data.endTime,
-        location: data.location?.trim() || null,
-        check_in_opens_at: data.checkInOpensAt,
-        check_in_closes_at: data.checkInClosesAt,
-        qr_token: createQrToken(),
-      })
-      .select("*, clubs(id, club_name, club_slug, description)")
-      .single();
-
-    if (error || !event) throw new Error(error?.message ?? "Unable to create event");
-    return {
-      event: event as EventWithClub,
-      onboarding: await resolveHostOnboardingState(context.userId),
-    };
+    return createEventForUser(context.supabase, context.userId, data);
   });
 
 export const updateEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(eventUpdateSchema)
   .handler(async ({ data, context }) => {
-    const existing = await requireOwnedEvent(context.userId, data.eventId);
-    await requireOwnedClub(context.userId, data.clubId);
-    const admin = await getSupabaseAdmin();
+    const existing = await requireOwnedEvent(context.supabase, context.userId, data.eventId);
+    await requireOwnedClub(context.supabase, context.userId, data.clubId);
 
-    const { data: event, error } = await admin
+    const { data: event, error } = await context.supabase
       .from("events")
       .update({
         club_id: data.clubId,
@@ -659,33 +702,24 @@ export const duplicateEvent = createServerFn({ method: "POST" })
     path: ["checkInClosesAt"],
   }))
   .handler(async ({ data, context }) => {
-    await requireOwnedEvent(context.userId, data.sourceEventId);
-    return createEvent({ data, headers: undefined as never });
+    await requireOwnedEvent(context.supabase, context.userId, data.sourceEventId);
+    const { sourceEventId: _sourceEventId, ...eventData } = data;
+    return createEventForUser(context.supabase, context.userId, eventData);
   });
 
 export const getEventOperations = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((input: { eventId: string }) => input)
   .handler(async ({ data, context }) => {
-    const { data: event, error } = await (await getSupabaseAdmin())
-      .from("events")
-      .select("*, clubs(id, club_name, club_slug, description)")
-      .eq("id", data.eventId)
-      .maybeSingle();
-
-    if (error) throw new Error(error.message);
-    if (!event) throw notFound();
-
-    const { data: club } = await (await getSupabaseAdmin()).from("clubs").select("host_id").eq("id", event.club_id).maybeSingle();
-    if (!club || club.host_id !== context.userId) throw redirect({ to: "/sign-in" });
-
-    const { data: attendance } = await (await getSupabaseAdmin())
+    const event = await requireOwnedEvent(context.supabase, context.userId, data.eventId);
+    const { data: attendance, error } = await context.supabase
       .from("attendance_records")
       .select("*, students(id, first_name, last_name, student_email, nine_hundred_number)")
       .eq("event_id", data.eventId)
       .order("checked_in_at", { ascending: false });
 
-    return { event: event as EventWithClub, attendance: (attendance ?? []) as AttendanceRow[] };
+    if (error) throw new Error(error.message);
+    return { event, attendance: (attendance ?? []) as AttendanceRow[] };
   });
 
 function buildStudentPreview(student: { id: string; first_name: string; last_name: string; student_email: string }): PublicStudentPreview {

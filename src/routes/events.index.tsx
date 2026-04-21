@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
-import { EventCard, EmptyStateBlock, FilterBar, ManagementPageShell, PageHeader, PrimaryButton, SearchInput, SelectInput, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
+import { EventCard, EmptyStateBlock, FilterBar, ManagementPageShell, PageHeader, PrimaryButton, SearchInput, SelectInput, getManagementErrorMessage, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
 import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
 import { getHostClubSummaries, getHostEvents } from "@/lib/attendance-hq.functions";
 import type { ClubSummary, EventListStatusFilter, ManagementEventSummary } from "@/lib/attendance-hq";
@@ -59,7 +59,7 @@ function EventsRoute() {
           setEvents(nextEvents);
         }
       } catch (loadError) {
-        if (!cancelled) setError(loadError instanceof Error ? loadError.message : "Unable to load events.");
+        if (!cancelled) setError(getManagementErrorMessage(loadError, "Unable to load events."));
       } finally {
         if (!cancelled) setFetching(false);
       }

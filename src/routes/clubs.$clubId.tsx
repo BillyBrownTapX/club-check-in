@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { CalendarDays, Copy, Plus } from "lucide-react";
 import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
-import { ClubDialog, EmptyStateBlock, ManagementPageShell, PageHeader, PrimaryButton, SecondaryButton, StatsCard, TemplateCard, TemplateDialog, EventCard, FormCard, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
+import { ClubDialog, EmptyStateBlock, ManagementPageShell, PageHeader, PrimaryButton, SecondaryButton, StatsCard, TemplateCard, TemplateDialog, EventCard, FormCard, getManagementErrorMessage, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
 import { createEventTemplate, duplicateEventTemplate, getClubDetail, updateClub, updateEventTemplate } from "@/lib/attendance-hq.functions";
 import type { EventTemplateWithClub, ManagementEventSummary } from "@/lib/attendance-hq";
 
@@ -53,7 +53,7 @@ function ClubDetailRoute() {
         const nextData = await getClub({ data: { clubId } });
         if (!cancelled) setData(nextData);
       } catch (loadError) {
-        if (!cancelled) setError(loadError instanceof Error ? loadError.message : "Unable to load club.");
+        if (!cancelled) setError(getManagementErrorMessage(loadError, "Unable to load club."));
       } finally {
         if (!cancelled) setFetching(false);
       }
