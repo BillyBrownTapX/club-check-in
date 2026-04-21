@@ -67,6 +67,9 @@ function ResetPasswordRoute() {
       <AuthCard>
         <PageHeadingBlock eyebrow="Secure your account" title="Choose a new password" description="Set a new password and return directly to your mobile host workspace." />
         {success ? <SuccessBanner message="Password updated. Redirecting you back into Attendance HQ." /> : null}
+        <div className="rounded-[1.5rem] border border-border/80 bg-surface/70 px-4 py-4">
+          <p className="text-sm leading-6 text-foreground">Use a password you can enter quickly on mobile while still keeping your workspace protected.</p>
+        </div>
         <form className="space-y-4" onSubmit={(event) => void onSubmit(event)}>
           <PasswordInput label="New password" autoComplete="new-password" error={form.formState.errors.password?.message} {...form.register("password")} />
           <PasswordInput label="Confirm password" autoComplete="new-password" error={form.formState.errors.confirmPassword?.message} {...form.register("confirmPassword")} />

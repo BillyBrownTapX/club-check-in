@@ -23,7 +23,7 @@ export function AuthShell({ children }: { children: React.ReactNode }) {
 }
 
 export function AuthCard({ children }: { children: React.ReactNode }) {
-  return <Card className="w-full max-w-[28rem] rounded-[2.1rem] border-border/90 bg-card/95 shadow-[0_28px_72px_-40px_color-mix(in_oklab,var(--color-primary)_46%,transparent)]"><CardContent className="space-y-6 p-6 sm:p-7">{children}</CardContent></Card>;
+  return <Card className="w-full max-w-[28rem] rounded-[2.1rem] border-border/90 bg-card/95 shadow-[0_28px_72px_-40px_color-mix(in_oklab,var(--color-primary)_46%,transparent)]"><CardContent className="space-y-6 p-6 pb-8 sm:p-7 sm:pb-9">{children}</CardContent></Card>;
 }
 
 export function OnboardingShell({ children }: { children: React.ReactNode }) {
@@ -38,7 +38,7 @@ export function OnboardingShell({ children }: { children: React.ReactNode }) {
 }
 
 export function FormCard({ children }: { children: React.ReactNode }) {
-  return <Card className="w-full max-w-[32rem] rounded-[2.1rem] border-border/90 bg-card/95 shadow-[0_28px_72px_-40px_color-mix(in_oklab,var(--color-primary)_46%,transparent)]"><CardContent className="space-y-6 p-6 sm:p-7">{children}</CardContent></Card>;
+  return <Card className="w-full max-w-[32rem] rounded-[2.1rem] border-border/90 bg-card/95 shadow-[0_28px_72px_-40px_color-mix(in_oklab,var(--color-primary)_46%,transparent)]"><CardContent className="space-y-6 p-6 pb-8 sm:p-7 sm:pb-9">{children}</CardContent></Card>;
 }
 
 export function ProgressIndicator({ step, total, label }: { step: number; total: number; label: string }) {
@@ -125,5 +125,5 @@ export function SuccessBanner({ message }: { message: string }) {
 }
 
 export function AuthSupportLinks({ primary, secondary }: { primary: React.ReactNode; secondary?: React.ReactNode }) {
-  return <div className="flex flex-col items-center gap-3 text-center">{primary}{secondary}</div>;
+  return <div className="flex flex-col items-center gap-3 border-t border-border/70 pt-2 text-center">{primary}{secondary}</div>;
 }
