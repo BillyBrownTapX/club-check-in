@@ -9,6 +9,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { signInSchema } from "@/lib/attendance-hq-schemas";
 import { ensureClientHostProfile, getClientOnboardingState } from "@/lib/host-onboarding-client";
 
+function navigateToNextPath(navigate: ReturnType<typeof useNavigate>, nextPath: string) {
+  if (nextPath === "/onboarding/club") {
+    navigate({ to: "/onboarding/club" });
+    return;
+  }
+  if (nextPath === "/onboarding/event") {
+    navigate({ to: "/onboarding/event" });
+    return;
+  }
+  navigate({ to: "/clubs" });
+}
+
 const formSchema = signInSchema;
 type FormValues = z.infer<typeof formSchema>;
 
@@ -38,7 +50,7 @@ function SignInRoute() {
           navigate({ to: "/events/$eventId", params: { eventId: state.event.id } });
           return;
         }
-        window.location.href = state.nextPath;
+        navigateToNextPath(navigate, state.nextPath);
       }).catch(() => undefined);
     }
   }, [loading, navigate, user]);
@@ -61,7 +73,7 @@ function SignInRoute() {
       navigate({ to: "/events/$eventId", params: { eventId: state.event.id } });
       return;
     }
-    window.location.href = state.nextPath;
+    navigateToNextPath(navigate, state.nextPath);
   });
 
   return (

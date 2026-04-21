@@ -9,6 +9,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { resetPasswordSchema } from "@/lib/attendance-hq-schemas";
 import { getClientOnboardingState } from "@/lib/host-onboarding-client";
 
+function navigateToNextPath(navigate: ReturnType<typeof useNavigate>, nextPath: string) {
+  if (nextPath === "/onboarding/club") {
+    navigate({ to: "/onboarding/club" });
+    return;
+  }
+  if (nextPath === "/onboarding/event") {
+    navigate({ to: "/onboarding/event" });
+    return;
+  }
+  navigate({ to: "/clubs" });
+}
+
 const formSchema = resetPasswordSchema;
 type FormValues = z.infer<typeof formSchema>;
 
@@ -55,7 +67,7 @@ function ResetPasswordRoute() {
           navigate({ to: "/events/$eventId", params: { eventId: state.event.id } });
           return;
         }
-        window.location.href = state.nextPath;
+        navigateToNextPath(navigate, state.nextPath);
       }, 600);
     }
   });

@@ -15,8 +15,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
+  combineDateAndTime,
   formatEventDate,
   formatEventTime,
+  shiftTimeString,
   type Club,
   type ClubSummary,
   type EventFormPayload,
@@ -124,16 +126,18 @@ export function SearchInput({ value, onChange }: { value: string; onChange: (val
   );
 }
 
+const EMPTY_SELECT_VALUE = "__empty__";
+
 export function SelectInput({ label, value, onValueChange, placeholder, options }: { label: string; value: string; onValueChange: (value: string) => void; placeholder: string; options: { value: string; label: string }[] }) {
   return (
     <div className="space-y-2 min-w-[10rem]">
       <Label className="text-sm font-medium text-foreground">{label}</Label>
-      <Select value={value} onValueChange={onValueChange}>
+      <Select value={value || EMPTY_SELECT_VALUE} onValueChange={(nextValue) => onValueChange(nextValue === EMPTY_SELECT_VALUE ? "" : nextValue)}>
         <SelectTrigger className="h-11 rounded-xl">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
-          {options.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
+          {options.map((option) => <SelectItem key={option.value || EMPTY_SELECT_VALUE} value={option.value || EMPTY_SELECT_VALUE}>{option.label}</SelectItem>)}
         </SelectContent>
       </Select>
     </div>
@@ -406,17 +410,55 @@ export function TemplateDialog({ open, onOpenChange, clubId, initialValues, onSu
   );
 }
 
-export function EventForm({ payload, title, description, submitLabel, onSubmit }: { payload: EventFormPayload; title: string; description: string; submitLabel: string; onSubmit: (values: EventValues | EventUpdateValues) => Promise<void> }) {
+function getOffsetMinutes(referenceIso: string, eventDate: string, startTime: string) {
+  const reference = new Date(referenceIso).getTime();
+  const eventStart = new Date(combineDateAndTime(eventDate, `${startTime}:00`)).getTime();
+  if (Number.isNaN(reference) || Number.isNaN(eventStart)) return 0;
+  return Math.round((reference - eventStart) / 60000);
+}
+
+function DateTimeReadonly({ label, value }: { label: string; value: string }) {
+  const date = new Date(value);
+  const formatted = Number.isNaN(date.getTime())
+    ? "—"
+    : date.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+
+  return (
+    <div className="space-y-2 rounded-xl border border-border/70 bg-secondary/40 px-4 py-3">
+      <p className="text-sm font-medium text-foreground">{label}</p>
+      <p className="text-sm text-muted-foreground">{formatted}</p>
+    </div>
+  );
+}
+
+export function EventForm({ payload, title, description, submitLabel, onSubmit, cancelAction }: { payload: EventFormPayload; title: string; description: string; submitLabel: string; onSubmit: (values: EventValues | EventUpdateValues) => Promise<void>; cancelAction?: React.ReactNode }) {
   const navigate = useNavigate();
   const form = useForm<EventFormValues>({
     resolver: zodResolver(eventSchema),
     defaultValues: payload.initialValues,
   });
   const [error, setError] = useState("");
+  const [offsets, setOffsets] = useState(() => ({
+    openMinutes: getOffsetMinutes(payload.initialValues.checkInOpensAt, payload.initialValues.eventDate, payload.initialValues.startTime),
+    closeMinutes: getOffsetMinutes(payload.initialValues.checkInClosesAt, payload.initialValues.eventDate, payload.initialValues.startTime),
+  }));
 
   useEffect(() => {
     form.reset(payload.initialValues);
+    setOffsets({
+      openMinutes: getOffsetMinutes(payload.initialValues.checkInOpensAt, payload.initialValues.eventDate, payload.initialValues.startTime),
+      closeMinutes: getOffsetMinutes(payload.initialValues.checkInClosesAt, payload.initialValues.eventDate, payload.initialValues.startTime),
+    });
   }, [form, payload.initialValues]);
+
+  const eventDate = form.watch("eventDate");
+  const startTime = form.watch("startTime");
+
+  useEffect(() => {
+    if (!eventDate || !startTime) return;
+    form.setValue("checkInOpensAt", combineDateAndTime(eventDate, `${shiftTimeString(startTime, offsets.openMinutes)}:00`), { shouldValidate: true });
+    form.setValue("checkInClosesAt", combineDateAndTime(eventDate, `${shiftTimeString(startTime, offsets.closeMinutes)}:00`), { shouldValidate: true });
+  }, [eventDate, form, offsets.closeMinutes, offsets.openMinutes, startTime]);
 
   const submit = form.handleSubmit(async (values) => {
     setError("");
@@ -472,14 +514,18 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit }
                 <TimeInput label="End time" error={form.formState.errors.endTime?.message} {...form.register("endTime")} />
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
-                <TextInput label="Check-in opens at" error={form.formState.errors.checkInOpensAt?.message} {...form.register("checkInOpensAt")} />
-                <TextInput label="Check-in closes at" error={form.formState.errors.checkInClosesAt?.message} {...form.register("checkInClosesAt")} />
+                <input type="hidden" {...form.register("checkInOpensAt")} />
+                <input type="hidden" {...form.register("checkInClosesAt")} />
+                <DateTimeReadonly label="Check-in opens" value={form.watch("checkInOpensAt")} />
+                <DateTimeReadonly label="Check-in closes" value={form.watch("checkInClosesAt")} />
               </div>
+              {form.formState.errors.checkInOpensAt?.message ? <p className="text-sm text-destructive">{form.formState.errors.checkInOpensAt.message}</p> : null}
+              {form.formState.errors.checkInClosesAt?.message ? <p className="text-sm text-destructive">{form.formState.errors.checkInClosesAt.message}</p> : null}
               {error ? <p className="text-sm text-destructive">{error}</p> : null}
               <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
                 <p className="text-sm text-muted-foreground">You can edit this event later.</p>
                 <div className="flex gap-2">
-                  <SecondaryButton type="button" onClick={() => window.history.back()}>Cancel</SecondaryButton>
+                  {cancelAction ?? <SecondaryButton asChild><Link to="/events">Cancel</Link></SecondaryButton>}
                   <PrimaryButton type="submit">{submitLabel}</PrimaryButton>
                 </div>
               </div>
