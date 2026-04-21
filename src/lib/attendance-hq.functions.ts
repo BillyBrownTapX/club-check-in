@@ -4,6 +4,7 @@ import { notFound, redirect } from "@tanstack/react-router";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import {
+  buildHostOnboardingState,
   combineDateAndTime,
   createDeviceToken,
   createQrToken,
@@ -15,6 +16,7 @@ import {
   type EventSummary,
   type EventTemplateWithClub,
   type EventWithClub,
+  type HostOnboardingState,
   type HostProfile,
   type PublicStudentPreview,
 } from "@/lib/attendance-hq";
@@ -25,10 +27,65 @@ import {
   fastCheckInSchema,
   forgotPasswordSchema,
   removeAttendanceSchema,
+  resetPasswordSchema,
   returningLookupSchema,
+  signInSchema,
   signUpSchema,
   studentRegistrationSchema,
 } from "@/lib/attendance-hq-schemas";
+
+async function ensureHostProfile(userId: string, fallback?: { fullName?: string | null; email?: string | null }) {
+  const { data: existingProfile, error: existingError } = await supabaseAdmin
+    .from("host_profiles")
+    .select("*")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (existingError) throw new Error(existingError.message);
+  if (existingProfile) return existingProfile as HostProfile;
+
+  const fullName = fallback?.fullName?.trim() || fallback?.email?.split("@")[0] || "Host";
+  const email = fallback?.email?.trim().toLowerCase();
+
+  const { data: createdProfile, error: createError } = await supabaseAdmin
+    .from("host_profiles")
+    .upsert({ id: userId, full_name: fullName, email: email ?? `${userId}@attendancehq.local` }, { onConflict: "id" })
+    .select("*")
+    .single();
+
+  if (createError || !createdProfile) throw new Error(createError?.message ?? "Unable to create host profile");
+  return createdProfile as HostProfile;
+}
+
+async function resolveHostOnboardingState(userId: string): Promise<HostOnboardingState> {
+  const [{ data: profile, error: profileError }, { data: club, error: clubError }] = await Promise.all([
+    supabaseAdmin.from("host_profiles").select("*").eq("id", userId).maybeSingle(),
+    supabaseAdmin.from("clubs").select("*").eq("host_id", userId).order("created_at", { ascending: true }).limit(1).maybeSingle(),
+  ]);
+
+  if (profileError) throw new Error(profileError.message);
+  if (clubError) throw new Error(clubError.message);
+
+  let event = null;
+  if (club?.id) {
+    const { data: firstEvent, error: eventError } = await supabaseAdmin
+      .from("events")
+      .select("*")
+      .eq("club_id", club.id)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (eventError) throw new Error(eventError.message);
+    event = firstEvent;
+  }
+
+  return buildHostOnboardingState({
+    profile: (profile as HostProfile | null) ?? null,
+    club: (club as Club | null) ?? null,
+    event: (event as EventWithClub | null) ?? null,
+  });
+}
 
 async function requireHostProfile(userId: string) {
   const { data, error } = await supabaseAdmin.from("host_profiles").select("*").eq("id", userId).single();
