@@ -1,173 +1,42 @@
 
-Apply the new UNG brand system across the entire app by rebuilding the global theme, typography, and shared primitives first, then propagating those changes through every host, auth, onboarding, public check-in, club, and event screen.
 
-1. Rebuild the global brand foundation
-- Update `src/styles.css` to align the entire app with the UNG palette:
-  - add semantic tokens for `ung-blue`, `ung-blue-light`, `ung-blue-soft`, `ung-blue-muted`, `ung-gold`, `ung-gold-light`, `ung-navy`, and `ung-cream`
-  - remap existing system tokens (`background`, `foreground`, `card`, `muted`, `border`, `primary`, `accent`, etc.) to the requested brand values
-  - reduce the current dark, smoky enterprise feel and shift to a brighter premium blue-and-gold UNG system
-- Add utility classes for:
-  - `.font-display`
-  - `.text-gradient-gold`
-  - `.text-gradient-blue`
-  - hero/final-CTA blue gradients
-  - subtle blur decorative blobs and reusable elevated surface treatments
-- Update base typography in the global stylesheet:
-  - Plus Jakarta Sans for all headings
-  - Inter for body/UI
-  - stronger heading hierarchy and more readable body defaults
-- Keep the app mobile-first and consistent with existing safe-area behavior.
+## Goal
 
-2. Align shared button and control styling to the new brand variants
-- Update `src/components/ui/button.tsx` so shared buttons support the requested system:
-  - `default`
-  - `hero`
-  - `gold`
-  - `gold-outline`
-  - refined `outline`, `secondary`, and `ghost`
-- Increase touch-friendly sizing and visual prominence:
-  - stronger radii
-  - bolder font weights
-  - clearer shadows
-  - improved hover/press states
-- Ensure existing app usages still work while giving page-level screens access to the new branded CTA treatments.
+Stop hiding the real error and stop the root error/404 boundaries from crashing themselves.
 
-3. Refresh app shell, root framing, and global error states
-- Update `src/routes/__root.tsx` so the global shell matches the UNG design language:
-  - lighter premium canvas
-  - cleaner branded error / 404 states
-  - more consistent branded primary and secondary actions
-- Refine the app shell background treatment to use subtle UNG blue tints and warm neutral surfaces rather than the current heavier enterprise shading.
+## Root cause
 
-4. Refresh shared Attendance HQ primitives
-- Update `src/components/attendance-hq/primitives.tsx`:
-  - restyle `AttendanceLogo` so the uploaded logo area fits the new brand framing
-  - align public cards, badges, KPIs, headers, and action cards to the new palette
-  - switch headings to display typography
-  - update supporting copy colors and surfaces to use the new blue/gold/cream system
-- Keep logo upload behavior unchanged while visually integrating it better into headers and landing areas.
+The "useAttendanceAuth must be used within AttendanceAuthProvider" message the user sees is a **secondary crash**, not the actual problem.
 
-5. Refresh shared auth and onboarding primitives
-- Update `src/components/attendance-hq/host-onboarding.tsx`:
-  - brand `AuthShell`, `AuthCard`, `OnboardingShell`, `FormCard`, and `ProgressIndicator`
-  - use UNG blue hero-style framing, gold accent moments, and cleaner white card surfaces
-  - apply Plus Jakarta Sans to major headings and stronger button hierarchy
-- Make form controls, support links, success banners, and sticky actions visually consistent with the new palette.
+What's happening:
+1. Some underlying error (or 404) occurs in a route.
+2. The error bubbles up to the root-level fallback in `src/routes/__root.tsx` (`RootErrorComponent` or `NotFoundComponent`).
+3. Those root fallbacks render `<AttendanceLogo />`. `AttendanceLogo` calls `useAttendanceAuth()` because of the logo upload flow.
+4. Root-level `errorComponent` / `notFoundComponent` render OUTSIDE `RootComponent`, which is where `<AttendanceAuthProvider>` lives. The context is missing, so `AttendanceLogo` throws.
+5. That secondary crash replaces the original error in the overlay, so every page (sign-in, /events, event detail) ends up showing the auth-provider message instead of the real cause.
 
-6. Refresh shared host-management primitives
-- Update `src/components/attendance-hq/host-management.tsx`:
-  - restyle `PageHeader`, `FormCard`, `StatsCard`, `FilterBar`, `MetaPill`, `ClubCard`, `EventCard`, `TemplateCard`, dialogs, and input wrappers
-  - apply the new brand hierarchy across management screens:
-    - stronger blue section framing
-    - white elevated cards
-    - soft blue and cream supporting surfaces
-    - gold for premium CTA emphasis and key highlights
-- Preserve all business logic and university-linked club/event flows while changing the visual system.
+There's a parallel masking problem in `src/router.tsx`'s `DefaultErrorComponent`: the error message is wrapped in `import.meta.env.DEV`, so in the deployed preview the user sees only "Something went wrong" with no diagnostics.
 
-7. Refresh shared public student check-in primitives
-- Update `src/components/attendance-hq/public-check-in.tsx` so the entire public flow inherits the new system:
-  - stronger UNG-branded event header
-  - clearer primary and success states
-  - improved gold/blue CTA hierarchy
-  - larger heading hierarchy using display type
-- Keep the progressive check-in structure intact while making the experience feel faster, cleaner, and more branded.
+## Fix
 
-8. Update landing and entry experience
-- Refresh `src/routes/index.tsx`:
-  - convert the current landing hero to a more brand-forward UNG presentation
-  - use blue gradient hero framing, gold CTA emphasis, brighter contrast, and stronger typography
-  - update cards/highlights to reflect the new palette and text gradient utilities
-- Ensure the route feels consistent with the new requested design direction, not just the internal host workspace.
+1. **Make root fallbacks provider-independent** in `src/routes/__root.tsx`.
+   - Replace `<AttendanceLogo />` inside `RootErrorComponent` and `NotFoundComponent` with a static, auth-free brand mark (simple text/wordmark "Attendance HQ" using `font-display`, no context, no Supabase calls).
+   - Keep the existing layout, copy, and CTAs.
 
-9. Update auth flows
-- Refresh:
-  - `src/routes/sign-in.tsx`
-  - `src/routes/sign-up.tsx`
-  - `src/routes/forgot-password.tsx`
-  - `src/routes/reset-password.tsx`
-- Apply the new branded system consistently:
-  - stronger blue/white/gold balance
-  - display-type page titles
-  - improved trust panels and support blocks
-  - updated CTA treatments using the new button variants
-- Keep all auth logic unchanged.
+2. **Surface the underlying error** in `src/router.tsx`'s `DefaultErrorComponent`.
+   - Always render the error message (drop the `import.meta.env.DEV` gate) inside the existing `<pre>` so we can actually diagnose route-level crashes in preview/production.
+   - Also log it to `console.error` for the network/console panels.
 
-10. Update onboarding flows
-- Refresh:
-  - `src/routes/onboarding.club.tsx`
-  - `src/routes/onboarding.event.tsx`
-- Bring university selection, setup forms, and progress blocks into the new brand system:
-  - clearer form sections
-  - stronger display headings
-  - improved blue-tinted section wrappers
-  - branded sticky submit zones
-- Keep all onboarding logic and validation intact.
+3. **Defensive logging in `__root.tsx`'s `RootErrorComponent`** so that if it ever fires again we get the original error printed in the console with a clear `[root-error]` tag (already partially present — confirm it stays and add the error stack).
 
-11. Update clubs management screens
-- Refresh:
-  - `src/routes/clubs.index.tsx`
-  - `src/routes/clubs.$clubId.tsx`
-- Apply the new branded cards, stats, action bars, and page headers.
-- Make university context more visible visually using the new palette and pill treatments.
-- Preserve club creation/edit behavior and required university linkage.
+4. **Confirm the underlying error after the masking is removed.** Once the auth-context crash stops happening, the next reload of `/events`, `/sign-in`, and `/events/$eventId` will show the real error message in the overlay. Based on the server logs (clubs row coming back with `university_id: null` and `universities: null` for the Sales Club), the most likely real failure is a downstream renderer assuming `event.clubs.universities` exists. After the fallback fix lands, address whichever real error appears (expected: harden the events screens against null `universities` / `university_id` from legacy clubs that haven't been backfilled).
 
-12. Update events management screens
-- Refresh:
-  - `src/routes/events.index.tsx`
-  - `src/routes/events.new.tsx`
-  - `src/routes/events.$eventId.edit.tsx`
-  - `src/routes/events.$eventId.tsx`
-  - `src/routes/events.$eventId.display.tsx`
-- Bring the full events experience into the UNG system:
-  - blue/gold action hierarchy
-  - stronger section cards
-  - branded stats tiles
-  - better treatment for QR display, live counts, filters, dialogs, and roster rows
-- Keep event creation/edit logic, university inheritance, and event ops behavior unchanged.
+## Files touched
 
-13. Update public student flow routes
-- Refresh `src/routes/check-in.$qrToken.tsx` so the new progressive flow screens visually match the requested palette and typography.
-- Re-theme:
-  - 900 number entry
-  - returning student confirmation
-  - first-time creation form
-  - success/already-checked-in states
-  - blocked/error screens
-- Preserve the new university-scoped check-in logic.
+- `src/routes/__root.tsx` — swap AttendanceLogo in `RootErrorComponent` and `NotFoundComponent` for a static wordmark; keep error logging.
+- `src/router.tsx` — always render the error message in `DefaultErrorComponent`; add `console.error`.
 
-14. Font-loading alignment
-- Because the requested spec references Google fonts in `src/index.css` while this project currently uses `src/styles.css`, add the font imports in the actual global stylesheet used by the app and wire them into the base rules there.
-- Do not create a stray unused `src/index.css`; keep the font system aligned with the existing TanStack root stylesheet path.
+## Out of scope for this pass
 
-15. Implementation safeguards
-- Do not change routing, server functions, or database behavior unless a style update requires a small supporting prop/class refactor.
-- Preserve:
-  - uploaded logo rendering/upload behavior
-  - university-linked club/event/student relationships
-  - progressive public check-in logic
-  - existing mobile-first safe-area patterns
+No design changes, no schema changes, no auth changes. This is strictly an error-handling / observability fix so the actual bug becomes visible. The follow-up (likely: null-safe rendering when a club hasn't been linked to a university yet) will be handled in a separate pass once the real error is unmasked.
 
-16. Validation after implementation
-- Verify all routes visually at the current mobile viewport first:
-  - `/`
-  - `/sign-in`
-  - `/sign-up`
-  - `/forgot-password`
-  - `/reset-password`
-  - `/onboarding/club`
-  - `/onboarding/event`
-  - `/clubs`
-  - `/clubs/$clubId`
-  - `/events`
-  - `/events/new`
-  - `/events/$eventId/edit`
-  - `/events/$eventId`
-  - `/events/$eventId/display`
-  - `/check-in/$qrToken`
-- Check for consistency in:
-  - UNG blue/gold/cream palette usage
-  - Plus Jakarta Sans headings and Inter body text
-  - button variants and CTA prominence
-  - surface contrast, borders, and shadows
-  - mobile spacing and safe-area polish
-- Run a typecheck after the styling pass to catch any incidental component prop mismatches introduced during the UI refresh.
