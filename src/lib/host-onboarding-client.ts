@@ -120,7 +120,8 @@ export async function getHostEventDetail(eventId: string, userId: string) {
     .maybeSingle();
 
   if (eventError) throw new Error(eventError.message);
-  if (!event || !event.clubs || event.clubs.host_id !== userId) return null;
+  const eventWithOwner = event as (EventWithClub & { clubs: (EventWithClub["clubs"] & { host_id?: string }) | null }) | null;
+  if (!eventWithOwner || !eventWithOwner.clubs || eventWithOwner.clubs.host_id !== userId) return null;
 
   const { data: attendance, error: attendanceError } = await supabase
     .from("attendance_records")
@@ -131,7 +132,7 @@ export async function getHostEventDetail(eventId: string, userId: string) {
   if (attendanceError) throw new Error(attendanceError.message);
 
   return {
-    event: event as EventWithClub,
+    event: eventWithOwner as EventWithClub,
     attendance: (attendance ?? []) as AttendanceRow[],
   };
 }

@@ -6,7 +6,6 @@ import { z } from "zod";
 import { DateInput, FormCard, InlineErrorMessage, OnboardingShell, PageHeadingBlock, PrimaryButton, ProgressIndicator, SecondaryTextLink, TextInput, TimeInput } from "@/components/attendance-hq/host-onboarding";
 import { useAttendanceAuth } from "@/components/attendance-hq/auth-provider";
 import { buildEventDefaults, combineDateAndTime, shiftTimeString } from "@/lib/attendance-hq";
-import { eventSchema } from "@/lib/attendance-hq-schemas";
 import { createFirstEvent, ensureClientHostProfile, getClientOnboardingState } from "@/lib/host-onboarding-client";
 
 const formSchema = z.object({
