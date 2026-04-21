@@ -206,18 +206,19 @@ export function SearchInput({ value, onChange }: { value: string; onChange: (val
 
 const EMPTY_SELECT_VALUE = "__empty__";
 
-export function SelectInput({ label, value, onValueChange, placeholder, options }: { label: string; value: string; onValueChange: (value: string) => void; placeholder: string; options: { value: string; label: string }[] }) {
+export function SelectInput({ label, value, onValueChange, placeholder, options, error }: { label: string; value: string; onValueChange: (value: string) => void; placeholder: string; options: { value: string; label: string }[]; error?: string }) {
   return (
       <div className="space-y-2 min-w-[10rem]">
       <Label className="text-sm font-semibold text-foreground">{label}</Label>
       <Select value={value || EMPTY_SELECT_VALUE} onValueChange={(nextValue) => onValueChange(nextValue === EMPTY_SELECT_VALUE ? "" : nextValue)}>
-        <SelectTrigger className="h-12 rounded-2xl border-border/80 bg-background/90">
+        <SelectTrigger className={cn("h-12 rounded-2xl border-border/80 bg-background/90", error && "border-destructive ring-1 ring-destructive/40")}>
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
           {options.map((option) => <SelectItem key={option.value || EMPTY_SELECT_VALUE} value={option.value || EMPTY_SELECT_VALUE}>{option.label}</SelectItem>)}
         </SelectContent>
       </Select>
+      {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </div>
   );
 }
