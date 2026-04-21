@@ -74,7 +74,7 @@ function SignInRoute() {
   return (
     <AuthShell>
       <AuthCard>
-        <PageHeadingBlock title="Sign in" description="Pick up where you left off and keep attendance moving." />
+        <PageHeadingBlock eyebrow="Welcome back" title="Sign in" description="Pick up where you left off and keep attendance moving from any room, event, or device." />
         {reasonMessage ? <SuccessBanner message={reasonMessage} /> : null}
         <form className="space-y-4" onSubmit={(event) => void onSubmit(event)}>
           <EmailInput label="Email" error={form.formState.errors.email?.message} {...form.register("email")} />

@@ -47,7 +47,7 @@ function ForgotPasswordRoute() {
   return (
     <AuthShell>
       <AuthCard>
-        <PageHeadingBlock title="Reset your password" description="We’ll send a reset link so you can get back into your account." />
+        <PageHeadingBlock eyebrow="Account recovery" title="Reset your password" description="We’ll send a reset link so you can get back into your host workspace quickly." />
         {success ? <SuccessBanner message="If that email matches an account, we’ve sent a reset link. Check your inbox to continue." /> : null}
         <form className="space-y-4" onSubmit={(event) => void onSubmit(event)}>
           <EmailInput label="Email" error={form.formState.errors.email?.message} {...form.register("email")} />
