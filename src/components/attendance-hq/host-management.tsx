@@ -541,6 +541,62 @@ interface DialogBaseProps {
   onOpenChange: (open: boolean) => void;
 }
 
+// Reusable destructive confirm button with an AlertDialog + in-flight guard.
+// Used for deleting clubs and events from every entry point (list cards,
+// detail pages, edit dialogs) so the confirmation UX stays consistent.
+export function DeleteConfirmButton({
+  trigger,
+  title,
+  description,
+  confirmLabel = "Delete",
+  onConfirm,
+}: {
+  trigger: React.ReactNode;
+  title: string;
+  description: React.ReactNode;
+  confirmLabel?: string;
+  onConfirm: () => Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleConfirm = async (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    if (deleting) return;
+    setDeleting(true);
+    try {
+      await onConfirm();
+      setOpen(false);
+    } catch (deleteError) {
+      toast.error(getManagementErrorMessage(deleteError, "Unable to delete."));
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <AlertDialog open={open} onOpenChange={(next) => { if (!deleting) setOpen(next); }}>
+      <AlertDialogTrigger asChild>{trigger}</AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{description}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            disabled={deleting}
+            onClick={handleConfirm}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            {deleting ? "Deleting…" : confirmLabel}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+}
+
 export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, title, description, universities }: DialogBaseProps & { initialValues?: Partial<ClubUpdateValues> & { logoPath?: string | null }; onSubmit: (values: ClubCreateValues | ClubUpdateValues) => Promise<void>; title: string; description: string; universities: University[] }) {
   const isEdit = Boolean(initialValues?.clubId);
   const form = useForm<ClubCreateValues | ClubUpdateValues>({
