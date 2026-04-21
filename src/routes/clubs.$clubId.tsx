@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { Link, createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { CalendarDays, Copy, Plus } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { ClubDialog, EmptyStateBlock, ManagementPageShell, PageHeader, PrimaryButton, SecondaryButton, StatsCard, TemplateCard, TemplateDialog, EventCard, FormCard, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
@@ -15,7 +15,6 @@ function ClubDetailError({ error }: { error: Error }) {
 }
 
 export const Route = createFileRoute("/clubs/$clubId")({
-  loader: ({ params }) => getClubDetail({ data: { clubId: params.clubId } }),
   errorComponent: ClubDetailError,
   notFoundComponent: ClubDetailNotFound,
   head: () => ({
@@ -29,9 +28,10 @@ export const Route = createFileRoute("/clubs/$clubId")({
 
 function ClubDetailRoute() {
   const { loading, user } = useRequireHostRedirect();
-  const data = Route.useLoaderData();
+  const { clubId } = Route.useParams();
   const router = useRouter();
   const navigate = useNavigate();
+  const getClub = useServerFn(getClubDetail);
   const updateClubMutation = useServerFn(updateClub);
   const createTemplateMutation = useServerFn(createEventTemplate);
   const updateTemplateMutation = useServerFn(updateEventTemplate);
@@ -39,10 +39,39 @@ function ClubDetailRoute() {
   const [clubDialogOpen, setClubDialogOpen] = useState(false);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<EventTemplateWithClub | null>(null);
+  const [data, setData] = useState<Awaited<ReturnType<typeof getClubDetail>> | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [fetching, setFetching] = useState(true);
 
-  const title = useMemo(() => data.club.club_name, [data.club.club_name]);
+  useEffect(() => {
+    if (loading || !user) return;
+    let cancelled = false;
 
-  if (loading || !user) return null;
+    const load = async () => {
+      setFetching(true);
+      setError(null);
+      try {
+        const nextData = await getClub({ data: { clubId } });
+        if (!cancelled) setData(nextData);
+      } catch (loadError) {
+        if (!cancelled) setError(loadError instanceof Error ? loadError.message : "Unable to load club.");
+      } finally {
+        if (!cancelled) setFetching(false);
+      }
+    };
+
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [clubId, getClub, loading, user]);
+
+  const title = useMemo(() => data?.club.club_name ?? "Club", [data?.club.club_name]);
+
+  if (loading || !user) return <ManagementPageShell><div className="py-16 text-center text-sm text-muted-foreground">Loading club…</div></ManagementPageShell>;
+  if (fetching) return <ManagementPageShell><div className="py-16 text-center text-sm text-muted-foreground">Loading club…</div></ManagementPageShell>;
+  if (error) return <ClubDetailError error={new Error(error)} />;
+  if (!data) return <ClubDetailNotFound />;
 
   return (
     <ManagementPageShell>
@@ -50,7 +79,7 @@ function ClubDetailRoute() {
         <PageHeader
           title={title}
           description={data.club.description || "Manage upcoming events, past attendance, and recurring templates for this club."}
-          action={<PrimaryButton asChild><a href={`/events/new?clubId=${data.club.id}`}>Create Event</a></PrimaryButton>}
+          action={<PrimaryButton asChild><Link to="/events/new" search={{ clubId: data.club.id }}>Create Event</Link></PrimaryButton>}
         />
 
         <FormCard>
@@ -63,7 +92,7 @@ function ClubDetailRoute() {
               <p className="text-sm text-muted-foreground">{data.club.description || "Add a short description to help your team identify this club."}</p>
             </div>
             <div className="flex flex-wrap gap-2">
-              <PrimaryButton asChild><a href={`/events/new?clubId=${data.club.id}`}>Create Event</a></PrimaryButton>
+              <PrimaryButton asChild><Link to="/events/new" search={{ clubId: data.club.id }}>Create Event</Link></PrimaryButton>
               <SecondaryButton type="button" onClick={() => { setEditingTemplate(null); setTemplateDialogOpen(true); }}>Create Template</SecondaryButton>
               <SecondaryButton type="button" onClick={() => setClubDialogOpen(true)}>Edit Club</SecondaryButton>
             </div>
@@ -79,21 +108,21 @@ function ClubDetailRoute() {
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-foreground">Upcoming events</h2>
-            <SecondaryButton asChild><a href={`/events?clubId=${data.club.id}&status=upcoming`}>View All</a></SecondaryButton>
+            <SecondaryButton asChild><Link to="/events" search={{ clubId: data.club.id, status: "upcoming", query: "" }}>View All</Link></SecondaryButton>
           </div>
           {data.upcomingEvents.length ? (
             <div className="grid gap-4 lg:grid-cols-2">
               {data.upcomingEvents.map((event: ManagementEventSummary) => <EventCard key={event.id} event={event} showClub={false} onDuplicate={(eventId) => navigate({ to: "/events/new", search: { duplicateFrom: eventId } })} />)}
             </div>
           ) : (
-            <EmptyStateBlock title="No upcoming events" description="Create your next event to start tracking attendance." action={<PrimaryButton asChild><a href={`/events/new?clubId=${data.club.id}`}>Create Event</a></PrimaryButton>} />
+            <EmptyStateBlock title="No upcoming events" description="Create your next event to start tracking attendance." action={<PrimaryButton asChild><Link to="/events/new" search={{ clubId: data.club.id }}>Create Event</Link></PrimaryButton>} />
           )}
         </section>
 
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-foreground">Past events</h2>
-            <SecondaryButton asChild><a href={`/events?clubId=${data.club.id}&status=past`}>View All</a></SecondaryButton>
+            <SecondaryButton asChild><Link to="/events" search={{ clubId: data.club.id, status: "past", query: "" }}>View All</Link></SecondaryButton>
           </div>
           {data.pastEvents.length ? (
             <div className="grid gap-4 lg:grid-cols-2">
@@ -118,8 +147,8 @@ function ClubDetailRoute() {
                   onUse={(templateId) => navigate({ to: "/events/new", search: { templateId } })}
                   onEdit={(template) => { setEditingTemplate(template); setTemplateDialogOpen(true); }}
                   onDuplicate={async (templateId) => {
-                    await duplicateTemplateMutation({ data: { templateId } });
-                    await router.invalidate({ sync: true });
+                     await duplicateTemplateMutation({ data: { templateId } });
+                     setData(await getClub({ data: { clubId } }));
                   }}
                 />
               ))}
@@ -136,8 +165,8 @@ function ClubDetailRoute() {
           description="Keep this club’s details current."
           initialValues={{ clubId: data.club.id, clubName: data.club.club_name, description: data.club.description ?? "", isActive: data.club.is_active }}
           onSubmit={async (values) => {
-            await updateClubMutation({ data: values as never });
-            await router.invalidate({ sync: true });
+             await updateClubMutation({ data: values as never });
+             setData(await getClub({ data: { clubId } }));
           }}
         />
 
@@ -159,9 +188,9 @@ function ClubDetailRoute() {
             defaultCheckInCloseOffsetMinutes: editingTemplate.default_check_in_close_offset_minutes,
           } : undefined}
           onSubmit={async (values) => {
-            if (editingTemplate) await updateTemplateMutation({ data: values as never });
-            else await createTemplateMutation({ data: values as never });
-            await router.invalidate({ sync: true });
+             if (editingTemplate) await updateTemplateMutation({ data: values as never });
+             else await createTemplateMutation({ data: values as never });
+             setData(await getClub({ data: { clubId } }));
           }}
         />
       </div>

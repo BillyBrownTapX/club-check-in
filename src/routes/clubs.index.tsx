@@ -71,7 +71,7 @@ function ClubsRoute() {
         {fetching ? (
           <div className="py-16 text-center text-sm text-muted-foreground">Loading your clubs…</div>
         ) : error ? (
-          <ClubsError error={new Error(error)} />
+          <div className="py-16 text-center text-sm text-muted-foreground">{error}</div>
         ) : clubs.length ? (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {clubs.map((club: ClubSummary) => <ClubCard key={club.id} club={club} />)}
