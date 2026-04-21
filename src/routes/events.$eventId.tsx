@@ -462,71 +462,80 @@ function EventDetailRoute() {
     setRefreshing(false);
   };
 
+  const statusChipTone: "success" | "blue" | "muted" | "destructive" =
+    status === "open" ? "success" : status === "upcoming" ? "blue" : status === "archived" ? "destructive" : "muted";
+
+  const historyOptions = [
+    { value: "recent" as const, label: "Recent" },
+    { value: "removed" as const, label: "Removed" },
+    { value: "actions" as const, label: "Actions" },
+    { value: "review" as const, label: "Review" },
+  ];
+
   return (
     <ManagementPageShell>
-        <div className="space-y-5 pb-20 md:pb-0">
-        <PageHeader
+      <div className="space-y-5 pb-6">
+        <LargeTitleHeader
+          eyebrow={event.clubs?.club_name ?? "Club event"}
           title={event.event_name}
-          description={event.clubs?.club_name ?? "Club event"}
-          action={
-            <div className="grid w-full grid-cols-2 gap-2 sm:flex sm:w-auto sm:flex-wrap">
-              <SecondaryButton asChild>
-                <Link to="/events/$eventId/edit" params={{ eventId }} search={{ created: "" }}>
-                  <Pencil className="h-4 w-4" />
-                  <span className="hidden sm:inline">Edit</span>
-                </Link>
-              </SecondaryButton>
-              <SecondaryButton type="button" onClick={() => void handleDuplicate()} disabled={duplicating}>
-                <Copy className="h-4 w-4" />
-                <span className="hidden sm:inline">{duplicating ? "Duplicating…" : "Duplicate"}</span>
-              </SecondaryButton>
-              <SecondaryButton asChild>
-                <Link to="/events/$eventId/display" params={{ eventId }} search={{ created: "" }}>
-                  <Maximize2 className="h-4 w-4" />
-                  <span className="hidden sm:inline">Display QR</span>
-                </Link>
-              </SecondaryButton>
-              <PrimaryButton type="button" onClick={() => setManualDialogOpen(true)}>
-                <Plus className="h-4 w-4" />
-                <span className="hidden sm:inline">Manual check-in</span>
-                <span className="sm:hidden">Manual</span>
-              </PrimaryButton>
-              <DeleteConfirmButton
-                trigger={
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="h-12 rounded-xl border-destructive/30 px-4 text-sm font-semibold text-destructive hover:bg-destructive/10 hover:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                    <span className="hidden sm:inline">Delete</span>
-                  </Button>
-                }
-                title="Delete this event?"
-                description="This permanently removes the event, its attendance records, and action history. This cannot be undone."
-                onConfirm={async () => {
-                  await deleteEventMutation({ data: { eventId } });
-                  toast.success("Event deleted");
-                  navigate({ to: "/events", search: { clubId: "", status: "all", query: "" } });
-                }}
-              />
-            </div>
+          trailing={
+            <Button asChild variant="tonal" size="icon" className="rounded-full" aria-label="Edit event">
+              <Link to="/events/$eventId/edit" params={{ eventId }} search={{ created: "" }}>
+                <Pencil className="h-[18px] w-[18px]" />
+              </Link>
+            </Button>
           }
         />
 
-        <div className="grid grid-cols-2 gap-3">
-          <OpsMetric label="Event date" value={formatEventDate(event.event_date)} detail={formatEventTime(event.start_time, event.end_time)} />
-          <OpsMetric label="Location" value={event.location || "TBA"} detail={statusBanner.title} />
+        {/* Hero card */}
+        <div
+          className={cn(
+            "rounded-[1.75rem] p-5",
+            status === "open" ? "hero-wash text-foreground" : "ios-card",
+          )}
+        >
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <CalendarDays className="h-4 w-4 text-muted-foreground" />
+                <p className="text-[14px] font-semibold text-foreground">{formatEventDate(event.event_date)}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Clock3 className="h-4 w-4 text-muted-foreground" />
+                <p className="text-[14px] text-foreground/90">{formatEventTime(event.start_time, event.end_time)}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <MapPin className="h-4 w-4 text-muted-foreground" />
+                <p className="truncate text-[14px] text-foreground/90">{event.location || "Location TBA"}</p>
+              </div>
+            </div>
+            <Chip tone={statusChipTone}>
+              {status === "open" ? "Live" : status === "upcoming" ? "Upcoming" : status === "archived" ? "Archived" : "Closed"}
+            </Chip>
+          </div>
+          <div className="mt-4 flex items-end justify-between border-t border-border/60 pt-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Checked in</p>
+              <p className="font-display text-[34px] font-extrabold leading-none tracking-tight text-foreground">
+                {summary?.total ?? attendance.length}
+              </p>
+            </div>
+            <div className="text-right">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Recent</p>
+              <p className="font-display text-[20px] font-bold text-foreground">
+                {summary?.recent ?? 0}
+                <span className="ml-1 text-[12px] font-medium text-muted-foreground">/ 15m</span>
+              </p>
+            </div>
+          </div>
         </div>
-
-        <StatusBanner banner={statusBanner} />
 
         {softError ? (
           <div className="flex items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-foreground">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
             <div className="flex-1 space-y-1">
               <p className="font-medium">Live updates paused</p>
-              <p className="text-muted-foreground">{softError} The dashboard is showing the most recent successful snapshot.</p>
+              <p className="text-muted-foreground">{softError}</p>
             </div>
             <Button type="button" variant="outline" size="sm" className="rounded-xl" onClick={() => void handleManualRefresh()}>
               Retry
@@ -534,251 +543,328 @@ function EventDetailRoute() {
           </div>
         ) : null}
 
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatsCard label="Attendance" value={summary?.total ?? attendance.length} hint="Total checked in" />
-          <StatsCard label="Recent arrivals" value={summary?.recent ?? 0} hint="Last 15 minutes" />
-          <StatsCard label="Check-in opens" value={Number.isNaN(opensAt.getTime()) ? "—" : opensAt.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} hint={formatEventDate(event.event_date)} />
-          <StatsCard label="Check-in closes" value={Number.isNaN(closesAt.getTime()) ? "—" : closesAt.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} hint={status === "open" ? "Open right now" : status === "upcoming" ? "Not open yet" : "Closed / archived"} />
+        {/* 2x2 quick actions */}
+        <div className="grid grid-cols-2 gap-3">
+          <ActionTile
+            icon={QrCode}
+            label="Show QR"
+            hint="Full screen"
+            tone="gold"
+            to="/events/$eventId/display"
+            params={{ eventId }}
+            search={{ created: "" }}
+          />
+          <ActionTile
+            icon={UserPlus}
+            label="Manual check-in"
+            hint="Add a student"
+            tone="blue"
+            onClick={() => setManualDialogOpen(true)}
+          />
+          <ActionTile
+            icon={Maximize2}
+            label="Display"
+            hint="Project to TV"
+            to="/events/$eventId/display"
+            params={{ eventId }}
+            search={{ created: "" }}
+          />
+          <ActionTile
+            icon={Download}
+            label={exporting ? "Exporting…" : "Export CSV"}
+            hint="Download roster"
+            onClick={() => void handleExportCsv()}
+          />
         </div>
 
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1.7fr)_24rem]">
-          <div className="space-y-6">
-            <Card className="rounded-[2rem] border-border/90 bg-card/95 shadow-[0_26px_60px_-36px_color-mix(in_oklab,var(--color-primary)_36%,transparent)]">
-              <CardContent className="space-y-4 p-5 sm:p-6">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-xl font-semibold text-foreground">Live roster</h2>
-                      <LiveDot active={initialLoaded && !softError} />
-                    </div>
-                    <p className="text-sm text-muted-foreground">Auto-refreshes every {POLL_INTERVAL_MS / 1000}s{lastRefreshAt ? ` · last update ${formatTime(lastRefreshAt)}` : ""}</p>
+        {/* Event tools */}
+        <div>
+          <SectionLabel>Event tools</SectionLabel>
+          <GroupedList>
+            <ListRow
+              icon={Copy}
+              label={duplicating ? "Duplicating…" : "Duplicate event"}
+              detail="Create a copy you can edit"
+              onClick={() => void handleDuplicate()}
+            />
+            {status === "open" ? (
+              <ListRow
+                icon={X}
+                iconBg="bg-destructive/10"
+                iconColor="text-destructive"
+                label="Close check-in early"
+                detail="Stop accepting new check-ins now"
+                onClick={() => setCloseEarlyOpen(true)}
+              />
+            ) : null}
+            <ListRow
+              icon={Archive}
+              label={event.is_archived ? "Reopen event" : "Archive event"}
+              detail={event.is_archived ? "Bring this event back to active" : "Hide from active operations"}
+              onClick={() => setArchiveDialogOpen(true)}
+            />
+            <ListRow
+              icon={RefreshCw}
+              label={refreshing ? "Refreshing…" : "Refresh now"}
+              detail={lastRefreshAt ? `Last update ${formatTime(lastRefreshAt)}` : "Pull latest attendance"}
+              onClick={() => void handleManualRefresh()}
+            />
+            <ActionSheet
+              trigger={
+                <button type="button" className="ios-list-row w-full text-left">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-destructive/10">
+                    <Trash2 className="h-[18px] w-[18px] text-destructive" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[15px] font-medium leading-tight text-destructive">Delete event</div>
+                    <div className="mt-0.5 text-[13px] text-muted-foreground">Permanently remove this event</div>
                   </div>
-                    <div className="flex flex-wrap gap-2 rounded-[1.4rem] border border-border/80 bg-surface/70 p-2">
-                    <SecondaryButton type="button" onClick={() => void handleManualRefresh()} disabled={refreshing}>
-                      <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-                      <span className="hidden sm:inline">Refresh</span>
-                    </SecondaryButton>
-                    <SecondaryButton type="button" onClick={() => void handleExportCsv()} disabled={exporting} aria-label="Export attendance as CSV">
-                      <Download className={`h-4 w-4 ${exporting ? "animate-pulse" : ""}`} />
-                      <span className="hidden sm:inline">{exporting ? "Exporting…" : "Export CSV"}</span>
-                    </SecondaryButton>
-                    {status === "open" ? (
-                      <SecondaryButton type="button" onClick={() => setCloseEarlyOpen(true)}>
-                        <X className="h-4 w-4" />
-                        <span className="hidden sm:inline">Close check-in</span>
-                      </SecondaryButton>
-                    ) : null}
-                    <SecondaryButton type="button" onClick={() => setArchiveDialogOpen(true)}>
-                      <Archive className="h-4 w-4" />
-                      <span className="hidden sm:inline">{event.is_archived ? "Reopen" : "Archive"}</span>
-                    </SecondaryButton>
-                  </div>
-                </div>
+                </button>
+              }
+              title="Delete this event?"
+              description="This permanently removes the event, attendance records, and history."
+            >
+              <ActionSheetItem
+                icon={Trash2}
+                label="Yes, delete event"
+                destructive
+                onClick={async () => {
+                  try {
+                    await deleteEventMutation({ data: { eventId } });
+                    toast.success("Event deleted");
+                    navigate({ to: "/events", search: { clubId: "", status: "all", query: "" } });
+                  } catch (error) {
+                    toast.error(getManagementErrorMessage(error, "Unable to delete event."));
+                  }
+                }}
+              />
+            </ActionSheet>
+          </GroupedList>
+        </div>
 
-                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_12rem_12rem]">
-                  <div className="relative">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                    <Input value={rosterQuery} onChange={(event) => setRosterQuery(event.target.value)} placeholder="Search by name, email, or 900 number" className="h-12 rounded-2xl border-border/90 bg-surface pl-9" />
-                  </div>
-                  <Select value={methodFilter} onValueChange={(value) => setMethodFilter(value as RosterMethodFilter)}>
-                    <SelectTrigger className="h-12 rounded-2xl border-border/90 bg-surface"><SelectValue placeholder="Method" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All methods</SelectItem>
-                      <SelectItem value="qr_scan">First scan</SelectItem>
-                      <SelectItem value="returning_lookup">Returning</SelectItem>
-                      <SelectItem value="remembered_device">Remembered</SelectItem>
-                      <SelectItem value="host_correction">Manual</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Select value={sortMode} onValueChange={(value) => setSortMode(value as RosterSort)}>
-                    <SelectTrigger className="h-12 rounded-2xl border-border/90 bg-surface"><SelectValue placeholder="Sort" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="newest">Newest first</SelectItem>
-                      <SelectItem value="oldest">Oldest first</SelectItem>
-                      <SelectItem value="name">Name</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(18rem,0.9fr)]">
-                  <div className="space-y-3">
-                    {filteredAttendance.length === 0 ? (
-                      <div className="rounded-2xl border border-dashed border-border/80 px-4 py-12 text-center">
-                        <p className="text-sm font-medium text-foreground">No matching attendance yet.</p>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                          {attendance.length === 0
-                            ? status === "open"
-                              ? "Share the QR code or use manual check-in to start collecting attendance."
-                              : status === "upcoming"
-                                ? `Check-in opens at ${formatTimestamp(event.check_in_opens_at)}.`
-                                : "Check-in is closed for this event."
-                            : "Try changing your roster filters."}
+        {/* Roster */}
+        <div>
+          <div className="mb-2 flex items-center justify-between px-3">
+            <p className="ios-section-label">Roster · {filteredAttendance.length}</p>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button type="button" variant="ghost" size="sm" className="h-8 rounded-full px-2 text-muted-foreground" aria-label="Sort">
+                  <ArrowDownUp className="h-4 w-4" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-44 rounded-2xl p-2">
+                <button
+                  type="button"
+                  className={cn("ios-list-row w-full text-left", sortMode === "newest" && "text-primary")}
+                  onClick={() => setSortMode("newest")}
+                >
+                  <span className="text-[14px] font-medium">Newest first</span>
+                </button>
+                <button
+                  type="button"
+                  className={cn("ios-list-row w-full text-left", sortMode === "oldest" && "text-primary")}
+                  onClick={() => setSortMode("oldest")}
+                >
+                  <span className="text-[14px] font-medium">Oldest first</span>
+                </button>
+                <button
+                  type="button"
+                  className={cn("ios-list-row w-full text-left", sortMode === "name" && "text-primary")}
+                  onClick={() => setSortMode("name")}
+                >
+                  <span className="text-[14px] font-medium">Name</span>
+                </button>
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div className="ios-card space-y-3 p-3">
+            <IosSearchField value={rosterQuery} onChange={setRosterQuery} placeholder="Search name, email, 900#" />
+            <SegmentedControl<RosterMethodFilter>
+              value={methodFilter}
+              onChange={setMethodFilter}
+              options={[
+                { value: "all", label: "All" },
+                { value: "qr_scan", label: "Scan" },
+                { value: "returning_lookup", label: "Return" },
+                { value: "host_correction", label: "Manual" },
+              ]}
+            />
+            {filteredAttendance.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-border/80 px-4 py-10 text-center">
+                <p className="text-[14px] font-medium text-foreground">No matching attendance.</p>
+                <p className="mt-1 text-[13px] text-muted-foreground">
+                  {attendance.length === 0
+                    ? status === "open"
+                      ? "Share the QR or use manual check-in."
+                      : status === "upcoming"
+                        ? `Opens at ${formatTimestamp(event.check_in_opens_at)}.`
+                        : "Check-in is closed."
+                    : "Try a different filter."}
+                </p>
+              </div>
+            ) : (
+              <ul className="divide-y divide-border/70 overflow-hidden rounded-2xl border border-border/70 bg-card">
+                {filteredAttendance.map((row) => {
+                  const initials = `${row.students?.first_name?.[0] ?? ""}${row.students?.last_name?.[0] ?? ""}`.toUpperCase() || "?";
+                  return (
+                    <li key={row.id} className="flex items-center gap-3 px-3 py-2.5">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[12.5px] font-bold text-primary">
+                        {initials}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-[14.5px] font-medium text-foreground">
+                          {row.students?.first_name} {row.students?.last_name}
+                        </p>
+                        <p className="truncate text-[12px] text-muted-foreground">
+                          {formatTimestamp(row.checked_in_at)} · {getCheckInMethodLabel(row.check_in_method)}
                         </p>
                       </div>
-                    ) : (
-                      <ul className="divide-y divide-border/80 overflow-hidden rounded-[1.75rem] border border-border/90 bg-surface/60 shadow-[0_18px_36px_-30px_color-mix(in_oklab,var(--color-primary)_20%,transparent)]">
-                        {filteredAttendance.map((row) => (
-                            <li key={row.id} className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
-                            <div className="min-w-0 flex-1 space-y-1">
-                              <div className="flex flex-wrap items-center gap-2">
-                                <p className="font-medium text-foreground">{row.students?.first_name} {row.students?.last_name}</p>
-                                <MethodBadge method={row.check_in_method} />
-                              </div>
-                              <p className="truncate text-sm text-muted-foreground">
-                                {row.students?.student_email}
-                                {row.students?.nine_hundred_number ? ` · ${row.students.nine_hundred_number}` : ""}
-                              </p>
-                            </div>
-                            <div className="flex items-center justify-between gap-3 sm:justify-end sm:gap-4">
-                              <span className="shrink-0 rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-semibold text-muted-foreground">{formatTimestamp(row.checked_in_at)}</span>
-                                <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                  className="rounded-2xl text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                onClick={() => setPendingRemoveRow(row)}
-                                disabled={removingId === row.id}
-                                aria-label={`Remove attendance for ${row.students?.first_name} ${row.students?.last_name}`}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                <span className="hidden sm:inline">Remove</span>
-                              </Button>
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-
-                  <div className="space-y-4">
-                    <PanelCard title="Recent arrivals" description="See who just came through the door.">
-                      {recentCheckIns.length ? (
-                        <ul className="space-y-3">
-                          {recentCheckIns.map((row) => (
-                            <li key={row.id} className="rounded-xl bg-secondary/50 px-3 py-3">
-                              <div className="flex items-center justify-between gap-3">
-                                <div>
-                                  <p className="font-medium text-foreground">{row.students?.first_name} {row.students?.last_name}</p>
-                                  <p className="text-sm text-muted-foreground">{getCheckInMethodLabel(row.check_in_method)}</p>
-                                </div>
-                                <p className="text-sm text-muted-foreground">{formatTimestamp(row.checked_in_at)}</p>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">Recent activity will appear here as students check in.</p>
-                      )}
-                    </PanelCard>
-
-                    <PanelCard title="Restore removed" description="Bring back accidental removals without leaving the page.">
-                      {removedAttendance.length ? (
-                        <ul className="space-y-3">
-                          {removedAttendance.map((action) => (
-                            <li key={action.id} className="rounded-xl bg-secondary/50 px-3 py-3">
-                              <div className="space-y-2">
-                                <div>
-                                  <p className="font-medium text-foreground">{action.student?.first_name} {action.student?.last_name}</p>
-                                  <p className="text-sm text-muted-foreground">Removed {formatTimestamp(action.created_at)}</p>
-                                </div>
-                                <Button type="button" variant="outline" className="w-full rounded-xl" onClick={() => void handleRestore(action.student!.id)} disabled={restoringStudentId === action.student?.id}>
-                                  <RotateCcw className="h-4 w-4" />
-                                  {restoringStudentId === action.student?.id ? "Restoring…" : "Restore attendance"}
-                                </Button>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className="text-sm text-muted-foreground">No removed attendance waiting for review.</p>
-                      )}
-                    </PanelCard>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-              <PanelCard title="Post-event review" description="Keep a clean operational snapshot for follow-up and exports.">
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <ReviewStat label="First scan" value={summary?.methodBreakdown.firstScan ?? 0} />
-                  <ReviewStat label="Returning" value={summary?.methodBreakdown.returning ?? 0} />
-                  <ReviewStat label="Remembered" value={summary?.methodBreakdown.remembered ?? 0} />
-                  <ReviewStat label="Manual" value={summary?.methodBreakdown.manual ?? 0} />
-                </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <MetaRow icon={<CalendarDays className="h-4 w-4" />} label={formatEventDate(event.event_date)} />
-                  <MetaRow icon={<Clock3 className="h-4 w-4" />} label={formatEventTime(event.start_time, event.end_time)} />
-                  {event.location ? <MetaRow icon={<MapPin className="h-4 w-4" />} label={event.location} /> : null}
-                  <MetaRow icon={<Download className="h-4 w-4" />} label="CSV export is the canonical roster" />
-                </div>
-              </PanelCard>
-
-              <PanelCard title="Recent actions" description="Audit host corrections and recovery work.">
-                {recentActions.length ? (
-                  <ul className="space-y-3">
-                    {recentActions.slice(0, 8).map((action) => (
-                      <li key={action.id} className="rounded-xl bg-secondary/50 px-3 py-3">
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-medium text-foreground">{actionLabel(action)}</p>
-                            <p className="text-sm text-muted-foreground">{action.student?.first_name} {action.student?.last_name}</p>
-                          </div>
-                          <p className="text-xs text-muted-foreground">{formatTimestamp(action.created_at)}</p>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Manual actions and removals will appear here.</p>
-                )}
-              </PanelCard>
-            </div>
-          </div>
-
-          <div className="space-y-6">
-            <Card className="rounded-[2rem] border-border/90 bg-card/95 shadow-[0_26px_60px_-36px_color-mix(in_oklab,var(--color-primary)_36%,transparent)]">
-              <CardContent className="space-y-4 p-5 sm:p-6">
-                <div className="space-y-1">
-                  <h2 className="text-base font-semibold text-foreground">QR check-in</h2>
-                  <p className="text-sm text-muted-foreground">Print, project, or share the link below.</p>
-                </div>
-                <div className="mx-auto w-full max-w-[16rem] rounded-[1.75rem] bg-white p-4 shadow-[0_16px_40px_-24px_rgba(15,23,42,0.24)]">
-                  {checkInUrl ? <QRCode value={checkInUrl} size={224} className="h-auto w-full" /> : null}
-                </div>
-                <div className="space-y-2 rounded-[1.5rem] border border-border/80 bg-secondary p-3">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Check-in URL</p>
-                  <p className="break-all text-xs text-foreground">{checkInUrl}</p>
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="button" variant="outline" className="flex-1 rounded-xl" onClick={() => void handleCopyLink()}>
-                      <Copy className="h-4 w-4" />Copy link
-                    </Button>
-                    <Button asChild type="button" variant="outline" className="flex-1 rounded-xl">
-                      <Link to="/events/$eventId/display" params={{ eventId }} search={{ created: "" }}>
-                        <Maximize2 className="h-4 w-4" />Full screen
-                      </Link>
-                    </Button>
-                  </div>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <PrimaryButton asChild>
-                    <Link to="/check-in/$qrToken" params={{ qrToken: event.qr_token }} target="_blank" rel="noreferrer">
-                      <ExternalLink className="h-4 w-4" />Open student view
-                    </Link>
-                  </PrimaryButton>
-                </div>
-              </CardContent>
-            </Card>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                        onClick={() => setPendingRemoveRow(row)}
+                        disabled={removingId === row.id}
+                        aria-label={`Remove ${row.students?.first_name} ${row.students?.last_name}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
         </div>
+
+        {/* History tabs */}
+        <div>
+          <SectionLabel>History</SectionLabel>
+          <div className="ios-card space-y-3 p-3">
+            <SegmentedControl
+              value={historyTab}
+              onChange={setHistoryTab}
+              options={historyOptions}
+            />
+            {historyTab === "recent" ? (
+              recentCheckIns.length ? (
+                <ul className="divide-y divide-border/70">
+                  {recentCheckIns.map((row) => (
+                    <li key={row.id} className="flex items-center justify-between gap-3 py-2.5">
+                      <div className="min-w-0">
+                        <p className="truncate text-[14px] font-medium text-foreground">
+                          {row.students?.first_name} {row.students?.last_name}
+                        </p>
+                        <p className="text-[12px] text-muted-foreground">{getCheckInMethodLabel(row.check_in_method)}</p>
+                      </div>
+                      <p className="shrink-0 text-[12px] text-muted-foreground">{formatTimestamp(row.checked_in_at)}</p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="px-1 py-2 text-[13px] text-muted-foreground">Recent activity appears here.</p>
+              )
+            ) : null}
+            {historyTab === "removed" ? (
+              removedAttendance.length ? (
+                <ul className="space-y-2">
+                  {removedAttendance.map((action) => (
+                    <li key={action.id} className="rounded-xl bg-secondary/50 px-3 py-2.5">
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate text-[14px] font-medium text-foreground">{action.student?.first_name} {action.student?.last_name}</p>
+                          <p className="text-[12px] text-muted-foreground">Removed {formatTimestamp(action.created_at)}</p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="rounded-xl"
+                          onClick={() => action.student && void handleRestore(action.student.id)}
+                          disabled={restoringStudentId === action.student?.id}
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                          {restoringStudentId === action.student?.id ? "…" : "Restore"}
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="px-1 py-2 text-[13px] text-muted-foreground">No removed attendance.</p>
+              )
+            ) : null}
+            {historyTab === "actions" ? (
+              recentActions.length ? (
+                <ul className="divide-y divide-border/70">
+                  {recentActions.slice(0, 8).map((action) => (
+                    <li key={action.id} className="flex items-start justify-between gap-3 py-2.5">
+                      <div className="min-w-0">
+                        <p className="truncate text-[14px] font-medium text-foreground">{actionLabel(action)}</p>
+                        <p className="text-[12px] text-muted-foreground">{action.student?.first_name} {action.student?.last_name}</p>
+                      </div>
+                      <p className="shrink-0 text-[12px] text-muted-foreground">{formatTimestamp(action.created_at)}</p>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="px-1 py-2 text-[13px] text-muted-foreground">No recent actions.</p>
+              )
+            ) : null}
+            {historyTab === "review" ? (
+              <div className="grid grid-cols-2 gap-2">
+                <ReviewTile label="First scan" value={summary?.methodBreakdown.firstScan ?? 0} />
+                <ReviewTile label="Returning" value={summary?.methodBreakdown.returning ?? 0} />
+                <ReviewTile label="Remembered" value={summary?.methodBreakdown.remembered ?? 0} />
+                <ReviewTile label="Manual" value={summary?.methodBreakdown.manual ?? 0} />
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        {/* Collapsible QR */}
+        <details className="ios-card group rounded-[1.5rem] p-0">
+          <summary className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3.5 [&::-webkit-details-marker]:hidden">
+            <div className="flex items-center gap-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-accent/20 text-accent-foreground">
+                <QrCode className="h-[18px] w-[18px]" />
+              </span>
+              <div>
+                <p className="text-[15px] font-semibold text-foreground">QR check-in</p>
+                <p className="text-[12px] text-muted-foreground">Tap to view code & link</p>
+              </div>
+            </div>
+            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
+          </summary>
+          <div className="space-y-3 px-4 pb-4">
+            <div className="mx-auto w-full max-w-[14rem] rounded-2xl bg-white p-3 shadow-sm">
+              {checkInUrl ? <QRCode value={checkInUrl} size={200} className="h-auto w-full" /> : null}
+            </div>
+            <div className="space-y-2 rounded-2xl bg-secondary/60 p-3">
+              <p className="text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground">Check-in URL</p>
+              <p className="break-all text-[12px] text-foreground">{checkInUrl}</p>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" size="sm" className="flex-1 rounded-xl" onClick={() => void handleCopyLink()}>
+                  <Copy className="h-4 w-4" />Copy
+                </Button>
+                <Button asChild type="button" variant="outline" size="sm" className="flex-1 rounded-xl">
+                  <Link to="/check-in/$qrToken" params={{ qrToken: event.qr_token }} target="_blank" rel="noreferrer">
+                    <ExternalLink className="h-4 w-4" />Open
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </details>
       </div>
 
-        <Dialog open={manualDialogOpen} onOpenChange={setManualDialogOpen}>
-        <DialogContent className="max-h-[92vh] overflow-y-auto rounded-[2rem] border-border/90 bg-card/98 p-0 shadow-[0_28px_72px_-40px_color-mix(in_oklab,var(--color-primary)_42%,transparent)] sm:max-w-lg">
+      <Dialog open={manualDialogOpen} onOpenChange={setManualDialogOpen}>
+        <DialogContent className="max-h-[92vh] overflow-y-auto rounded-[2rem] border-border/90 bg-card/98 p-0 sm:max-w-lg">
           <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-muted" />
           <DialogHeader>
             <div className="px-6 pt-3">
-              <DialogTitle className="text-left text-2xl font-semibold text-foreground">Manual check-in</DialogTitle>
+              <DialogTitle className="text-left text-[22px] font-semibold text-foreground">Manual check-in</DialogTitle>
               <DialogDescription className="mt-2 text-left text-sm leading-6 text-muted-foreground">Use this when a student cannot complete the QR flow but still needs to be counted.</DialogDescription>
             </div>
           </DialogHeader>
@@ -845,6 +931,15 @@ function EventDetailRoute() {
         </AlertDialogContent>
       </AlertDialog>
     </ManagementPageShell>
+  );
+}
+
+function ReviewTile({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-xl bg-secondary/60 px-3 py-2.5">
+      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="mt-0.5 font-display text-[20px] font-bold text-foreground">{value}</p>
+    </div>
   );
 }
 
