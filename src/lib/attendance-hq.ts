@@ -80,6 +80,12 @@ export type EventOperationsPayload = {
   summary: EventAttendanceSummary;
 };
 
+export type EventDisplayPayload = {
+  event: EventWithClub;
+  summary: EventAttendanceSummary;
+  attendanceCount: number;
+};
+
 export type CheckInStatus =
   | "open"
   | "upcoming"
