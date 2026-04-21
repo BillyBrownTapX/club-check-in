@@ -547,6 +547,7 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, title,
   }, [form, initialValues, isEdit, open]);
 
   const submit = form.handleSubmit(async (values) => {
+    if (form.formState.isSubmitting) return;
     setError("");
     try {
       await onSubmit(values);
@@ -555,6 +556,7 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, title,
       setError(getManagementErrorMessage(submitError, "Unable to save club."));
     }
   });
+  const isSubmitting = form.formState.isSubmitting;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -585,7 +587,7 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, title,
             </div>
           ) : null}
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          <PrimaryButton type="submit" className="w-full">{isEdit ? "Save Club" : "Create Club"}</PrimaryButton>
+          <PrimaryButton type="submit" className="w-full" disabled={isSubmitting}>{isSubmitting ? (isEdit ? "Saving…" : "Creating…") : (isEdit ? "Save Club" : "Create Club")}</PrimaryButton>
         </form>
       </DialogContent>
     </Dialog>
@@ -648,6 +650,7 @@ export function TemplateDialog({ open, onOpenChange, clubId, initialValues, onSu
   }, [clubId, form, initialValues, isEdit, open]);
 
   const submit = form.handleSubmit(async (values) => {
+    if (form.formState.isSubmitting) return;
     setError("");
     try {
       await onSubmit(values);
@@ -656,6 +659,7 @@ export function TemplateDialog({ open, onOpenChange, clubId, initialValues, onSu
       setError(getManagementErrorMessage(submitError, "Unable to save template."));
     }
   });
+  const isSubmitting = form.formState.isSubmitting;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -680,7 +684,7 @@ export function TemplateDialog({ open, onOpenChange, clubId, initialValues, onSu
             <TextInput type="number" label="Close offset minutes" error={form.formState.errors.defaultCheckInCloseOffsetMinutes?.message} {...form.register("defaultCheckInCloseOffsetMinutes", { valueAsNumber: true })} />
           </div>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          <PrimaryButton type="submit" className="w-full">{isEdit ? "Save Template" : "Create Template"}</PrimaryButton>
+          <PrimaryButton type="submit" className="w-full" disabled={isSubmitting}>{isSubmitting ? (isEdit ? "Saving…" : "Creating…") : (isEdit ? "Save Template" : "Create Template")}</PrimaryButton>
         </form>
       </DialogContent>
     </Dialog>
@@ -758,6 +762,7 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
   }, [endTime, eventDate, form, offsets.closeMinutesAfterEnd, offsets.openMinutesBeforeStart, startTime]);
 
   const submit = form.handleSubmit(async (values) => {
+    if (form.formState.isSubmitting) return;
     setError("");
     try {
       await onSubmit(values);
@@ -765,6 +770,7 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
       setError(getManagementErrorMessage(submitError, "Unable to save event."));
     }
   });
+  const isSubmitting = form.formState.isSubmitting;
 
   const selectedClubId = form.watch("clubId");
   const templatesForClub = useMemo(() => payload.templates.filter((template) => template.club_id === selectedClubId), [payload.templates, selectedClubId]);
@@ -852,7 +858,7 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
                 <p className="mb-3 text-sm leading-6 text-muted-foreground md:mb-2">Save when the mobile summary looks right. Updated timing takes effect immediately on the live event.</p>
                 <div className="flex flex-col gap-2 md:flex-row md:justify-end">
                   {cancelAction ?? <SecondaryButton asChild><Link to="/events" search={{ clubId: "", status: "all", query: "" }}>Cancel</Link></SecondaryButton>}
-                  <PrimaryButton type="submit">{submitLabel}</PrimaryButton>
+                  <PrimaryButton type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving…" : submitLabel}</PrimaryButton>
                 </div>
               </div>
             </form>
