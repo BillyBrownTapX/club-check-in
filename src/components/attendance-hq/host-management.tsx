@@ -1,6 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { CalendarDays, ChevronRight, Clock3, Copy, MapPin, Plus, Search, WandSparkles } from "lucide-react";
+import { CalendarDays, ChevronRight, Clock3, Copy, ImagePlus, Loader2, MapPin, Plus, Search, Trash2, WandSparkles } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useSignedLogoUrl } from "@/hooks/use-signed-logo";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
