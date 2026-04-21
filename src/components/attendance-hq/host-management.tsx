@@ -441,16 +441,19 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, title,
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg rounded-2xl">
+      <DialogContent className="max-h-[92vh] overflow-y-auto rounded-[2rem] border-border/70 p-0 sm:max-w-lg">
+        <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-muted" />
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
+          <div className="px-6 pt-3">
+            <DialogTitle className="text-left text-2xl font-semibold text-foreground">{title}</DialogTitle>
+            <DialogDescription className="mt-2 text-left text-sm leading-6 text-muted-foreground">{description}</DialogDescription>
+          </div>
         </DialogHeader>
-        <form className="space-y-4" onSubmit={(event) => void submit(event)}>
+        <form className="space-y-4 px-6 pb-6 pt-2" onSubmit={(event) => void submit(event)}>
           <TextInput label="Club name" error={form.formState.errors.clubName?.message} {...form.register("clubName")} />
           <TextAreaInput label="Description" error={form.formState.errors.description?.message} {...form.register("description")} />
           {isEdit ? (
-            <div className="flex items-center justify-between rounded-xl border border-border px-4 py-3">
+            <div className="flex items-center justify-between rounded-2xl border border-border/70 bg-secondary/35 px-4 py-4">
               <div>
                 <p className="text-sm font-medium text-foreground">Club active</p>
                 <p className="text-sm text-muted-foreground">Hide inactive clubs from day-to-day management.</p>
@@ -533,12 +536,15 @@ export function TemplateDialog({ open, onOpenChange, clubId, initialValues, onSu
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg rounded-2xl">
+      <DialogContent className="max-h-[92vh] overflow-y-auto rounded-[2rem] border-border/70 p-0 sm:max-w-lg">
+        <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-muted" />
         <DialogHeader>
-          <DialogTitle>{isEdit ? "Edit Template" : "Create Template"}</DialogTitle>
-          <DialogDescription>Save lightweight defaults for recurring events.</DialogDescription>
+          <div className="px-6 pt-3">
+            <DialogTitle className="text-left text-2xl font-semibold text-foreground">{isEdit ? "Edit Template" : "Create Template"}</DialogTitle>
+            <DialogDescription className="mt-2 text-left text-sm leading-6 text-muted-foreground">Save lightweight defaults for recurring events.</DialogDescription>
+          </div>
         </DialogHeader>
-        <form className="space-y-4" onSubmit={(event) => void submit(event)}>
+        <form className="space-y-4 px-6 pb-6 pt-2" onSubmit={(event) => void submit(event)}>
           <TextInput label="Template name" error={form.formState.errors.templateName?.message} {...form.register("templateName")} />
           <TextInput label="Default event name" error={form.formState.errors.defaultEventName?.message} {...form.register("defaultEventName")} />
           <TextInput label="Default location" error={form.formState.errors.defaultLocation?.message} {...form.register("defaultLocation")} />
@@ -579,8 +585,8 @@ function DateTimeReadonly({ label, value }: { label: string; value: string }) {
     : date.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
   return (
-    <div className="space-y-2 rounded-xl border border-border/70 bg-secondary/40 px-4 py-3">
-      <p className="text-sm font-medium text-foreground">{label}</p>
+    <div className="space-y-2 rounded-2xl border border-border/70 bg-secondary/40 px-4 py-3">
+      <p className="text-sm font-semibold text-foreground">{label}</p>
       <p className="text-sm text-muted-foreground">{formatted}</p>
     </div>
   );
@@ -630,19 +636,19 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
 
   return (
     <ManagementPageShell>
-      <div className="space-y-6 pb-20 md:pb-0">
+      <div className="space-y-5 pb-20 md:pb-0">
         <PageHeader title={title} description={description} action={<SecondaryButton asChild><Link to="/events" search={{ clubId: "", status: "all", query: "" }}>Back to Events</Link></SecondaryButton>} />
         <div className="space-y-4">
           {templatesForClub.length ? (
             <FormCard>
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-3">
                 <div>
-                  <p className="text-sm font-medium text-foreground">Start from template</p>
-                  <p className="text-sm text-muted-foreground">Use a recurring setup without rebuilding the form from scratch.</p>
+                  <p className="text-sm font-semibold text-foreground">Start from template</p>
+                  <p className="text-sm leading-6 text-muted-foreground">Use a recurring setup without rebuilding the form from scratch.</p>
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex snap-x gap-2 overflow-x-auto pb-1">
                   {templatesForClub.slice(0, 3).map((template) => (
-                    <SecondaryButton key={template.id} type="button" onClick={() => navigate({ to: "/events/new", search: { clubId: selectedClubId || "", templateId: template.id, duplicateFrom: "" } })}>
+                    <SecondaryButton key={template.id} type="button" className="min-w-fit snap-start" onClick={() => navigate({ to: "/events/new", search: { clubId: selectedClubId || "", templateId: template.id, duplicateFrom: "" } })}>
                       <WandSparkles className="h-4 w-4" />
                       {template.template_name}
                     </SecondaryButton>
@@ -661,20 +667,20 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
                 options={payload.clubs.map((club) => ({ value: club.id, label: club.club_name }))}
               />
               <TextInput label="Event name" error={form.formState.errors.eventName?.message} {...form.register("eventName")} />
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4">
                 <DateInput label="Event date" error={form.formState.errors.eventDate?.message} {...form.register("eventDate")} />
                 <TextInput label="Location" error={form.formState.errors.location?.message} {...form.register("location")} />
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-4">
                 <TimeInput label="Start time" error={form.formState.errors.startTime?.message} {...form.register("startTime")} />
                 <TimeInput label="End time" error={form.formState.errors.endTime?.message} {...form.register("endTime")} />
               </div>
-              <div className="space-y-3 rounded-2xl border border-border/70 bg-card px-4 py-4">
+              <div className="space-y-3 rounded-[1.6rem] border border-border/70 bg-secondary/25 px-4 py-4">
                 <div>
-                  <p className="text-sm font-medium text-foreground">Check-in timing</p>
-                  <p className="text-sm text-muted-foreground">Tune the window for early arrivals, walk-ins, and post-event cleanup.</p>
+                  <p className="text-sm font-semibold text-foreground">Check-in timing</p>
+                  <p className="text-sm leading-6 text-muted-foreground">Tune the window for early arrivals, walk-ins, and post-event cleanup.</p>
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4">
                   <TextInput
                     type="number"
                     min={0}
@@ -692,7 +698,7 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
                 </div>
                 <input type="hidden" {...form.register("checkInOpensAt")} />
                 <input type="hidden" {...form.register("checkInClosesAt")} />
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid gap-4">
                   <DateTimeReadonly label="Check-in opens" value={form.watch("checkInOpensAt")} />
                   <DateTimeReadonly label="Check-in closes" value={form.watch("checkInClosesAt")} />
                 </div>
@@ -700,9 +706,9 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
               {form.formState.errors.checkInOpensAt?.message ? <p className="text-sm text-destructive">{form.formState.errors.checkInOpensAt.message}</p> : null}
               {form.formState.errors.checkInClosesAt?.message ? <p className="text-sm text-destructive">{form.formState.errors.checkInClosesAt.message}</p> : null}
               {error ? <p className="text-sm text-destructive">{error}</p> : null}
-              <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-                <p className="text-sm text-muted-foreground">Saving changes reactivates the event and uses the updated check-in window.</p>
-                <div className="flex gap-2">
+              <div className="sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 -mx-2 rounded-[1.6rem] border border-border/70 bg-background/92 p-3 shadow-[0_18px_40px_-24px_color-mix(in_oklab,var(--color-primary)_35%,transparent)] backdrop-blur md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:shadow-none">
+                <p className="mb-3 text-sm leading-6 text-muted-foreground md:mb-2">Saving changes reactivates the event and uses the updated check-in window.</p>
+                <div className="flex flex-col gap-2 md:flex-row md:justify-end">
                   {cancelAction ?? <SecondaryButton asChild><Link to="/events" search={{ clubId: "", status: "all", query: "" }}>Cancel</Link></SecondaryButton>}
                   <PrimaryButton type="submit">{submitLabel}</PrimaryButton>
                 </div>
