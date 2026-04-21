@@ -44,6 +44,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
 import {
+  DeleteConfirmButton,
   ManagementPageShell,
   PageHeader,
   PrimaryButton,
@@ -54,6 +55,7 @@ import {
 } from "@/components/attendance-hq/host-management";
 import {
   closeCheckInEarly,
+  deleteEvent,
   duplicateEvent,
   exportEventAttendance,
   getEventOperations,
