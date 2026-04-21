@@ -42,6 +42,11 @@ export const clubSchema = z.object({
   description: z.string().trim().max(280, "Description is too long").optional().or(z.literal("")),
 });
 
+export const clubUpdateSchema = clubSchema.extend({
+  clubId: z.string().uuid(),
+  isActive: z.boolean().default(true),
+});
+
 export const eventTemplateSchema = z.object({
   clubId: z.string().uuid("Choose a club"),
   templateName: z.string().trim().min(2, "Enter a template name").max(120, "Template name is too long"),
@@ -51,6 +56,10 @@ export const eventTemplateSchema = z.object({
   defaultEndTime: z.string().optional().or(z.literal("")),
   defaultCheckInOpenOffsetMinutes: z.coerce.number().int().min(-1440).max(1440),
   defaultCheckInCloseOffsetMinutes: z.coerce.number().int().min(-1440).max(1440),
+});
+
+export const eventTemplateUpdateSchema = eventTemplateSchema.extend({
+  templateId: z.string().uuid(),
 });
 
 export const eventSchema = z.object({
@@ -71,6 +80,16 @@ export const validatedEventSchema = eventSchema.refine((value) => value.endTime 
 }).refine((value) => new Date(value.checkInClosesAt).getTime() > new Date(value.checkInOpensAt).getTime(), {
   message: "Check-in close must be after open",
   path: ["checkInClosesAt"],
+});
+
+export const eventUpdateSchema = validatedEventSchema.extend({
+  eventId: z.string().uuid(),
+});
+
+export const eventListFilterSchema = z.object({
+  clubId: z.string().uuid().optional().or(z.literal("")),
+  status: z.enum(["all", "upcoming", "past"]).default("all"),
+  query: z.string().trim().max(120).optional().or(z.literal("")),
 });
 
 export const returningLookupSchema = z.object({
