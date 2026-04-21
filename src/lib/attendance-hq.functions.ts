@@ -16,6 +16,7 @@ import {
   createDeviceToken,
   createQrToken,
   type EventAttendanceSummary,
+  type EventDisplayPayload,
   type EventFormPayload,
   type EventFormValues,
   type EventOperationsPayload,
@@ -785,6 +786,8 @@ export const updateEvent = createServerFn({ method: "POST" })
         location: data.location?.trim() || null,
         check_in_opens_at: data.checkInOpensAt,
         check_in_closes_at: data.checkInClosesAt,
+        is_active: true,
+        is_archived: false,
         qr_token: existing.qr_token,
       })
       .eq("id", data.eventId)
@@ -858,6 +861,42 @@ export const getEventOperations = createServerFn({ method: "GET" })
       recentActions,
       summary: buildEventAttendanceSummary(normalizedAttendance, removedAttendanceMap.size, recentActions),
     } as EventOperationsPayload;
+  });
+
+export const getEventDisplayPayload = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((input: { eventId: string }) => input)
+  .handler(async ({ data, context }) => {
+    const event = await requireOwnedEvent(context.supabase, context.userId, data.eventId);
+    const [{ count: attendanceCount, error: attendanceCountError }, { data: actions, error: actionsError }] = await Promise.all([
+      context.supabase
+        .from("attendance_records")
+        .select("id", { count: "exact", head: true })
+        .eq("event_id", data.eventId),
+      context.supabase
+        .from("attendance_actions")
+        .select("*")
+        .eq("event_id", data.eventId)
+        .order("created_at", { ascending: false })
+        .limit(30),
+    ]);
+
+    if (attendanceCountError) throw new Error(safeMessage(attendanceCountError));
+    if (actionsError) throw new Error(safeMessage(actionsError));
+
+    const recentActions = ((actions ?? []) as Database["public"]["Tables"]["attendance_actions"]["Row"][])
+      .map(parseAttendanceActionLog)
+      .filter((value): value is AttendanceActionLog => Boolean(value));
+    const removedCount = recentActions.reduce((total, action) => {
+      if (action.action_type !== "removed" || !action.student?.id) return total;
+      return total + 1;
+    }, 0);
+
+    return {
+      event,
+      attendanceCount: attendanceCount ?? 0,
+      summary: buildEventAttendanceSummary([], removedCount, recentActions),
+    } as EventDisplayPayload;
   });
 
 // ─────────────────────────────────────────────────────────────────────────────

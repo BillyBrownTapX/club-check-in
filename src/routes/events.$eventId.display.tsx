@@ -5,13 +5,13 @@ import QRCode from "react-qr-code";
 import { Button } from "@/components/ui/button";
 import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
 import { useRequireHostRedirect } from "@/components/attendance-hq/host-management";
-import { getEventOperations } from "@/lib/attendance-hq.functions";
+import { getEventDisplayPayload } from "@/lib/attendance-hq.functions";
 import {
   formatEventDate,
   formatEventTime,
   formatTimestamp,
   getCheckInStatus,
-  type AttendanceRow,
+  type EventDisplayPayload,
   type EventAttendanceSummary,
   type EventWithClub,
 } from "@/lib/attendance-hq";
@@ -49,10 +49,10 @@ export const Route = createFileRoute("/events/$eventId/display")({
 function EventDisplayRoute() {
   const { loading, user } = useRequireHostRedirect();
   const { eventId } = Route.useParams();
-  const loadOperations = useAuthorizedServerFn(getEventOperations);
+  const loadDisplayPayload = useAuthorizedServerFn(getEventDisplayPayload);
 
   const [event, setEvent] = useState<EventWithClub | null>(null);
-  const [attendance, setAttendance] = useState<AttendanceRow[]>([]);
+  const [attendanceCount, setAttendanceCount] = useState(0);
   const [summary, setSummary] = useState<EventAttendanceSummary | null>(null);
   const [initialLoaded, setInitialLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -60,16 +60,16 @@ function EventDisplayRoute() {
 
   const refresh = useCallback(async () => {
     try {
-      const next = await loadOperations({ data: { eventId } });
+      const next = await loadDisplayPayload({ data: { eventId } }) as EventDisplayPayload;
       setEvent(next.event as EventWithClub);
-      setAttendance(next.attendance);
+      setAttendanceCount(next.attendanceCount);
       setSummary(next.summary);
       setLastUpdatedAt(new Date().toISOString());
       setLoadError(null);
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : "Unable to load event.");
     }
-  }, [eventId, loadOperations]);
+  }, [eventId, loadDisplayPayload]);
 
   useEffect(() => {
     if (loading || !user) return;
@@ -178,7 +178,7 @@ function EventDisplayRoute() {
               <Users className="h-5 w-5" />
               <span className="text-sm font-medium uppercase tracking-[0.18em]">Checked in</span>
             </div>
-            <div className="mt-4 text-7xl font-bold leading-none text-foreground">{attendance.length}</div>
+            <div className="mt-4 text-7xl font-bold leading-none text-foreground">{attendanceCount}</div>
             <p className="mt-3 text-sm text-muted-foreground">{summary?.recent ?? 0} in the last 15 minutes</p>
           </div>
           <div className="rounded-2xl border border-border/70 bg-card px-5 py-4 shadow-sm">
