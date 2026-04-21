@@ -74,7 +74,7 @@ export const eventSchema = z.object({
   checkInClosesAt: z.string().min(1, "Choose when check-in closes"),
 });
 
-export const validatedEventSchema = eventSchema.refine((value) => value.endTime > value.startTime, {
+const eventTimingValidation = <T extends z.ZodTypeAny>(schema: T) => schema.refine((value) => value.endTime > value.startTime, {
   message: "End time must be after start time",
   path: ["endTime"],
 }).refine((value) => new Date(value.checkInClosesAt).getTime() > new Date(value.checkInOpensAt).getTime(), {
@@ -82,15 +82,11 @@ export const validatedEventSchema = eventSchema.refine((value) => value.endTime 
   path: ["checkInClosesAt"],
 });
 
-export const eventUpdateSchema = eventSchema.extend({
+export const validatedEventSchema = eventTimingValidation(eventSchema);
+
+export const eventUpdateSchema = eventTimingValidation(eventSchema.extend({
   eventId: z.string().uuid(),
-}).refine((value) => value.endTime > value.startTime, {
-  message: "End time must be after start time",
-  path: ["endTime"],
-}).refine((value) => new Date(value.checkInClosesAt).getTime() > new Date(value.checkInOpensAt).getTime(), {
-  message: "Check-in close must be after open",
-  path: ["checkInClosesAt"],
-});
+}));
 
 export const eventListFilterSchema = z.object({
   clubId: z.string().uuid().optional().or(z.literal("")),
