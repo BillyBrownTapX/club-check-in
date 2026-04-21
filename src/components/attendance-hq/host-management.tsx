@@ -9,7 +9,7 @@ import { useForm } from "react-hook-form";
 import type { z } from "zod";
 import { useAttendanceAuth, useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
 import { HostAppShell } from "@/components/attendance-hq/host-shell";
-import { getHostOnboardingState } from "@/lib/attendance-hq.functions";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
