@@ -130,6 +130,28 @@ function RootComponent() {
     return () => mq?.removeEventListener?.("change", apply);
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const vv = window.visualViewport;
+    if (!vv) return;
+    let frame = 0;
+    const sync = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+        document.documentElement.style.setProperty("--visual-bottom", `${offset}px`);
+      });
+    };
+    sync();
+    vv.addEventListener("resize", sync);
+    vv.addEventListener("scroll", sync);
+    return () => {
+      cancelAnimationFrame(frame);
+      vv.removeEventListener("resize", sync);
+      vv.removeEventListener("scroll", sync);
+    };
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <AttendanceAuthProvider>
