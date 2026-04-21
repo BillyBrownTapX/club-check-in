@@ -655,6 +655,27 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, onDele
           ) : null}
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           <PrimaryButton type="submit" className="w-full" disabled={isSubmitting}>{isSubmitting ? (isEdit ? "Saving…" : "Creating…") : (isEdit ? "Save Club" : "Create Club")}</PrimaryButton>
+          {isEdit && onDelete ? (
+            <DeleteConfirmButton
+              trigger={
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-12 w-full rounded-xl border-destructive/30 text-sm font-semibold text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  disabled={isSubmitting}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Delete Club
+                </Button>
+              }
+              title="Delete this club?"
+              description="This permanently removes the club, all of its events, attendance records, and templates. This cannot be undone."
+              onConfirm={async () => {
+                await onDelete();
+                onOpenChange(false);
+              }}
+            />
+          ) : null}
         </form>
       </DialogContent>
     </Dialog>
