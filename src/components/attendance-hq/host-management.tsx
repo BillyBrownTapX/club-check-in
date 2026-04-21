@@ -587,7 +587,7 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, title,
             </div>
           ) : null}
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          <PrimaryButton type="submit" className="w-full">{isEdit ? "Save Club" : "Create Club"}</PrimaryButton>
+          <PrimaryButton type="submit" className="w-full" disabled={isSubmitting}>{isSubmitting ? (isEdit ? "Saving…" : "Creating…") : (isEdit ? "Save Club" : "Create Club")}</PrimaryButton>
         </form>
       </DialogContent>
     </Dialog>
