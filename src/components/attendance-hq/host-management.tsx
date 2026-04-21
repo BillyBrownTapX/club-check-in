@@ -547,6 +547,7 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, title,
   }, [form, initialValues, isEdit, open]);
 
   const submit = form.handleSubmit(async (values) => {
+    if (form.formState.isSubmitting) return;
     setError("");
     try {
       await onSubmit(values);
@@ -555,6 +556,7 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, title,
       setError(getManagementErrorMessage(submitError, "Unable to save club."));
     }
   });
+  const isSubmitting = form.formState.isSubmitting;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
