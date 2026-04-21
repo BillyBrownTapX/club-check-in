@@ -1,82 +1,83 @@
 
-Fix the real configuration failure that is keeping Attendance HQ stuck on the “App isn’t configured” screen.
 
-## Confirmed issue
+## Why typing appears to delete itself
 
-The app is failing before normal UI logic runs.
+The preview is doing exactly what an aggressive auth guard tells it to do, and the result looks like disappearing text.
 
-What is confirmed:
-- The published site currently renders the root config fallback, not the app.
-- The browser console error is:
-  `Missing Supabase environment variables. Ensure SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY (or VITE_ prefixed versions) are set in your .env file.`
-- `src/integrations/supabase/client.ts` throws immediately if `VITE_SUPABASE_URL` or `VITE_SUPABASE_PUBLISHABLE_KEY` are missing.
-- `wrangler.jsonc` currently documents the required values, but does not actually define any `vars`.
-- The project secrets currently do not include the required backend keys.
+### What actually happens (from the session replay)
 
-This is a deployment/config problem, not a visual/UI bug.
+1. You open `/sign-up` (or `/sign-in`).
+2. `AttendanceAuthProvider` starts hydrating the session from browser storage. This is async — it takes a beat.
+3. The form renders immediately and you start typing (e.g. "Billy Brown", then "wabrow9730@un").
+4. A valid session from an earlier test signup comes back from storage.
+5. `useRequireGuestRedirect` sees "you're logged in, you shouldn't be on /sign-up" and calls the server function `getHostOnboardingState`, then navigates to `/events/$eventId`.
+6. While you are mid-keystroke, the sign-up component unmounts. Your focused field keeps only its last character, and the other fields appear wiped — because the whole form is gone.
+7. You land on `/events/9478bde7-…` with the impression that the inputs deleted your text.
 
-## What to implement
+This matches the replay exactly:
 
-### 1. Restore the required backend configuration
-Set the missing project configuration so both the browser bundle and server-side code receive the values they expect:
+```text
+type "wabrow9730@un"  → DOM elements removed
+                      → input attributes re-set
+                      → fullName + password appear cleared
+                      → navigate to /events/9478…
+```
 
-Required public values:
-- `SUPABASE_URL`
-- `SUPABASE_PUBLISHABLE_KEY`
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_PUBLISHABLE_KEY`
-- `VITE_SUPABASE_PROJECT_ID`
+No input is "losing" keystrokes. The route is being swapped out from underneath you by the guest redirect.
 
-Required server-only value:
-- `SUPABASE_SERVICE_ROLE_KEY`
+### Contributing noise
+- `Warning: Error in route match: /sign-in/sign-in` — some `<Link to="/sign-in">` is resolving relative to the current `/sign-in` route and producing a bad path. Harmless, but clutters the console and sometimes cancels a navigation mid-flight.
+- `Error during concurrent rendering but React was able to recover` — the symptom of a component unmounting while its children are suspending (the auth navigate fires during render).
 
-### 2. Make the public values durable in project config
-Update `wrangler.jsonc` to include a real `vars` block for the non-secret values above so the deployment has a stable source of truth for:
-- browser Vite injection
-- SSR/runtime access
-- future publishes
+## The fix
 
-Keep `SUPABASE_SERVICE_ROLE_KEY` as a secret only.
+Stop redirecting away from the auth pages while the user is actively typing or while the session is still settling. Specifically:
 
-### 3. Leave generated client files untouched
-Do not edit:
-- `src/integrations/supabase/client.ts`
-- `src/integrations/supabase/client.server.ts`
+1. Treat the sign-up form as the source of truth while focused. Do not auto-redirect away from `/sign-up` or `/sign-in` based on a cached session until:
+   - auth is fully hydrated, AND
+   - the user has not interacted with the form yet.
 
-They are correctly failing fast; the missing config is the actual issue.
+   If the user already started typing, keep them on the form. They get redirected on a successful submit instead of being yanked mid-keystroke.
 
-### 4. Republish after config is restored
-After the backend values are restored, rebuild/publish the app so the generated browser bundle includes the `VITE_*` values.
+2. Gate the form render behind `authLoading`. While the provider is still hydrating, show the form in a disabled/neutral state so the first keystroke cannot land before the redirect decision is made. This closes the race permanently.
 
-## Files/settings involved
+3. Always make the Link to /sign-in absolute. Fix the `"/sign-in/sign-in"` warning by ensuring every `<Link to="/sign-in">` on auth routes is an absolute path (it is, but TanStack Router can treat it as relative when the current route is `/sign-in` — pass `from="/"` or use `navigate` to be explicit).
 
-### Code/config changes
-- `wrangler.jsonc`
-  - add a real `vars` section with the public backend values
+4. Clear the stale session cleanly when the user intentionally hits `/sign-up`. If they arrive with a valid session but explicitly requested the signup page, either:
+   - redirect once on initial load (before the form is mountable), or
+   - sign them out silently and let them create the new account.
 
-### Project/backend settings
-- Lovable Cloud project secrets/settings
-  - ensure `SUPABASE_SERVICE_ROLE_KEY` exists
-  - ensure the public backend values are present for deployment
+   We will pick option (a): the redirect still runs, but only once on initial mount, before any keystroke is possible.
 
-## Verification checklist
+## Files that change
 
-After the fix:
-- `/` loads the landing page instead of the config error card
-- `/sign-in` loads normally
-- `/sign-up` loads normally
-- `/forgot-password` loads normally
-- `/check-in/$qrToken` no longer fails immediately because of missing config
-- browser console no longer shows the missing-environment error
-- published site and preview behave consistently
+- `src/components/attendance-hq/host-management.tsx`
+  - Update `useRequireGuestRedirect` to:
+    - return `{ loading, shouldRedirect }` — consumers render a placeholder while loading or while the redirect is in flight
+    - only fire `resolveRedirect` once, synchronously after hydration, and never after the user has touched the form
+
+- `src/routes/sign-in.tsx`
+  - While `loading` from the guard is true, render the `AuthCard` skeleton (heading + disabled inputs) instead of the live form. No keystrokes can land until the redirect decision is made.
+
+- `src/routes/sign-up.tsx`
+  - Same treatment as sign-in: render the card with disabled inputs until the guard resolves.
+
+- `src/routes/forgot-password.tsx` and `src/routes/reset-password.tsx`
+  - Same pattern, since they share `useRequireGuestRedirect` in spirit (forgot-password should not redirect an authed user mid-typing either). Audit and apply the same skeleton gate.
+
+- Any `<Link to="/sign-in">` inside `/sign-in` should navigate absolutely to avoid the `/sign-in/sign-in` warning. Fix is scoped to the auth routes.
+
+## What you will see after the fix
+
+- Opening `/sign-up` with a cached session: you are redirected to `/events/…` before the form is interactive. No typing, no lost text.
+- Opening `/sign-up` with no cached session: the form appears, and your typing stays put. No mid-keystroke redirect.
+- Opening `/sign-in` while already logged in: same behavior — redirected before you can type.
+- The `Error in route match: /sign-in/sign-in` warning disappears.
+- The concurrent-rendering recovery warning disappears on auth routes.
 
 ## Out of scope
 
-- no redesign work
-- no auth-flow refactor
-- no database schema changes
-- no route logic changes unless a second issue appears after config is restored
+- No changes to the actual check-in form on `/check-in/$qrToken`. Its inputs are not affected by this bug; the replay evidence is specific to the auth routes and the guest guard.
+- No changes to `useRequireHostRedirect` — it is already safe because the host screens do not have a form users type into before the redirect decision.
+- No auth provider changes. The race is in the guest guard, not in `AttendanceAuthProvider`.
 
-## Expected outcome
-
-Attendance HQ will boot again because the deployment will finally receive the backend settings that the app already expects.
