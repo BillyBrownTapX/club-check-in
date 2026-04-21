@@ -335,92 +335,154 @@ export function ClubCard({ club }: { club: ClubSummary }) {
 }
 
 export function EventCard({ event, showClub = true, onDuplicate, onDelete }: { event: ManagementEventSummary; showClub?: boolean; onDuplicate?: (eventId: string) => void; onDelete?: (eventId: string) => Promise<void> }) {
+  const navigate = useNavigate();
   const statusLabel = event.checkInStatus === "open"
-    ? "Open"
+    ? "Live"
     : event.checkInStatus === "upcoming"
-      ? "Upcoming"
+      ? "Soon"
       : event.checkInStatus === "inactive"
-        ? "Inactive"
+        ? "Closed"
         : event.checkInStatus === "archived"
           ? "Archived"
-          : "Closed";
+          : "Past";
 
-  const statusHint = event.checkInStatus === "open"
-    ? "Actively accepting check-ins"
+  const statusTone: React.ComponentProps<typeof Chip>["tone"] = event.checkInStatus === "open"
+    ? "success"
     : event.checkInStatus === "upcoming"
-      ? "Ready for the next meeting"
-      : event.checkInStatus === "inactive"
-        ? "Closed early by a host"
-        : event.checkInStatus === "archived"
-          ? "Stored for record keeping"
-          : "Review and export attendance";
+      ? "gold"
+      : "muted";
+
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   return (
-    <Card className="rounded-[1.9rem] border border-primary/10 bg-card/95 shadow-[0_24px_52px_-34px_color-mix(in_oklab,var(--color-primary)_20%,transparent)]">
-      <CardContent className="space-y-4 p-5">
-        <div className="flex items-start justify-between gap-3">
-          <div className="space-y-1 min-w-0">
-            <h3 className="truncate text-lg font-semibold text-foreground">{event.event_name}</h3>
-            {showClub ? <p className="text-sm text-muted-foreground">{event.clubs?.club_name}</p> : null}
+    <div className="ios-card relative rounded-2xl p-4">
+      <Link
+        to="/events/$eventId"
+        params={{ eventId: event.id }}
+        search={{ created: "" }}
+        className="ios-press block pr-10"
+      >
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <h3 className="truncate text-[16px] font-semibold leading-tight text-foreground">{event.event_name}</h3>
+            {showClub && event.clubs?.club_name ? (
+              <p className="mt-0.5 truncate text-[12.5px] text-muted-foreground">{event.clubs.club_name}</p>
+            ) : null}
           </div>
-          <StatusBadge active={event.checkInStatus === "open" || event.checkInStatus === "upcoming"} activeLabel={statusLabel} inactiveLabel={statusLabel} />
+          <Chip tone={statusTone} className="shrink-0">{statusLabel}</Chip>
         </div>
-        <div className="space-y-2 text-sm text-muted-foreground">
-          <div className="flex items-center gap-2"><CalendarDays className="h-4 w-4" />{formatEventDate(event.event_date)}</div>
-          <div className="flex items-center gap-2"><Clock3 className="h-4 w-4" />{formatEventTime(event.start_time, event.end_time)}</div>
-          {event.location ? <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />{event.location}</div> : null}
+        <p className="mt-2 truncate text-[13px] text-muted-foreground">
+          {formatEventDate(event.event_date)} · {formatEventTime(event.start_time, event.end_time)}
+          {event.location ? ` · ${event.location}` : ""}
+        </p>
+        <div className="mt-3 flex items-center justify-between">
+          <span className="text-[13px] font-semibold text-foreground">{event.attendanceCount ?? 0} checked in</span>
         </div>
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <MetaPill label="Attendance" value={event.attendanceCount} />
-          <MetaPill label="Status" value={statusLabel} />
-        </div>
-        <p className="text-sm text-muted-foreground">{statusHint}</p>
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <PrimaryButton asChild><Link to="/events/$eventId" params={{ eventId: event.id }} search={{ created: "" }}>Manage</Link></PrimaryButton>
-          <SecondaryButton asChild><Link to="/events/$eventId/edit" params={{ eventId: event.id }} search={{ created: "" }}>Edit</Link></SecondaryButton>
-          <SecondaryButton type="button" onClick={() => onDuplicate?.(event.id)}>Duplicate</SecondaryButton>
-        </div>
-        {onDelete ? (
-          <DeleteConfirmButton
-            trigger={
-              <Button
-                type="button"
-                variant="outline"
-                className="h-11 w-full rounded-xl border-destructive/30 text-sm font-semibold text-destructive hover:bg-destructive/10 hover:text-destructive"
-              >
-                <Trash2 className="h-4 w-4" />
-                Delete Event
-              </Button>
-            }
-            title="Delete this event?"
-            description="This permanently removes the event, its attendance records, and action history. This cannot be undone."
-            onConfirm={() => onDelete(event.id)}
+      </Link>
+      <div className="absolute right-3 top-3">
+        <ActionSheet
+          trigger={
+            <button
+              type="button"
+              aria-label="Event actions"
+              className="ios-press flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MoreHorizontal className="h-5 w-5" />
+            </button>
+          }
+          title={event.event_name}
+          description="Event actions"
+        >
+          <ActionSheetItem
+            icon={ChevronRight}
+            label="Manage event"
+            onClick={() => navigate({ to: "/events/$eventId", params: { eventId: event.id }, search: { created: "" } })}
           />
-        ) : null}
-      </CardContent>
-    </Card>
+          <ActionSheetItem
+            icon={Pencil}
+            label="Edit event"
+            onClick={() => navigate({ to: "/events/$eventId/edit", params: { eventId: event.id }, search: { created: "" } })}
+          />
+          {onDuplicate ? (
+            <ActionSheetItem icon={Copy} label="Duplicate" onClick={() => onDuplicate(event.id)} />
+          ) : null}
+          {onDelete ? (
+            <ActionSheetItem
+              icon={Trash2}
+              label="Delete event"
+              destructive
+              onClick={() => setConfirmDeleteOpen(true)}
+            />
+          ) : null}
+        </ActionSheet>
+      </div>
+      {onDelete ? (
+        <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete this event?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This permanently removes the event, its attendance records, and action history. This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={async () => {
+                  try { await onDelete(event.id); } catch (e) { toast.error(getManagementErrorMessage(e, "Unable to delete.")); }
+                }}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      ) : null}
+    </div>
   );
 }
 
 export function TemplateCard({ template, onUse, onEdit, onDuplicate }: { template: EventTemplateWithClub; onUse: (templateId: string) => void; onEdit: (template: EventTemplateWithClub) => void; onDuplicate: (templateId: string) => void }) {
   return (
-    <Card className="rounded-[1.75rem] border border-primary/10 bg-card/95 shadow-[0_20px_48px_-32px_color-mix(in_oklab,var(--color-primary)_18%,transparent)]">
-      <CardContent className="space-y-4 p-5">
-        <div className="space-y-1">
-          <h3 className="text-base font-semibold text-foreground">{template.template_name}</h3>
-          <p className="text-sm text-muted-foreground">{template.default_location || "Location not set"}</p>
-        </div>
-        <div className="space-y-1 text-sm text-muted-foreground">
-          <p>{template.default_start_time && template.default_end_time ? formatEventTime(template.default_start_time, template.default_end_time) : "Time not set"}</p>
-          <p>Open {template.default_check_in_open_offset_minutes} min · Close {template.default_check_in_close_offset_minutes} min</p>
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          <SecondaryButton type="button" onClick={() => onUse(template.id)}>Use</SecondaryButton>
-          <SecondaryButton type="button" onClick={() => onEdit(template)}>Edit</SecondaryButton>
-          <SecondaryButton type="button" onClick={() => onDuplicate(template.id)}>Duplicate</SecondaryButton>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="ios-card relative rounded-2xl p-4">
+      <button
+        type="button"
+        onClick={() => onUse(template.id)}
+        className="ios-press block w-full pr-10 text-left"
+      >
+        <h3 className="text-[15.5px] font-semibold text-foreground">{template.template_name}</h3>
+        <p className="mt-0.5 text-[13px] text-muted-foreground">
+          {template.default_start_time && template.default_end_time
+            ? formatEventTime(template.default_start_time, template.default_end_time)
+            : "Time not set"}
+          {template.default_location ? ` · ${template.default_location}` : ""}
+        </p>
+        <p className="mt-1 text-[12px] text-muted-foreground">
+          Open {template.default_check_in_open_offset_minutes} min · Close {template.default_check_in_close_offset_minutes} min
+        </p>
+      </button>
+      <div className="absolute right-3 top-3">
+        <ActionSheet
+          trigger={
+            <button
+              type="button"
+              aria-label="Template actions"
+              className="ios-press flex h-9 w-9 items-center justify-center rounded-full bg-muted text-muted-foreground"
+            >
+              <MoreHorizontal className="h-5 w-5" />
+            </button>
+          }
+          title={template.template_name}
+          description="Template actions"
+        >
+          <ActionSheetItem icon={WandSparkles} label="Use template" onClick={() => onUse(template.id)} />
+          <ActionSheetItem icon={Pencil} label="Edit template" onClick={() => onEdit(template)} />
+          <ActionSheetItem icon={Copy} label="Duplicate" onClick={() => onDuplicate(template.id)} />
+        </ActionSheet>
+      </div>
+    </div>
   );
 }
 
