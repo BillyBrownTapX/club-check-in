@@ -530,13 +530,13 @@ interface DialogBaseProps {
   onOpenChange: (open: boolean) => void;
 }
 
-export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, title, description, universities }: DialogBaseProps & { initialValues?: Partial<ClubUpdateValues>; onSubmit: (values: ClubCreateValues | ClubUpdateValues) => Promise<void>; title: string; description: string; universities: University[] }) {
+export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, title, description, universities }: DialogBaseProps & { initialValues?: Partial<ClubUpdateValues> & { logoPath?: string | null }; onSubmit: (values: ClubCreateValues | ClubUpdateValues) => Promise<void>; title: string; description: string; universities: University[] }) {
   const isEdit = Boolean(initialValues?.clubId);
   const form = useForm<ClubCreateValues | ClubUpdateValues>({
     resolver: zodResolver(isEdit ? clubUpdateSchema : clubSchema),
     defaultValues: isEdit
-      ? { clubId: initialValues?.clubId ?? "", universityId: initialValues?.universityId ?? "", clubName: initialValues?.clubName ?? "", description: initialValues?.description ?? "", isActive: initialValues?.isActive ?? true }
-      : { universityId: "", clubName: "", description: "" },
+      ? { clubId: initialValues?.clubId ?? "", universityId: initialValues?.universityId ?? "", clubName: initialValues?.clubName ?? "", description: initialValues?.description ?? "", isActive: initialValues?.isActive ?? true, logoPath: initialValues?.logoPath ?? null }
+      : { universityId: "", clubName: "", description: "", logoPath: null },
   });
   const [error, setError] = useState("");
 
