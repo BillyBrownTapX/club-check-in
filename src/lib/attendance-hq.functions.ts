@@ -380,10 +380,10 @@ async function createEventForUser(
 export const getHostWorkspace = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const profile = await ensureHostProfile(context.userId);
+    const profile = await requireHostProfile(context.userId);
     const clubs = await getHostClubSummariesForUser(context.supabase, context.userId);
     const events = await getHostEventsForUser(context.supabase, context.userId, { clubId: "", status: "all", query: "" });
-    const templates = await getHostTemplatesForUser(context.supabase, context.userId, "");
+    const templates = await getHostTemplatesForUser(context.supabase, context.userId);
 
     return {
       profile,
