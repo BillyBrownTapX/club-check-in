@@ -1,42 +1,79 @@
 
+Fix the real deployment/config mismatch that is still breaking Attendance HQ.
 
-## Why your app shows "App isn't configured"
+## What is actually wrong now
 
-The error screen is doing exactly what it was designed to do: the Supabase client tried to initialize, couldn't find `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` (or the SSR `SUPABASE_*` equivalents), and threw. The root error boundary recognized the message and rendered the "App isn't configured" card.
+The earlier diagnosis is outdated.
 
-The console confirms this exact error:
-> "Missing Supabase environment variables. Ensure SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY (or VITE_ prefixed versions) are set in your .env file."
+- The project now does have a local `.env` file in the sandbox.
+- But the published app still renders **“App isn't configured”**.
+- That means the problem is no longer “missing file in the workspace” — it is that the **deployed app is not receiving the backend env values at build/runtime**.
 
-## Root cause
+Most likely cause:
+- the manual `.env` workaround only affected the local sandbox session
+- `.env` is gitignored and is not a durable deployment source
+- the published build still does not have the required browser-safe backend values (`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`) injected by Lovable Cloud
 
-The `.env` file is **missing from the project filesystem**. Only `.env.example` exists. Lovable Cloud is supposed to auto-generate `.env` from the connected backend (the values listed in the project metadata) but in your current workspace it hasn't been written, so:
+The evidence:
+- published URL still shows the root config error screen
+- preview fetch is gated behind the auth bridge, so it did not prove the deployed app was healthy
+- runtime secrets already exist for this project, so this is a **Cloud/deployment injection problem**, not a missing-secret problem
 
-- `import.meta.env.VITE_SUPABASE_URL` is `undefined` in the browser bundle
-- `process.env.SUPABASE_URL` is `undefined` during SSR
-- Every page crashes at the first `supabase.*` access
+## Plan
 
-This is why every route — landing, sign-in, check-in — shows the same error card. Nothing in your UI work caused this; the connection to Lovable Cloud just isn't being injected.
+### 1. Repair the backend env source of truth
+Use Lovable Cloud as the source of configuration again instead of relying on the sandbox-only `.env`.
 
-## Fix (one click — no code changes)
+- Verify the project’s Cloud connection is healthy
+- Refresh/reconnect the Cloud integration so the managed environment is regenerated for builds
+- Confirm the public backend values are available to the app build, not just to runtime secrets
 
-Reconnect / refresh Lovable Cloud so the `.env` is regenerated:
+### 2. Remove the false assumption that the sandbox `.env` fixed deployment
+Treat the current `.env` as a temporary local workaround only.
 
-1. Open the project's **Cloud** panel (Connectors → Lovable Cloud).
-2. If Cloud is shown as connected, click **Refresh / Sync** (or toggle off and back on). If it shows as disconnected, click **Enable Cloud**.
-3. Wait for the project to rebuild — the preview will reload automatically.
+- Do not rely on the manually created `.env` as the permanent fix
+- Ensure the project rebuilds from managed configuration so preview/published deployments receive the same values consistently
 
-After that, `.env` will be written with the four required keys and the app will boot normally.
+### 3. Rebuild and republish from the repaired configuration
+Once Cloud env injection is restored:
 
-## If reconnecting doesn't write `.env`
+- trigger a fresh preview rebuild
+- verify the root route no longer throws the “missing backend settings” error
+- republish so the public site is rebuilt from the corrected environment state
 
-Fallback: I can manually create `.env` in the workspace using the values already on file for this project (`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, plus `VITE_SUPABASE_PROJECT_ID`). This unblocks the client + SSR boot. The service-role key (`SUPABASE_SERVICE_ROLE_KEY`) used by `client.server.ts` and any admin server functions cannot be recreated from public metadata and must come from the Cloud sync — so admin-only flows (public check-in lookups that use `supabaseAdmin`) will still need the proper Cloud reconnect to work.
+### 4. Verify both app entry paths
+After the rebuild, explicitly test these routes:
 
-## What I'll do once you confirm
+- `/`
+- `/sign-in`
+- `/sign-up`
+- `/forgot-password`
+- `/check-in/$qrToken` with a valid token if available
 
-- **Preferred:** you reconnect Cloud, the `.env` regenerates, app comes back up. No code changes needed.
-- **If reconnect fails:** I'll write a `.env` with the public anon credentials so the UI boots, then we troubleshoot the missing `SUPABASE_SERVICE_ROLE_KEY` together.
+Success criteria:
+- landing page renders instead of the root error card
+- auth screens load normally
+- no “App isn't configured” fallback appears
+- public check-in can at least load its shell instead of failing immediately
 
-<lov-actions>
-  <lov-open-backend>Open Lovable Cloud</lov-open-backend>
-</lov-actions>
+### 5. Only if Cloud re-sync still fails
+If the deployment still cannot see the backend values after reconnect/rebuild, do a second-pass fix focused on configuration delivery:
 
+- inspect how browser-safe backend config is being injected into TanStack/Vite builds
+- repair that delivery path at the project/platform config layer
+- keep the generated backend client untouched unless absolutely necessary
+
+## Files/code impact
+
+Expected best-case outcome:
+- no app code changes required
+- this is fixed by restoring proper managed environment injection and republishing
+
+If a second pass is needed, the investigation will center on:
+- `vite.config.ts`
+- deployment/build environment wiring
+- Lovable Cloud configuration state
+
+## Important constraint
+
+Do not continue chasing generic frontend bugs until this is resolved. The app is failing before normal product flows begin, so deployment/backend config must be fixed first.
