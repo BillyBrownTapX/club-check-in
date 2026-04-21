@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { HeadContent, Link, Outlet, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AttendanceAuthProvider } from "@/components/attendance-hq/auth-provider";
@@ -72,7 +72,10 @@ export const Route = createRootRouteWithContext<AppRouterContext>()({
       { name: "description", content: "Run live events, manage clubs, and capture attendance from a premium iPhone-native workspace." },
       { name: "theme-color", content: "#0F3FA0" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "Attendance" },
+      { name: "application-name", content: "Attendance HQ" },
       { property: "og:title", content: "Attendance HQ — premium event check-in" },
       { property: "og:description", content: "Run live events, manage clubs, and capture attendance from a premium iPhone-native workspace." },
       { property: "og:type", content: "website" },
@@ -85,6 +88,9 @@ export const Route = createRootRouteWithContext<AppRouterContext>()({
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "canonical", href: "https://attendance-hq.com" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "apple-touch-icon", href: "/icons/icon-192.png" },
+      { rel: "apple-touch-icon", sizes: "512x512", href: "/icons/icon-512.png" },
     ],
   }),
   shellComponent: RootShell,
