@@ -1,170 +1,229 @@
 
-Build the host onboarding flow as a guided activation path that starts at authentication and ends at the newly created event detail page, without exposing hosts to empty states or unrelated dashboard complexity.
+Build the authenticated clubs/events management layer as the host’s operational workspace after onboarding, reusing the current visual system and event-detail handoff while adding the missing routes, ownership-safe data access, and lightweight CRUD flows.
 
-1. Authentication foundation
-- Add dedicated routes for `/sign-up`, `/sign-in`, and `/forgot-password`.
-- Add the required public `/reset-password` route to complete password recovery correctly.
-- Use the existing `host_profiles` table and auth listener pattern already present in the app.
-- Because the required behavior is “start immediately,” configure sign-up so new hosts can continue directly into onboarding without waiting on email verification.
+1. Route structure and navigation
+- Add host-only management routes:
+  - `/clubs`
+  - `/clubs/$clubId`
+  - `/events`
+  - `/events/new`
+  - `/events/$eventId/edit`
+- Keep `/events/$eventId` as the post-create/post-duplicate destination.
+- Update host navigation so it only links to real routes:
+  - remove or replace the current broken `/dashboard` nav target
+  - use Clubs and Events as the primary workspace entry points
+- Add auth guards to all management routes using the existing auth provider pattern so unauthenticated users are redirected to `/sign-in`.
 
-2. Shared onboarding UI system
-- Create purpose-built onboarding components:
-  - `AuthShell`
-  - `AuthCard`
-  - `OnboardingShell`
-  - `ProgressIndicator`
+2. Shared management UI system
+- Extend the existing host primitives into a dedicated management set:
+  - `ManagementPageShell`
+  - `PageHeader`
+  - `ClubCard`
+  - `EventCard`
+  - `TemplateCard`
+  - `StatsCard`
+  - `FilterBar`
   - `FormCard`
-  - `PageHeadingBlock`
+  - `EmptyStateBlock`
   - `PrimaryButton`
-  - `SecondaryTextLink`
-  - `TextInput`
-  - `EmailInput`
-  - `PasswordInput`
+  - `SecondaryButton`
+  - `StatusBadge`
+  - `SearchInput`
   - `DateInput`
   - `TimeInput`
-  - `InlineErrorMessage`
-  - `SuccessBanner`
-- Keep all onboarding forms single-column, centered, touch-friendly, and visually consistent with the existing premium restrained design system.
-- Reuse the product logo and neutral styling already established in `primitives.tsx` and `styles.css`.
+  - `TextInput`
+  - `TextAreaInput`
+  - `SelectInput`
+- Reuse current cards/buttons where possible instead of creating a second design language.
+- Keep mobile-first behavior:
+  - stacked cards on phones
+  - compact responsive grids on desktop
+  - no dense data tables as the default UI
 
-3. Auth page behavior
-- `/sign-up`
-  - Show full name, email, and password.
-  - Submit through a host sign-up flow that creates the auth user and ensures the host profile exists.
-  - Automatically sign the new host into the app client-side and route immediately to `/onboarding/club`.
-- `/sign-in`
-  - Show email and password with clear support links.
-  - On success, route based on onboarding state:
-    - no clubs → `/onboarding/club`
-    - has club but no events → `/onboarding/event`
-    - fully onboarded → dashboard or primary host landing page
-- `/forgot-password`
-  - Collect email and send reset link.
-  - Keep the page minimal and confirmation-focused.
-- `/reset-password`
-  - Let hosts set a new password after following the reset link.
-  - Redirect to sign-in or onboarding-aware host routing after success.
+3. Backend/query foundation for management
+- Add new server functions for host management data instead of relying on ad hoc client queries:
+  - get all host clubs with event counts
+  - get one club detail with upcoming events, past events, and templates
+  - get host events list with club join and attendance counts
+  - get event form payload for edit/duplicate
+  - create club for non-onboarding use
+  - update club
+  - update event
+  - duplicate event
+  - update template
+  - duplicate template
+- Keep ownership checks server-side by verifying the authenticated host owns the club or the event’s parent club before returning or mutating data.
+- Preserve current use of backend-generated QR tokens for new and duplicated events.
 
-4. Onboarding state resolution
-- Add a server function to resolve host onboarding status from authenticated data:
-  - host profile
-  - first club if any
-  - first event if any
-  - completion state
-- Use this status to:
-  - guard onboarding routes
-  - prevent repeating completed steps
-  - send returning hosts to the correct next step
-- Add route guards for `/onboarding/club` and `/onboarding/event` so only authenticated hosts can access them.
-
-5. Create first club step
-- Add `/onboarding/club` with the shared onboarding shell.
-- Show subtle progress: “Step 1 of 2”.
-- Keep the form extremely short:
+4. Clubs page: `/clubs`
+- Build a focused list/grid page with:
+  - title and short supporting copy
+  - `Create Club` primary action
+  - responsive club cards
+- Each club card should show:
   - club name
-  - description optional
-- Generate the slug automatically from club name on the server.
-- On success:
-  - create the club linked to the authenticated host
-  - route immediately to `/onboarding/event`
-- If the host already has a club, redirect forward instead of showing a redundant form.
+  - description
+  - active/inactive status if useful
+  - upcoming event count
+  - past event count
+  - actions: Manage Club, Create Event
+- Add empty state:
+  - “No clubs yet”
+  - CTA to create a club
+- Implement club creation as a lightweight inline form, dialog, or dedicated card on the page to avoid unnecessary route sprawl.
 
-6. Create first event step
-- Add `/onboarding/event` with the same onboarding shell.
-- Show subtle progress: “Step 2 of 2”.
-- Preload the host’s first club from onboarding status instead of asking them to choose a club.
-- Use a focused form for:
+5. Club detail page: `/clubs/$clubId`
+- Build this as the control center for one club with:
+  - compact club header card
+  - quick action row
+  - quick stats
+  - upcoming events section
+  - past events section
+  - templates section
+- Quick actions:
+  - Create Event
+  - Create Template
+  - Edit Club
+- Stats:
+  - Upcoming Events
+  - Past Events
+  - Total Check-Ins if easily derived from joined attendance counts
+- Sections:
+  - upcoming events with manage/edit links
+  - past events with duplicate action
+  - template cards with Use, Edit, Duplicate
+- Add dedicated empty states for missing upcoming events, past events, and templates.
+
+6. Events page: `/events`
+- Build a centralized cross-club event list with:
+  - page header
+  - `Create Event` primary action
+  - optional `Use Template` helper action
+  - lightweight filter row
+  - events list/cards
+- Filters:
+  - club selector
+  - status selector: upcoming / past / all
+  - optional name search if it stays visually clean
+- Each event item shows:
   - event name
-  - event date
-  - start time
-  - end time
+  - club name
+  - date/time
   - location
-  - check-in opens at
-  - check-in closes at
-- Add smart defaults:
-  - when start time is chosen, suggest check-in opens 15 minutes before
+  - attendance count
+  - check-in status
+  - actions: Manage Event, Edit, Duplicate
+- Add empty states for:
+  - no events at all
+  - no filter matches
+
+7. Create event flow: `/events/new`
+- Build a general-purpose event form that works beyond onboarding:
+  - club selector
+  - template shortcut block if templates exist
+  - event fields
+  - full-width primary CTA
+- Reuse current event defaults behavior:
+  - suggest check-in opens 15 minutes before start
   - suggest check-in closes 20 minutes after start
-  - keep both values editable
-- On success:
-  - create the event with a unique QR token
-  - redirect directly to `/events/:eventId`
-  - pass a success banner/toast message such as “Your event is ready. Open the QR code to start check-in.”
+  - keep values editable
+- Add support for prefilled creation from:
+  - selected club
+  - chosen template
+  - duplicate source event
+- On success, redirect directly to `/events/$eventId`.
 
-7. Routing and handoff logic
-- Keep `/events/:eventId` as the onboarding destination rather than adding a separate success page.
-- Add lightweight redirect helpers so:
-  - authenticated hosts visiting `/sign-in` or `/sign-up` are forwarded appropriately
-  - hosts without a club go to `/onboarding/club`
-  - hosts with a club but no event go to `/onboarding/event`
-  - fully onboarded hosts land on the main host area
-- Preserve redirect-back behavior for protected host routes after sign-in where useful.
+8. Edit event flow: `/events/$eventId/edit`
+- Reuse the same event form shell with prefilled values.
+- Keep the UI focused:
+  - title “Edit Event”
+  - save changes CTA
+  - cancel action
+- Validate ownership server-side before loading or saving.
+- Preserve the existing event’s QR token on edit; only duplicates get a new token.
 
-8. Server-side changes
-- Refactor auth-related server functions so onboarding works with real session behavior, not just account creation:
-  - keep password reset server support
-  - add onboarding status server function
-  - ensure club creation and event creation can be used cleanly inside onboarding
-- Harden creation flows to return structured validation and ownership-safe results.
-- Ensure club/event creation always uses the authenticated host context and never trusts client-provided ownership data.
-- Confirm host profile creation is resilient:
-  - rely on the existing trigger where possible
-  - add a safe recovery path if profile lookup fails after sign-up
+9. Duplicate event flow
+- Implement duplicate as a shortcut, not a separate complex workflow.
+- Trigger from:
+  - events page
+  - club detail past/upcoming event cards
+  - optionally event detail later via reuse
+- Behavior:
+  - load source event
+  - prefill create-event form with copied values
+  - allow host to adjust date/time/location
+  - create a brand-new event with a fresh QR token
+  - redirect to the new event detail page
+- Support duplication either via:
+  - `/events/new?duplicateFrom=<eventId>`
+  - or a dedicated server function that returns prefill data for the create form
 
-9. Form validation and UX details
-- Reuse Zod-based schemas where they already fit.
-- Add any missing auth schemas or onboarding-specific client validation.
-- Show inline errors only; no browser alerts.
-- Keep one clear primary CTA per screen.
-- Use larger inputs and buttons than generic admin forms so onboarding feels deliberate and easy on mobile/tablet.
+10. Lightweight template management
+- Keep templates secondary to events and scoped to club context.
+- Manage templates inside the club detail page using dialogs or inline form cards.
+- Support:
+  - create template
+  - edit template
+  - duplicate template
+  - use template to prefill `/events/new`
+- Template cards should show:
+  - template name
+  - default location
+  - default time
+  - open/close offset summary
+- “Use Template” should send the host into a prefilled create-event flow, not create an event instantly.
 
-10. Route metadata and boundaries
-- Add route-specific `head()` metadata for sign-up, sign-in, forgot password, reset password, onboarding club, and onboarding event.
-- Add error and not-found handling for any onboarding route using loaders.
-- Keep the TanStack Start router structure intact and avoid editing generated route files manually.
+11. Club editing
+- Add a minimal edit-club flow within the club detail page.
+- Fields:
+  - club name
+  - description
+  - is_active if included
+- Keep slug generation/update logic server-side and predictable.
+- Avoid deep settings or secondary club configuration.
 
-11. Technical details
-- New route files to add:
-  - `sign-up.tsx`
-  - `sign-in.tsx`
-  - `forgot-password.tsx`
-  - `reset-password.tsx`
-  - `onboarding.club.tsx`
-  - `onboarding.event.tsx`
-  - optionally an authenticated layout route for host-only onboarding guards
-- Likely supporting additions:
-  - onboarding/auth components file
-  - onboarding routing helpers
-  - new server function for onboarding status
-- Update the auth provider only as needed to expose enough session state for route decisions and client redirects.
+12. Schema and validation updates
+- Extend the existing Zod schema layer with:
+  - club update schema
+  - event update schema
+  - template update schema
+  - lightweight filters/search schema if needed
+- Reuse the existing `eventSchema`/`validatedEventSchema` base for create/edit event forms.
+- Keep all validation inline in forms with concise errors.
 
-12. Backend and auth configuration work required
-- Since immediate onboarding after sign-up is required, update backend auth settings to allow that flow.
-- If email verification remains enabled today, change the configuration so new hosts can proceed directly after account creation.
-- No new data tables are required for this onboarding scope; existing `host_profiles`, `clubs`, and `events` support it.
+13. Routing, loaders, and boundaries
+- For any management route using loaders, add both:
+  - `errorComponent`
+  - `notFoundComponent`
+- Use server functions in route loaders for initial data so ownership failures and missing records resolve cleanly.
+- Ensure links use TanStack typed params consistently for `/clubs/$clubId` and `/events/$eventId`.
 
-13. Acceptance checks
-- New host can:
-  - sign up
-  - enter `/onboarding/club`
-  - create first club
-  - create first event
-  - land directly on `/events/:eventId`
-- Returning host behavior:
-  - no club → `/onboarding/club`
-  - has club, no event → `/onboarding/event`
-  - fully onboarded → main host landing page
-- Forgot/reset password flow works end-to-end.
-- Mobile, tablet, and desktop layouts remain clean, single-column at the form core, and visually guided.
-- No host is dropped onto an empty generic dashboard immediately after sign-up.
+14. Technical details
+- Prefer server functions over direct client-side multi-query orchestration for the new management layer.
+- Reuse existing types in `attendance-hq.ts`, but add focused derived types for:
+  - club summary with counts
+  - club detail payload
+  - event management list item
+  - template summary
+- Avoid editing generated route tree files manually.
+- Keep all new routes/components in the existing Attendance HQ namespace for consistency.
 
-14. Deliverable
-- A polished activation funnel for hosts that covers:
-  - sign-up
-  - sign-in
-  - forgot/reset password
-  - create first club
-  - create first event
-  - progress indication
-  - onboarding-aware redirects
-  - direct handoff into the event detail experience
-- The result should feel like guided setup into live value, not generic auth plus blank application state.
+15. Acceptance checks
+- Authenticated host can:
+  - view all owned clubs
+  - open a club detail page
+  - create another club
+  - view centralized events
+  - filter events by club and upcoming/past
+  - create an event from scratch
+  - edit an event
+  - duplicate an event into a new record
+  - create/edit/duplicate/use templates from a club
+  - land on `/events/$eventId` after create/duplicate
+- Unauthorized hosts cannot access another host’s club/event/template data.
+- Mobile layout remains card-first and action-oriented with no critical horizontal scrolling.
+
+16. Known fixes to include while implementing
+- Replace the broken `/dashboard` navigation target in `HostAppShell`.
+- Wire the currently nonfunctional template buttons (`Use`, `Edit`, `Duplicate`) to real behaviors.
+- Introduce proper post-onboarding workspace landing behavior so authenticated hosts can move into Clubs or Events instead of relying only on the onboarding event redirect.
