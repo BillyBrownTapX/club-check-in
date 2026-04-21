@@ -108,8 +108,14 @@ export function useAuthorizedServerFn<T extends (...args: any[]) => Promise<any>
     navigate({ to: "/sign-in", search: { reason: "expired" } });
   }, [navigate, signOut]);
 
-  return (options?: Parameters<T>[0]) => {
-    const accessToken = session?.access_token;
+  return async (options?: Parameters<T>[0]) => {
+    let accessToken = session?.access_token;
+
+    if (!accessToken) {
+      const { data } = await supabase.auth.getSession();
+      accessToken = data.session?.access_token;
+    }
+
     if (!accessToken) {
       // Defer the redirect to the next tick so callers can still attach
       // their own error handling without losing the navigation.
