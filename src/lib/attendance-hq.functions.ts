@@ -1545,3 +1545,75 @@ export const closeCheckInEarly = createServerFn({ method: "POST" })
     if (error) throw new Error(safeMessage(error));
     return { ok: true };
   });
+
+// Cascade-delete a single event. Because the schema has no FK cascade
+// declarations, we have to remove attendance actions + records first,
+// then the event row itself. Ownership is re-verified via
+// requireOwnedEvent; RLS is a secondary guard on each write.
+async function cascadeDeleteEvent(supabase: AppSupabaseClient, eventId: string) {
+  const admin = await getSupabaseAdmin();
+
+  const { error: actionsError } = await admin
+    .from("attendance_actions")
+    .delete()
+    .eq("event_id", eventId);
+  if (actionsError) throw new Error(safeMessage(actionsError, "Unable to delete event history."));
+
+  const { error: recordsError } = await admin
+    .from("attendance_records")
+    .delete()
+    .eq("event_id", eventId);
+  if (recordsError) throw new Error(safeMessage(recordsError, "Unable to delete attendance records."));
+
+  const { error: eventError } = await admin
+    .from("events")
+    .delete()
+    .eq("id", eventId);
+  if (eventError) throw new Error(safeMessage(eventError, "Unable to delete event."));
+}
+
+export const deleteEvent = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(deleteEventSchema)
+  .handler(async ({ data, context }) => {
+    await requireOwnedEvent(context.supabase, context.userId, data.eventId);
+    await cascadeDeleteEvent(context.supabase, data.eventId);
+    return { ok: true };
+  });
+
+export const deleteClub = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(deleteClubSchema)
+  .handler(async ({ data, context }) => {
+    await requireOwnedClub(context.supabase, context.userId, data.clubId);
+
+    const admin = await getSupabaseAdmin();
+
+    // 1. Find all events in this club, cascade-delete each (attendance
+    //    actions + records first, then the event row).
+    const { data: events, error: eventsError } = await admin
+      .from("events")
+      .select("id")
+      .eq("club_id", data.clubId);
+    if (eventsError) throw new Error(safeMessage(eventsError, "Unable to load club events."));
+
+    for (const event of events ?? []) {
+      await cascadeDeleteEvent(context.supabase, event.id);
+    }
+
+    // 2. Remove event templates attached to this club.
+    const { error: templatesError } = await admin
+      .from("event_templates")
+      .delete()
+      .eq("club_id", data.clubId);
+    if (templatesError) throw new Error(safeMessage(templatesError, "Unable to delete club templates."));
+
+    // 3. Finally, delete the club row itself.
+    const { error: clubError } = await admin
+      .from("clubs")
+      .delete()
+      .eq("id", data.clubId);
+    if (clubError) throw new Error(safeMessage(clubError, "Unable to delete club."));
+
+    return { ok: true };
+  });
