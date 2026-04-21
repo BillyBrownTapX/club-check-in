@@ -115,7 +115,7 @@ function EventsRoute() {
           <>
             <SectionLabel>{filtered.length} {filtered.length === 1 ? "event" : "events"}</SectionLabel>
             <div className="space-y-3">
-              {filtered.map((e) => <EventCard key={e.id} event={e} />)}
+              {filtered.map((e) => <EventCard key={e.id} event={e} onDelete={handleDelete} />)}
             </div>
           </>
         )}
