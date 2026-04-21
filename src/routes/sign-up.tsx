@@ -75,6 +75,10 @@ function SignUpRoute() {
       <AuthCard>
         <PageHeadingBlock eyebrow="Get started" title="Create your account" description="Launch a stronger mobile attendance system for your organization in just a few guided steps." />
         {confirmEmailNotice ? <SuccessBanner message={confirmEmailNotice} /> : null}
+        <div className="rounded-[1.5rem] border border-border/80 bg-surface/70 px-4 py-4">
+          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">What happens next</p>
+          <p className="mt-2 text-sm leading-6 text-foreground">Create your account, set up your club, then launch the first QR-ready event from the same mobile workflow.</p>
+        </div>
         <form className="space-y-4" onSubmit={(event) => void onSubmit(event)}>
           <TextInput label="Full name" autoComplete="name" error={form.formState.errors.fullName?.message} {...form.register("fullName")} />
           <EmailInput label="Email" error={form.formState.errors.email?.message} {...form.register("email")} />

@@ -592,6 +592,18 @@ function DateTimeReadonly({ label, value }: { label: string; value: string }) {
   );
 }
 
+function FormSection({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
+  return (
+    <section className="space-y-4 rounded-[1.75rem] border border-border/80 bg-surface/70 p-4 shadow-[0_18px_38px_-30px_color-mix(in_oklab,var(--color-primary)_24%,transparent)] sm:p-5">
+      <div className="space-y-1">
+        <h2 className="text-base font-semibold text-foreground sm:text-lg">{title}</h2>
+        <p className="text-sm leading-6 text-muted-foreground">{description}</p>
+      </div>
+      {children}
+    </section>
+  );
+}
+
 export function EventForm({ payload, title, description, submitLabel, onSubmit, cancelAction }: { payload: EventFormPayload; title: string; description: string; submitLabel: string; onSubmit: (values: EventValues | EventUpdateValues) => Promise<void>; cancelAction?: React.ReactNode }) {
   const navigate = useNavigate();
   const form = useForm<EventFormValues>({
@@ -633,6 +645,7 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
 
   const selectedClubId = form.watch("clubId");
   const templatesForClub = useMemo(() => payload.templates.filter((template) => template.club_id === selectedClubId), [payload.templates, selectedClubId]);
+  const selectedClub = useMemo(() => payload.clubs.find((club) => club.id === selectedClubId), [payload.clubs, selectedClubId]);
 
   return (
     <ManagementPageShell>
@@ -641,12 +654,12 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
         <div className="space-y-4">
           {templatesForClub.length ? (
             <FormCard>
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-4">
                 <div>
                   <p className="text-sm font-semibold text-foreground">Start from template</p>
                   <p className="text-sm leading-6 text-muted-foreground">Use a recurring setup without rebuilding the form from scratch.</p>
                 </div>
-                  <div className="flex snap-x gap-2 overflow-x-auto pb-1">
+                <div className="flex snap-x gap-2 overflow-x-auto pb-1">
                   {templatesForClub.slice(0, 3).map((template) => (
                     <SecondaryButton key={template.id} type="button" className="min-w-fit snap-start" onClick={() => navigate({ to: "/events/new", search: { clubId: selectedClubId || "", templateId: template.id, duplicateFrom: "" } })}>
                       <WandSparkles className="h-4 w-4" />
@@ -659,27 +672,32 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
           ) : null}
           <FormCard>
             <form className="space-y-5" onSubmit={(event) => void submit(event)}>
-              <SelectInput
-                label="Club"
-                value={form.watch("clubId")}
-                onValueChange={(value) => form.setValue("clubId", value, { shouldValidate: true })}
-                placeholder="Choose a club"
-                options={payload.clubs.map((club) => ({ value: club.id, label: club.club_name }))}
-              />
-              <TextInput label="Event name" error={form.formState.errors.eventName?.message} {...form.register("eventName")} />
-              <div className="grid gap-4">
-                <DateInput label="Event date" error={form.formState.errors.eventDate?.message} {...form.register("eventDate")} />
-                <TextInput label="Location" error={form.formState.errors.location?.message} {...form.register("location")} />
+              <div className="grid gap-3 sm:grid-cols-3">
+                <MetaPill label="Club" value={selectedClub?.club_name ?? "Select club"} />
+                <MetaPill label="Templates" value={templatesForClub.length} />
+                <MetaPill label="Check-in plan" value={`${offsets.openMinutesBeforeStart} / ${offsets.closeMinutesAfterEnd} min`} />
               </div>
-              <div className="grid gap-4">
-                <TimeInput label="Start time" error={form.formState.errors.startTime?.message} {...form.register("startTime")} />
-                <TimeInput label="End time" error={form.formState.errors.endTime?.message} {...form.register("endTime")} />
-              </div>
-              <div className="space-y-3 rounded-[1.75rem] border border-border/90 bg-secondary/25 px-4 py-4">
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Check-in timing</p>
-                  <p className="text-sm leading-6 text-muted-foreground">Tune the window for early arrivals, walk-ins, and post-event cleanup.</p>
+              <FormSection title="Event basics" description="Name the meeting, attach it to the right club, and make the setup obvious at a glance.">
+                <SelectInput
+                  label="Club"
+                  value={form.watch("clubId")}
+                  onValueChange={(value) => form.setValue("clubId", value, { shouldValidate: true })}
+                  placeholder="Choose a club"
+                  options={payload.clubs.map((club) => ({ value: club.id, label: club.club_name }))}
+                />
+                <TextInput label="Event name" error={form.formState.errors.eventName?.message} {...form.register("eventName")} />
+                <div className="grid gap-4">
+                  <DateInput label="Event date" error={form.formState.errors.eventDate?.message} {...form.register("eventDate")} />
+                  <TextInput label="Location" error={form.formState.errors.location?.message} {...form.register("location")} />
                 </div>
+              </FormSection>
+              <FormSection title="Schedule" description="Keep the meeting window easy to scan and comfortable to edit on a phone.">
+                <div className="grid gap-4">
+                  <TimeInput label="Start time" error={form.formState.errors.startTime?.message} {...form.register("startTime")} />
+                  <TimeInput label="End time" error={form.formState.errors.endTime?.message} {...form.register("endTime")} />
+                </div>
+              </FormSection>
+              <FormSection title="Check-in timing" description="Tune early access, walk-in handling, and post-event cleanup without losing clarity.">
                 <div className="grid gap-4">
                   <TextInput
                     type="number"
@@ -702,12 +720,12 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
                   <DateTimeReadonly label="Check-in opens" value={form.watch("checkInOpensAt")} />
                   <DateTimeReadonly label="Check-in closes" value={form.watch("checkInClosesAt")} />
                 </div>
-              </div>
+              </FormSection>
               {form.formState.errors.checkInOpensAt?.message ? <p className="text-sm text-destructive">{form.formState.errors.checkInOpensAt.message}</p> : null}
               {form.formState.errors.checkInClosesAt?.message ? <p className="text-sm text-destructive">{form.formState.errors.checkInClosesAt.message}</p> : null}
               {error ? <p className="text-sm text-destructive">{error}</p> : null}
               <div className="sticky bottom-[calc(5.8rem+env(safe-area-inset-bottom))] z-20 -mx-2 rounded-[1.75rem] border border-border/90 bg-card/96 p-3 shadow-[0_24px_52px_-28px_color-mix(in_oklab,var(--color-primary)_42%,transparent)] backdrop-blur md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:shadow-none">
-                <p className="mb-3 text-sm leading-6 text-muted-foreground md:mb-2">Saving changes reactivates the event and uses the updated check-in window.</p>
+                <p className="mb-3 text-sm leading-6 text-muted-foreground md:mb-2">Save when the mobile summary looks right. Updated timing takes effect immediately on the live event.</p>
                 <div className="flex flex-col gap-2 md:flex-row md:justify-end">
                   {cancelAction ?? <SecondaryButton asChild><Link to="/events" search={{ clubId: "", status: "all", query: "" }}>Cancel</Link></SecondaryButton>}
                   <PrimaryButton type="submit">{submitLabel}</PrimaryButton>

@@ -480,6 +480,11 @@ function EventDetailRoute() {
           }
         />
 
+        <div className="grid grid-cols-2 gap-3">
+          <OpsMetric label="Event date" value={formatEventDate(event.event_date)} detail={formatEventTime(event.start_time, event.end_time)} />
+          <OpsMetric label="Location" value={event.location || "TBA"} detail={statusBanner.title} />
+        </div>
+
         <StatusBanner banner={statusBanner} />
 
         {softError ? (
@@ -514,7 +519,7 @@ function EventDetailRoute() {
                     </div>
                     <p className="text-sm text-muted-foreground">Auto-refreshes every {POLL_INTERVAL_MS / 1000}s{lastRefreshAt ? ` · last update ${formatTime(lastRefreshAt)}` : ""}</p>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                    <div className="flex flex-wrap gap-2 rounded-[1.4rem] border border-border/80 bg-surface/70 p-2">
                     <SecondaryButton type="button" onClick={() => void handleManualRefresh()} disabled={refreshing}>
                       <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
                       <span className="hidden sm:inline">Refresh</span>
@@ -577,7 +582,7 @@ function EventDetailRoute() {
                         </p>
                       </div>
                     ) : (
-                      <ul className="divide-y divide-border/80 overflow-hidden rounded-[1.75rem] border border-border/90 bg-surface/60">
+                      <ul className="divide-y divide-border/80 overflow-hidden rounded-[1.75rem] border border-border/90 bg-surface/60 shadow-[0_18px_36px_-30px_color-mix(in_oklab,var(--color-primary)_20%,transparent)]">
                         {filteredAttendance.map((row) => (
                             <li key={row.id} className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
                             <div className="min-w-0 flex-1 space-y-1">
@@ -591,7 +596,7 @@ function EventDetailRoute() {
                               </p>
                             </div>
                             <div className="flex items-center justify-between gap-3 sm:justify-end sm:gap-4">
-                              <span className="shrink-0 text-sm text-muted-foreground">{formatTimestamp(row.checked_in_at)}</span>
+                              <span className="shrink-0 rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-semibold text-muted-foreground">{formatTimestamp(row.checked_in_at)}</span>
                                 <Button
                                 type="button"
                                 variant="ghost"
@@ -734,13 +739,16 @@ function EventDetailRoute() {
         </div>
       </div>
 
-      <Dialog open={manualDialogOpen} onOpenChange={setManualDialogOpen}>
-        <DialogContent className="rounded-2xl sm:max-w-lg">
+        <Dialog open={manualDialogOpen} onOpenChange={setManualDialogOpen}>
+        <DialogContent className="max-h-[92vh] overflow-y-auto rounded-[2rem] border-border/90 bg-card/98 p-0 shadow-[0_28px_72px_-40px_color-mix(in_oklab,var(--color-primary)_42%,transparent)] sm:max-w-lg">
+          <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-muted" />
           <DialogHeader>
-            <DialogTitle>Manual check-in</DialogTitle>
-            <DialogDescription>Use this when a student cannot complete the QR flow but still needs to be counted.</DialogDescription>
+            <div className="px-6 pt-3">
+              <DialogTitle className="text-left text-2xl font-semibold text-foreground">Manual check-in</DialogTitle>
+              <DialogDescription className="mt-2 text-left text-sm leading-6 text-muted-foreground">Use this when a student cannot complete the QR flow but still needs to be counted.</DialogDescription>
+            </div>
           </DialogHeader>
-          <div className="space-y-4">
+          <div className="space-y-4 px-6 pb-6 pt-2">
             <div className="grid gap-4 sm:grid-cols-2">
               <Field label="First name"><Input className="h-11 rounded-xl" value={manualForm.firstName} onChange={(event) => setManualForm((prev) => ({ ...prev, firstName: event.target.value }))} /></Field>
               <Field label="Last name"><Input className="h-11 rounded-xl" value={manualForm.lastName} onChange={(event) => setManualForm((prev) => ({ ...prev, lastName: event.target.value }))} /></Field>
@@ -748,7 +756,7 @@ function EventDetailRoute() {
             <Field label="Student email"><Input className="h-11 rounded-xl" type="email" value={manualForm.studentEmail} onChange={(event) => setManualForm((prev) => ({ ...prev, studentEmail: event.target.value }))} /></Field>
             <Field label="900 number"><Input className="h-11 rounded-xl" inputMode="numeric" value={manualForm.nineHundredNumber} onChange={(event) => setManualForm((prev) => ({ ...prev, nineHundredNumber: event.target.value }))} /></Field>
             {manualError ? <p className="text-sm text-destructive">{manualError}</p> : null}
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
               <SecondaryButton type="button" onClick={() => setManualDialogOpen(false)}>Cancel</SecondaryButton>
               <PrimaryButton type="button" onClick={() => void handleManualCheckIn()} disabled={manualSubmitting}>{manualSubmitting ? "Saving…" : "Save manual check-in"}</PrimaryButton>
             </div>
@@ -808,7 +816,7 @@ function EventDetailRoute() {
 
 function PanelCard({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
   return (
-    <Card className="rounded-2xl border-border/70 shadow-sm">
+    <Card className="rounded-[1.8rem] border-border/80 bg-card/95 shadow-[0_22px_48px_-34px_color-mix(in_oklab,var(--color-primary)_28%,transparent)]">
       <CardContent className="space-y-4 p-5 sm:p-6">
         <div className="space-y-1">
           <h2 className="text-base font-semibold text-foreground">{title}</h2>
@@ -817,6 +825,16 @@ function PanelCard({ title, description, children }: { title: string; descriptio
         {children}
       </CardContent>
     </Card>
+  );
+}
+
+function OpsMetric({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return (
+    <div className="rounded-[1.5rem] border border-border/80 bg-surface/70 px-4 py-4 shadow-[0_18px_36px_-30px_color-mix(in_oklab,var(--color-primary)_22%,transparent)]">
+      <p className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
+      <p className="mt-2 text-sm font-semibold text-foreground">{value}</p>
+      <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
+    </div>
   );
 }
 

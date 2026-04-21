@@ -76,6 +76,10 @@ function SignInRoute() {
       <AuthCard>
         <PageHeadingBlock eyebrow="Welcome back" title="Sign in" description="Return to your mobile operations workspace and keep live attendance moving without delay." />
         {reasonMessage ? <SuccessBanner message={reasonMessage} /> : null}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="rounded-[1.35rem] border border-border/80 bg-surface/70 px-4 py-3"><p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Access</p><p className="mt-1 text-sm font-semibold text-foreground">Host workspace</p></div>
+          <div className="rounded-[1.35rem] border border-border/80 bg-surface/70 px-4 py-3"><p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Designed for</p><p className="mt-1 text-sm font-semibold text-foreground">Phone-first ops</p></div>
+        </div>
         <form className="space-y-4" onSubmit={(event) => void onSubmit(event)}>
           <EmailInput label="Email" error={form.formState.errors.email?.message} {...form.register("email")} />
           <PasswordInput label="Password" error={form.formState.errors.password?.message} {...form.register("password")} />

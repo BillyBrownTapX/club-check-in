@@ -69,6 +69,8 @@ function OnboardingEventRoute() {
   const endTime = form.watch("endTime");
   const openMinutesBeforeStart = form.watch("openMinutesBeforeStart");
   const closeMinutesAfterEnd = form.watch("closeMinutesAfterEnd");
+  const opensPreview = form.watch("checkInOpensAt");
+  const closesPreview = form.watch("checkInClosesAt");
 
   useEffect(() => {
     if (!eventDate || !startTime || !endTime) return;
@@ -144,19 +146,40 @@ function OnboardingEventRoute() {
         <ProgressIndicator step={2} total={2} label="Create your first event" />
         <PageHeadingBlock eyebrow="Setup" title="Create your first event" description="Set up your first meeting so members can scan in quickly and you can manage attendance live from your phone." />
         <form className="space-y-4" onSubmit={(event) => void onSubmit(event)}>
-          <TextInput label="Event name" error={form.formState.errors.eventName?.message} {...form.register("eventName")} />
-          <DateInput label="Event date" error={form.formState.errors.eventDate?.message} {...form.register("eventDate")} />
-          <TimeInput label="Start time" error={form.formState.errors.startTime?.message} {...form.register("startTime")} />
-          <TimeInput label="End time" error={form.formState.errors.endTime?.message} {...form.register("endTime")} />
-          <TextInput label="Location" error={form.formState.errors.location?.message} {...form.register("location")} />
-          <div className="grid gap-4">
-            <TextInput type="number" label="Open minutes before start" error={form.formState.errors.openMinutesBeforeStart?.message} {...form.register("openMinutesBeforeStart", { valueAsNumber: true })} />
-            <TextInput type="number" label="Close minutes after end" error={form.formState.errors.closeMinutesAfterEnd?.message} {...form.register("closeMinutesAfterEnd", { valueAsNumber: true })} />
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-[1.4rem] border border-border/80 bg-surface/70 px-4 py-3"><p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Date</p><p className="mt-1 text-sm font-semibold text-foreground">{eventDate || "Select"}</p></div>
+            <div className="rounded-[1.4rem] border border-border/80 bg-surface/70 px-4 py-3"><p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Start</p><p className="mt-1 text-sm font-semibold text-foreground">{startTime || "Select"}</p></div>
+            <div className="rounded-[1.4rem] border border-border/80 bg-surface/70 px-4 py-3"><p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">End</p><p className="mt-1 text-sm font-semibold text-foreground">{endTime || "Select"}</p></div>
           </div>
-          <DateTimeDisplay label="Check-in opens at" value={form.watch("checkInOpensAt")} />
-          <DateTimeDisplay label="Check-in closes at" value={form.watch("checkInClosesAt")} />
+          <section className="space-y-4 rounded-[1.7rem] border border-border/80 bg-surface/70 p-4">
+            <div className="space-y-1">
+              <h2 className="text-base font-semibold text-foreground">Event basics</h2>
+              <p className="text-sm leading-6 text-muted-foreground">Create a clean event record that is easy for hosts to recognize instantly.</p>
+            </div>
+            <TextInput label="Event name" error={form.formState.errors.eventName?.message} {...form.register("eventName")} />
+            <DateInput label="Event date" error={form.formState.errors.eventDate?.message} {...form.register("eventDate")} />
+            <TimeInput label="Start time" error={form.formState.errors.startTime?.message} {...form.register("startTime")} />
+            <TimeInput label="End time" error={form.formState.errors.endTime?.message} {...form.register("endTime")} />
+            <TextInput label="Location" error={form.formState.errors.location?.message} {...form.register("location")} />
+          </section>
+          <section className="space-y-4 rounded-[1.7rem] border border-border/80 bg-surface/70 p-4">
+            <div className="space-y-1">
+              <h2 className="text-base font-semibold text-foreground">Check-in timing</h2>
+              <p className="text-sm leading-6 text-muted-foreground">Preview the exact attendance window before you launch the first QR flow.</p>
+            </div>
+            <div className="grid gap-4">
+              <TextInput type="number" label="Open minutes before start" error={form.formState.errors.openMinutesBeforeStart?.message} {...form.register("openMinutesBeforeStart", { valueAsNumber: true })} />
+              <TextInput type="number" label="Close minutes after end" error={form.formState.errors.closeMinutesAfterEnd?.message} {...form.register("closeMinutesAfterEnd", { valueAsNumber: true })} />
+            </div>
+            <div className="grid gap-3">
+              <DateTimeDisplay label="Check-in opens at" value={opensPreview} />
+              <DateTimeDisplay label="Check-in closes at" value={closesPreview} />
+            </div>
+          </section>
           <InlineErrorMessage message={submitError ?? undefined} />
-          <PrimaryButton type="submit" disabled={form.formState.isSubmitting || !clubId}>Create Event</PrimaryButton>
+          <div className="sticky bottom-[max(1rem,env(safe-area-inset-bottom))] z-10 -mx-2 rounded-[1.75rem] border border-border/90 bg-card/96 p-3 shadow-[0_24px_52px_-28px_color-mix(in_oklab,var(--color-primary)_42%,transparent)] backdrop-blur">
+            <PrimaryButton type="submit" disabled={form.formState.isSubmitting || !clubId}>Create Event</PrimaryButton>
+          </div>
         </form>
         <div className="flex flex-col gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
           <p className="text-muted-foreground">You can edit this event later.</p>

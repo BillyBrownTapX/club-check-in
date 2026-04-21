@@ -49,6 +49,9 @@ function ForgotPasswordRoute() {
       <AuthCard>
         <PageHeadingBlock eyebrow="Account recovery" title="Reset your password" description="We’ll send a secure reset link so you can get back into your workspace quickly." />
         {success ? <SuccessBanner message="If that email matches an account, we’ve sent a reset link. Check your inbox to continue." /> : null}
+        <div className="rounded-[1.5rem] border border-border/80 bg-surface/70 px-4 py-4">
+          <p className="text-sm leading-6 text-foreground">Use the email tied to your host workspace and continue the reset on the same phone for the smoothest handoff.</p>
+        </div>
         <form className="space-y-4" onSubmit={(event) => void onSubmit(event)}>
           <EmailInput label="Email" error={form.formState.errors.email?.message} {...form.register("email")} />
           <PrimaryButton type="submit" disabled={form.formState.isSubmitting}>Send reset link</PrimaryButton>
