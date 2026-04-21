@@ -29,6 +29,14 @@ export const forgotPasswordSchema = z.object({
   email: emailSchema,
 });
 
+export const resetPasswordSchema = z.object({
+  password: passwordSchema,
+  confirmPassword: passwordSchema,
+}).refine((value) => value.password === value.confirmPassword, {
+  message: "Passwords must match",
+  path: ["confirmPassword"],
+});
+
 export const clubSchema = z.object({
   clubName: z.string().trim().min(2, "Enter a club name").max(120, "Club name is too long"),
   description: z.string().trim().max(280, "Description is too long").optional().or(z.literal("")),
