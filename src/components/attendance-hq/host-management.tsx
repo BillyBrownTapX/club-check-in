@@ -441,7 +441,7 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, title,
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto rounded-[2rem] border-border/70 p-0 sm:max-w-lg">
+      <DialogContent className="max-h-[92vh] overflow-y-auto rounded-[2rem] border-border/90 bg-card/98 p-0 shadow-[0_28px_72px_-40px_color-mix(in_oklab,var(--color-primary)_42%,transparent)] sm:max-w-lg">
         <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-muted" />
         <DialogHeader>
           <div className="px-6 pt-3">
@@ -453,7 +453,7 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, title,
           <TextInput label="Club name" error={form.formState.errors.clubName?.message} {...form.register("clubName")} />
           <TextAreaInput label="Description" error={form.formState.errors.description?.message} {...form.register("description")} />
           {isEdit ? (
-            <div className="flex items-center justify-between rounded-2xl border border-border/70 bg-secondary/35 px-4 py-4">
+            <div className="flex items-center justify-between rounded-2xl border border-border/90 bg-secondary/35 px-4 py-4">
               <div>
                 <p className="text-sm font-medium text-foreground">Club active</p>
                 <p className="text-sm text-muted-foreground">Hide inactive clubs from day-to-day management.</p>
@@ -536,7 +536,7 @@ export function TemplateDialog({ open, onOpenChange, clubId, initialValues, onSu
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto rounded-[2rem] border-border/70 p-0 sm:max-w-lg">
+      <DialogContent className="max-h-[92vh] overflow-y-auto rounded-[2rem] border-border/90 bg-card/98 p-0 shadow-[0_28px_72px_-40px_color-mix(in_oklab,var(--color-primary)_42%,transparent)] sm:max-w-lg">
         <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-muted" />
         <DialogHeader>
           <div className="px-6 pt-3">
@@ -585,7 +585,7 @@ function DateTimeReadonly({ label, value }: { label: string; value: string }) {
     : date.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 
   return (
-    <div className="space-y-2 rounded-2xl border border-border/70 bg-secondary/40 px-4 py-3">
+    <div className="space-y-2 rounded-2xl border border-border/90 bg-secondary/40 px-4 py-3">
       <p className="text-sm font-semibold text-foreground">{label}</p>
       <p className="text-sm text-muted-foreground">{formatted}</p>
     </div>
@@ -646,7 +646,7 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
                   <p className="text-sm font-semibold text-foreground">Start from template</p>
                   <p className="text-sm leading-6 text-muted-foreground">Use a recurring setup without rebuilding the form from scratch.</p>
                 </div>
-                <div className="flex snap-x gap-2 overflow-x-auto pb-1">
+                  <div className="flex snap-x gap-2 overflow-x-auto pb-1">
                   {templatesForClub.slice(0, 3).map((template) => (
                     <SecondaryButton key={template.id} type="button" className="min-w-fit snap-start" onClick={() => navigate({ to: "/events/new", search: { clubId: selectedClubId || "", templateId: template.id, duplicateFrom: "" } })}>
                       <WandSparkles className="h-4 w-4" />
@@ -675,7 +675,7 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
                 <TimeInput label="Start time" error={form.formState.errors.startTime?.message} {...form.register("startTime")} />
                 <TimeInput label="End time" error={form.formState.errors.endTime?.message} {...form.register("endTime")} />
               </div>
-              <div className="space-y-3 rounded-[1.6rem] border border-border/70 bg-secondary/25 px-4 py-4">
+              <div className="space-y-3 rounded-[1.75rem] border border-border/90 bg-secondary/25 px-4 py-4">
                 <div>
                   <p className="text-sm font-semibold text-foreground">Check-in timing</p>
                   <p className="text-sm leading-6 text-muted-foreground">Tune the window for early arrivals, walk-ins, and post-event cleanup.</p>
@@ -706,7 +706,7 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
               {form.formState.errors.checkInOpensAt?.message ? <p className="text-sm text-destructive">{form.formState.errors.checkInOpensAt.message}</p> : null}
               {form.formState.errors.checkInClosesAt?.message ? <p className="text-sm text-destructive">{form.formState.errors.checkInClosesAt.message}</p> : null}
               {error ? <p className="text-sm text-destructive">{error}</p> : null}
-              <div className="sticky bottom-[calc(5.5rem+env(safe-area-inset-bottom))] z-20 -mx-2 rounded-[1.6rem] border border-border/70 bg-background/92 p-3 shadow-[0_18px_40px_-24px_color-mix(in_oklab,var(--color-primary)_35%,transparent)] backdrop-blur md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:shadow-none">
+              <div className="sticky bottom-[calc(5.8rem+env(safe-area-inset-bottom))] z-20 -mx-2 rounded-[1.75rem] border border-border/90 bg-card/96 p-3 shadow-[0_24px_52px_-28px_color-mix(in_oklab,var(--color-primary)_42%,transparent)] backdrop-blur md:static md:mx-0 md:border-0 md:bg-transparent md:p-0 md:shadow-none">
                 <p className="mb-3 text-sm leading-6 text-muted-foreground md:mb-2">Saving changes reactivates the event and uses the updated check-in window.</p>
                 <div className="flex flex-col gap-2 md:flex-row md:justify-end">
                   {cancelAction ?? <SecondaryButton asChild><Link to="/events" search={{ clubId: "", status: "all", query: "" }}>Cancel</Link></SecondaryButton>}
