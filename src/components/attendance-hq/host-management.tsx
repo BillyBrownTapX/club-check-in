@@ -858,7 +858,7 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
                 <p className="mb-3 text-sm leading-6 text-muted-foreground md:mb-2">Save when the mobile summary looks right. Updated timing takes effect immediately on the live event.</p>
                 <div className="flex flex-col gap-2 md:flex-row md:justify-end">
                   {cancelAction ?? <SecondaryButton asChild><Link to="/events" search={{ clubId: "", status: "all", query: "" }}>Cancel</Link></SecondaryButton>}
-                  <PrimaryButton type="submit">{submitLabel}</PrimaryButton>
+                  <PrimaryButton type="submit" disabled={isSubmitting}>{isSubmitting ? "Saving…" : submitLabel}</PrimaryButton>
                 </div>
               </div>
             </form>
