@@ -41,6 +41,7 @@ export const clubSchema = z.object({
   universityId: z.string().uuid("Choose a university"),
   clubName: z.string().trim().min(2, "Enter a club name").max(120, "Club name is too long"),
   description: z.string().trim().max(280, "Description is too long").optional().or(z.literal("")),
+  logoPath: z.string().trim().max(512).nullable().optional(),
 });
 
 export const clubUpdateSchema = clubSchema.extend({
