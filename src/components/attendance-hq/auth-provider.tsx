@@ -92,7 +92,7 @@ function isAuthExpired(error: unknown): boolean {
 export function useAuthorizedServerFn<T extends (...args: any[]) => Promise<any>>(serverFn: T) {
   const { session, signOut } = useAttendanceAuth();
   const navigate = useNavigate();
-  const invoke = useServerFn(serverFn) as AuthorizedServerFn<T>;
+  const invoke = useServerFn(serverFn) as unknown as AuthorizedServerFn<T>;
   // Make sure two simultaneous 401s (e.g. polling + a button click) don't
   // race to trigger two redirects. The first one wins; the second silently
   // continues to surface its error so callers can still toast/log if they
