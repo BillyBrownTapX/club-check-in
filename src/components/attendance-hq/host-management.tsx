@@ -542,8 +542,8 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, title,
 
   useEffect(() => {
     form.reset(isEdit
-      ? { clubId: initialValues?.clubId ?? "", universityId: initialValues?.universityId ?? "", clubName: initialValues?.clubName ?? "", description: initialValues?.description ?? "", isActive: initialValues?.isActive ?? true }
-      : { universityId: "", clubName: "", description: "" });
+      ? { clubId: initialValues?.clubId ?? "", universityId: initialValues?.universityId ?? "", clubName: initialValues?.clubName ?? "", description: initialValues?.description ?? "", isActive: initialValues?.isActive ?? true, logoPath: initialValues?.logoPath ?? null }
+      : { universityId: "", clubName: "", description: "", logoPath: null });
   }, [form, initialValues, isEdit, open]);
 
   const submit = form.handleSubmit(async (values) => {
