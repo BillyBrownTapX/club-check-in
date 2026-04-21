@@ -1,9 +1,9 @@
 import type { ReactNode } from "react";
-import { CheckCircle2, ChevronRight, Clock3, MapPin, QrCode, ShieldAlert, Sparkles } from "lucide-react";
+import { Clock3, MapPin, QrCode, ShieldAlert, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { BrandMark, Chip, SuccessBurst } from "@/components/attendance-hq/ios";
 import { cn } from "@/lib/utils";
 import {
   formatEventDate,
@@ -16,157 +16,121 @@ import {
 } from "@/lib/attendance-hq";
 
 const statusLabelMap: Record<CheckInStatus, string> = {
-  open: "Check-in Open",
-  upcoming: "Not Open Yet",
+  open: "Open",
+  upcoming: "Opens soon",
   closed: "Closed",
   inactive: "Closed",
   archived: "Closed",
 };
 
-const statusToneMap: Record<CheckInStatus, string> = {
-  open: "bg-primary/12 text-primary border border-primary/15",
-  upcoming: "bg-accent/18 text-accent-foreground border border-accent/30",
-  closed: "bg-muted text-muted-foreground border border-border/70",
-  inactive: "bg-destructive/10 text-destructive border border-destructive/20",
-  archived: "bg-muted text-muted-foreground border border-border/70",
+const statusToneMap: Record<CheckInStatus, "success" | "gold" | "muted" | "destructive"> = {
+  open: "success",
+  upcoming: "gold",
+  closed: "muted",
+  inactive: "destructive",
+  archived: "muted",
 };
 
 export function PublicCheckInShell({ children }: { children: ReactNode }) {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-app-shell">
-      <div className="blur-orb-white left-0 top-0 h-32 w-32" />
-      <div className="blur-orb-blue -right-8 top-10 h-40 w-40" />
-      <div className="mx-auto flex min-h-screen w-full max-w-[29rem] flex-col px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:px-6 sm:pt-8">
-        <div className="mb-5 flex items-center gap-3 px-1">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-brand text-primary-foreground shadow-[0_18px_36px_-20px_color-mix(in_oklab,var(--color-primary)_40%,transparent)]">
-            <QrCode className="h-5 w-5" />
-          </div>
-          <div>
-            <div className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-primary/70">Attendance HQ</div>
-            <div className="font-display text-base font-extrabold text-foreground">Student check-in</div>
-          </div>
-        </div>
-        <div className="flex-1 space-y-4">{children}</div>
+    <div className="relative min-h-screen overflow-hidden">
+      <div className="blur-orb-blue -left-10 -top-10 h-36 w-36 opacity-40" />
+      <div className="blur-orb-gold -bottom-12 -right-8 h-40 w-40 opacity-40" />
+      <div className="relative mx-auto flex min-h-screen w-full max-w-[440px] flex-col px-4 pb-safe pt-safe-1 sm:px-5">
+        <header className="flex items-center justify-between py-3">
+          <BrandMark size="sm" />
+          <Chip tone="muted">Check-in</Chip>
+        </header>
+        <main className="flex-1 space-y-4 pb-6">{children}</main>
       </div>
     </div>
   );
 }
 
 export function StatusBadge({ status }: { status: CheckInStatus }) {
-  return <span className={cn("inline-flex rounded-full px-3 py-1 text-xs font-semibold", statusToneMap[status])}>{statusLabelMap[status]}</span>;
+  return <Chip tone={statusToneMap[status]}>{statusLabelMap[status]}</Chip>;
 }
 
 export function EventInfoCard({ event, status }: { event: EventWithClub; status: CheckInStatus }) {
   return (
-    <Card className="overflow-hidden rounded-[2rem] border border-primary/10 bg-card/95 shadow-[0_24px_56px_-34px_color-mix(in_oklab,var(--color-primary)_24%,transparent)]">
-      <div className="hero-wash px-5 py-5 text-white">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-white/80">{event.clubs?.club_name ?? "Club event"}</div>
-            <CardTitle className="mt-2 font-display text-[1.8rem] font-extrabold leading-tight text-white">{event.event_name}</CardTitle>
-          </div>
-          <StatusBadge status={status} />
+    <div className="relative overflow-hidden rounded-[1.75rem] hero-wash p-5 text-white ios-spring-in">
+      <div className="blur-orb-gold -bottom-8 -right-6 h-28 w-28 opacity-60" />
+      <div className="relative flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-white/80">{event.clubs?.club_name ?? "Club event"}</p>
+          <h2 className="mt-2 font-display text-[24px] font-extrabold leading-tight">{event.event_name}</h2>
         </div>
+        <StatusBadge status={status} />
       </div>
-      <CardHeader className="space-y-3 p-5">
-        <div className="space-y-3 text-sm text-muted-foreground">
-          <div>{formatEventDate(event.event_date)}</div>
-          <div className="flex items-center gap-2"><Clock3 className="h-4 w-4 text-primary" />{formatEventTime(event.start_time, event.end_time)}</div>
-          {event.location ? <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-primary" />{event.location}</div> : null}
-        </div>
-      </CardHeader>
-    </Card>
-  );
-}
-
-export function ActionChoiceCard({ title, description, icon, onClick }: { title: string; description?: string; icon: ReactNode; onClick: () => void; }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex w-full items-center gap-4 rounded-[1.75rem] border border-primary/10 bg-card/95 p-5 text-left shadow-[0_20px_44px_-28px_color-mix(in_oklab,var(--color-primary)_20%,transparent)] transition-transform duration-150 hover:-translate-y-0.5"
-    >
-      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground">{icon}</div>
-      <div className="min-w-0 flex-1">
-        <div className="font-display text-base font-bold text-foreground">{title}</div>
-        {description ? <div className="mt-1 text-sm text-muted-foreground">{description}</div> : null}
+      <div className="relative mt-4 space-y-1.5 text-[13px] text-white/90">
+        <div>{formatEventDate(event.event_date)}</div>
+        <div className="flex items-center gap-1.5"><Clock3 className="h-3.5 w-3.5" />{formatEventTime(event.start_time, event.end_time)}</div>
+        {event.location ? <div className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5" />{event.location}</div> : null}
       </div>
-      <ChevronRight className="h-5 w-5 text-muted-foreground" />
-    </button>
+    </div>
   );
 }
 
 export function CheckInFormCard({ children }: { children: ReactNode }) {
-  return <Card className="rounded-[2rem] border border-primary/10 bg-card/95 shadow-[0_24px_56px_-34px_color-mix(in_oklab,var(--color-primary)_24%,transparent)]"><CardContent className="space-y-4 p-5 pt-5">{children}</CardContent></Card>;
+  return <div className="ios-card rounded-[1.5rem] p-5 space-y-4 ios-spring-in">{children}</div>;
 }
 
 export function IdentityConfirmationCard({ student }: { student: PublicStudentPreview }) {
   return (
-    <Card className="rounded-[2rem] border border-primary/10 bg-card/95 shadow-[0_18px_42px_-28px_color-mix(in_oklab,var(--color-primary)_18%,transparent)]">
-      <CardContent className="space-y-4 p-6 text-center">
-        <div className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-primary/70">Student found</div>
-        <div className="space-y-2">
-          <div className="font-display text-2xl font-extrabold text-foreground">{student.firstName} {student.lastInitial}.</div>
-          <div className="text-sm text-muted-foreground">{student.maskedEmail}</div>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="ios-card rounded-[1.5rem] p-6 text-center ios-spring-in">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+        <QrCode className="h-5 w-5" />
+      </div>
+      <p className="mt-4 ios-section-label">Student found</p>
+      <p className="mt-2 font-display text-[24px] font-extrabold text-foreground">{student.firstName} {student.lastInitial}.</p>
+      <p className="mt-1 text-[13px] text-muted-foreground">{student.maskedEmail}</p>
+    </div>
   );
 }
 
 export function SuccessStateCard({ event, checkedInAt }: { event: EventWithClub; checkedInAt: string }) {
   return (
-    <Card className="rounded-[2rem] border border-success/20 bg-card/95 shadow-[0_18px_42px_-28px_color-mix(in_oklab,var(--color-success)_20%,transparent)]">
-      <CardContent className="space-y-5 p-6 text-center">
-        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/12 text-success ring-gold">
-          <CheckCircle2 className="h-8 w-8" />
-        </div>
-        <div className="space-y-2">
-          <h1 className="font-display text-3xl font-extrabold text-foreground">You’re checked in</h1>
-          <p className="text-sm text-muted-foreground">Your attendance has been recorded successfully.</p>
-        </div>
-        <div className="rounded-[1.5rem] surface-soft p-4 text-left">
-          <div className="text-sm font-semibold uppercase tracking-[0.14em] text-primary/75">{event.clubs?.club_name}</div>
-          <div className="mt-1 font-display text-xl font-bold text-foreground">{event.event_name}</div>
-          <div className="mt-3 space-y-1 text-sm text-muted-foreground">
-            <div>{formatEventDate(event.event_date)}</div>
-            <div>Checked in {formatTimestamp(checkedInAt)}</div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="ios-card rounded-[1.75rem] p-6 text-center ios-spring-in">
+      <SuccessBurst />
+      <h1 className="mt-5 font-display text-[28px] font-extrabold text-foreground">You're checked in</h1>
+      <p className="mt-1.5 text-[14px] text-muted-foreground">Your attendance has been recorded.</p>
+      <div className="mt-5 rounded-2xl bg-muted px-4 py-4 text-left">
+        <p className="ios-section-label">{event.clubs?.club_name}</p>
+        <p className="mt-1 font-display text-[17px] font-bold text-foreground">{event.event_name}</p>
+        <p className="mt-2 text-[13px] text-muted-foreground">{formatEventDate(event.event_date)}</p>
+        <p className="mt-1 text-[13px] text-muted-foreground">Checked in {formatTimestamp(checkedInAt)}</p>
+      </div>
+    </div>
   );
 }
 
-export function ErrorStateCard({ title, description, marker = <ShieldAlert className="h-7 w-7" />, action }: { title: string; description: string; marker?: ReactNode; action?: ReactNode; }) {
+export function ErrorStateCard({ title, description, marker, action }: { title: string; description: string; marker?: ReactNode; action?: ReactNode }) {
   return (
-    <Card className="rounded-[2rem] border border-primary/10 bg-card/95 shadow-[0_18px_42px_-28px_color-mix(in_oklab,var(--color-primary)_18%,transparent)]">
-      <CardContent className="space-y-5 p-6 text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10 text-destructive">{marker}</div>
-        <div className="space-y-2">
-          <h1 className="font-display text-2xl font-bold text-foreground">{title}</h1>
-          <p className="text-sm text-muted-foreground">{description}</p>
-        </div>
-        {action}
-      </CardContent>
-    </Card>
+    <div className="ios-card rounded-[1.75rem] p-6 text-center ios-spring-in">
+      <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-muted text-muted-foreground">
+        {marker ?? <ShieldAlert className="h-5 w-5" />}
+      </div>
+      <h1 className="mt-4 font-display text-[22px] font-bold text-foreground">{title}</h1>
+      <p className="mt-1.5 text-[14px] leading-6 text-muted-foreground">{description}</p>
+      {action ? <div className="mt-5">{action}</div> : null}
+    </div>
   );
 }
 
 export function PrimaryButton(props: React.ComponentProps<typeof Button>) {
-  return <Button {...props} variant={props.variant ?? "hero"} className={cn("h-13 w-full rounded-xl text-base font-bold", props.className)} />;
+  return <Button {...props} variant={props.variant ?? "hero"} size={props.size ?? "xl"} className={cn("w-full", props.className)} />;
 }
 
 export function SecondaryTextButton(props: React.ComponentProps<typeof Button>) {
-  return <Button variant="ghost" {...props} className={cn("h-11 w-full rounded-xl text-sm font-semibold text-primary", props.className)} />;
+  return <Button variant="ghost" {...props} className={cn("h-11 w-full rounded-xl text-[14px] font-semibold text-primary", props.className)} />;
 }
 
-export function MobileInputField({ label, error, className, ...props }: React.ComponentProps<typeof Input> & { label: string; error?: string; }) {
+export function MobileInputField({ label, error, className, ...props }: React.ComponentProps<typeof Input> & { label: string; error?: string }) {
   return (
-    <div className="space-y-2.5">
-      <Label className="text-sm font-semibold text-foreground">{label}</Label>
-      <Input {...props} className={cn("h-13 rounded-xl border-primary/10 bg-background px-4 text-base shadow-none placeholder:text-muted-foreground/90", className)} />
-      {error ? <p className="text-sm font-medium text-destructive">{error}</p> : null}
+    <div className="space-y-2">
+      <Label className="text-[13px] font-semibold text-foreground">{label}</Label>
+      <Input {...props} className={cn("h-12 rounded-xl border-border/80 bg-muted/50 px-4 text-[15px] shadow-none focus-visible:bg-card", className)} />
+      {error ? <p className="text-[13px] font-medium text-destructive">{error}</p> : null}
     </div>
   );
 }
@@ -176,12 +140,12 @@ export function MobileNumericField(props: React.ComponentProps<typeof MobileInpu
 }
 
 export function EventContextRow({ event }: { event: EventWithClub }) {
-  return <div className="px-1 text-sm font-medium text-primary/75">{event.clubs?.club_name} • {event.event_name}</div>;
+  return <p className="px-1 text-[13px] font-medium text-muted-foreground">{event.clubs?.club_name} · {event.event_name}</p>;
 }
 
 export function RememberedStudentLabel({ student }: { student: PublicStudentPreview }) {
   return (
-    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+    <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
       <Sparkles className="h-4 w-4 text-accent" />
       <span>Check in as {getStudentShortName({ first_name: student.firstName, last_name: student.lastInitial })}</span>
     </div>
