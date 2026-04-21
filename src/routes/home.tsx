@@ -5,6 +5,7 @@ import { useAttendanceAuth, useAuthorizedServerFn } from "@/components/attendanc
 import { HostAppShell, HomeTopActions } from "@/components/attendance-hq/host-shell";
 import { useRequireHostRedirect, getManagementErrorMessage } from "@/components/attendance-hq/host-management";
 import { ActionTile, Chip, GroupedList, LargeTitleHeader, ListRow, SectionLabel, StatTile } from "@/components/attendance-hq/ios";
+import { InstallBanner } from "@/components/attendance-hq/install-cta";
 import { getHostClubSummaries, getHostEvents } from "@/lib/attendance-hq.functions";
 import { formatEventDate, formatEventTime, getCheckInStatus, type ClubSummary, type ManagementEventSummary } from "@/lib/attendance-hq";
 
@@ -92,6 +93,8 @@ function HomeRoute() {
         <div className="ios-card mt-2 rounded-3xl p-5 text-sm text-destructive">{error}</div>
       ) : (
         <>
+          <InstallBanner />
+
           {featuredEvent ? (
             <Link
               to="/events/$eventId"

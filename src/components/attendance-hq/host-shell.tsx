@@ -46,6 +46,7 @@ function BottomTabBar({ pathname }: { pathname: string }) {
               <Link
                 key={tab.to}
                 to={tab.to as never}
+                style={{ touchAction: "manipulation" }}
                 className={cn(
                   "ios-press flex flex-col items-center justify-center gap-0.5 rounded-[1.2rem] py-2 transition-colors",
                   active ? "text-primary" : "text-muted-foreground",
