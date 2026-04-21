@@ -41,43 +41,33 @@ function SignUpRoute() {
       password: values.password,
       options: { data: { full_name: values.fullName } },
     });
-
     if (error) {
       setAuthSettling(false);
       setSubmitError(normalizeSupabaseAuthError(error, "Unable to create account."));
       return;
     }
-
     if (!data.user) {
       setAuthSettling(false);
       setSubmitError("Unable to create account.");
       return;
     }
-
-    // When Supabase has email confirmation enabled the signUp call returns
-    // a user but no session. There's nothing to redirect to yet — the
-    // host_profile bootstrap happens server-side on first authenticated
-    // call (see getHostOnboardingState).
     if (!data.session) {
-      setConfirmEmailNotice(
-        "Check your inbox to confirm your email, then sign in to continue setting up your club.",
-      );
+      setConfirmEmailNotice("Check your inbox to confirm your email, then sign in to continue setting up your club.");
       setAuthSettling(false);
       form.reset();
       return;
     }
-
     setAuthSettling(true);
   });
 
   return (
     <AuthShell>
       <AuthCard>
-        <PageHeadingBlock eyebrow="Get started" title="Create your account" description="Launch a stronger mobile attendance system for your organization in just a few guided steps." />
+        <PageHeadingBlock eyebrow="Get started" title="Create your account" description="Launch a cleaner university-linked attendance system in just a few guided steps." />
         {confirmEmailNotice ? <SuccessBanner message={confirmEmailNotice} /> : null}
-        <div className="rounded-[1.5rem] border border-border/80 bg-surface/70 px-4 py-4">
-          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">What happens next</p>
-          <p className="mt-2 text-sm leading-6 text-foreground">Create your account, set up your club, then launch the first QR-ready event from the same mobile workflow.</p>
+        <div className="rounded-[1.5rem] surface-soft px-4 py-4">
+          <p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-primary/70">What happens next</p>
+          <p className="mt-2 text-sm leading-6 text-foreground">Create your account, connect your club to its university, then launch the first QR-ready event from the same mobile workflow.</p>
         </div>
         <form className="space-y-4" onSubmit={(event) => void onSubmit(event)}>
           <TextInput label="Full name" autoComplete="name" error={form.formState.errors.fullName?.message} {...form.register("fullName")} />

@@ -1,75 +1,75 @@
 import type { ReactNode } from "react";
 import { HeadContent, Link, Outlet, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import appCss from "../styles.css?url";
+import { AttendanceLogo } from "@/components/attendance-hq/primitives";
 import { AttendanceAuthProvider } from "@/components/attendance-hq/auth-provider";
+import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
 import { PRODUCT_NAME } from "@/lib/attendance-hq";
+import appCss from "../styles.css?url";
 
 export interface AppRouterContext {
   queryClient: QueryClient;
 }
 
+function BrandedShellCard({ children }: { children: ReactNode }) {
+  return (
+    <div className="relative overflow-hidden rounded-[2rem] border border-primary/10 bg-card/95 p-8 shadow-[0_28px_72px_-36px_color-mix(in_oklab,var(--color-primary)_28%,transparent)] backdrop-blur">
+      <div className="blur-orb-white -left-10 -top-10 h-28 w-28" />
+      <div className="blur-orb-blue -bottom-8 -right-8 h-32 w-32" />
+      <div className="relative">{children}</div>
+    </div>
+  );
+}
+
 function NotFoundComponent() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-app-shell px-4 py-8">
-      <div className="w-full max-w-md rounded-[2rem] border border-border/80 bg-card/95 p-8 text-center shadow-[0_24px_64px_-36px_color-mix(in_oklab,var(--color-primary)_42%,transparent)]">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-secondary text-secondary-foreground text-sm font-semibold">404</div>
-        <h1 className="mt-5 text-3xl font-semibold tracking-tight text-foreground">Page not found</h1>
-        <p className="mt-3 text-sm leading-6 text-muted-foreground">The page you’re looking for doesn’t exist or is no longer available.</p>
-        <div className="mt-6">
-          <Link
-            to="/"
-            className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-[0_18px_40px_-24px_color-mix(in_oklab,var(--color-primary)_58%,transparent)] transition-colors hover:bg-primary/90"
-          >
-            Go home
-          </Link>
-        </div>
+    <div className="flex min-h-screen items-center justify-center px-4 py-8">
+      <div className="w-full max-w-lg">
+        <BrandedShellCard>
+          <div className="flex flex-col items-center text-center">
+            <AttendanceLogo />
+            <div className="mt-8 inline-flex rounded-full bg-secondary px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">404</div>
+            <h1 className="mt-5 font-display text-4xl font-extrabold tracking-tight text-foreground">Page not found</h1>
+            <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">The page you tried to open is unavailable. Head back to the main workspace and continue from there.</p>
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <Button asChild variant="hero" size="lg"><Link to="/">Go home</Link></Button>
+              <Button asChild variant="outline" size="lg"><Link to="/sign-in">Host sign in</Link></Button>
+            </div>
+          </div>
+        </BrandedShellCard>
       </div>
     </div>
   );
 }
 
-// Last-chance error wall for anything that escaped a route's own
-// errorComponent — most importantly the supabase client throwing during
-// boot when SUPABASE_URL / SUPABASE_PUBLISHABLE_KEY are missing. Without
-// this, a misconfigured deploy renders a blank screen + console stack
-// instead of an actionable message.
 function RootErrorComponent({ error }: { error: Error }) {
-  if (typeof console !== "undefined") {
-    console.error("[root-error]", error);
-  }
-  // Detect the well-known "missing env" signal so we can show config-
-  // specific copy. Anything else falls back to the generic "we hit a snag"
-  // screen — we never echo the raw .message into the page.
+  if (typeof console !== "undefined") console.error("[root-error]", error);
   const isConfigError = /supabase environment variables/i.test(error?.message ?? "");
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-app-shell px-4 py-8">
-      <div className="w-full max-w-md rounded-[2rem] border border-border/80 bg-card/95 p-8 text-center shadow-[0_24px_64px_-36px_color-mix(in_oklab,var(--color-primary)_42%,transparent)]">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10 text-sm font-semibold text-destructive">!</div>
-        <h1 className="mt-5 text-2xl font-semibold tracking-tight text-foreground">
-          {isConfigError ? `${PRODUCT_NAME} isn’t configured` : "Something went wrong"}
-        </h1>
-        <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          {isConfigError
-            ? "The site is missing required server settings. The team has been notified — please check back shortly."
-            : "An unexpected error happened. Please refresh the page or try again in a moment."}
-        </p>
-        <div className="mt-6 flex justify-center gap-3">
-          <button
-            type="button"
-            onClick={() => { if (typeof window !== "undefined") window.location.reload(); }}
-            className="inline-flex min-h-12 items-center justify-center rounded-2xl bg-primary px-5 text-sm font-semibold text-primary-foreground shadow-[0_18px_40px_-24px_color-mix(in_oklab,var(--color-primary)_58%,transparent)] transition-colors hover:bg-primary/90"
-          >
-            Reload
-          </button>
-          <Link
-            to="/"
-            className="inline-flex min-h-12 items-center justify-center rounded-2xl border border-border bg-surface px-5 text-sm font-semibold text-foreground transition-colors hover:bg-secondary"
-          >
-            Go home
-          </Link>
-        </div>
+    <div className="flex min-h-screen items-center justify-center px-4 py-8">
+      <div className="w-full max-w-lg">
+        <BrandedShellCard>
+          <div className="flex flex-col items-center text-center">
+            <AttendanceLogo />
+            <div className="mt-8 inline-flex rounded-full bg-destructive/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-destructive">Attention</div>
+            <h1 className="mt-5 font-display text-3xl font-extrabold tracking-tight text-foreground">
+              {isConfigError ? `${PRODUCT_NAME} isn’t configured` : "Something went wrong"}
+            </h1>
+            <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">
+              {isConfigError
+                ? "The app is missing required backend settings. Please check back shortly."
+                : "An unexpected error interrupted the page. Refresh and try again."}
+            </p>
+            <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+              <Button type="button" variant="hero" size="lg" onClick={() => { if (typeof window !== "undefined") window.location.reload(); }}>
+                Reload
+              </Button>
+              <Button asChild variant="outline" size="lg"><Link to="/">Go home</Link></Button>
+            </div>
+          </div>
+        </BrandedShellCard>
       </div>
     </div>
   );

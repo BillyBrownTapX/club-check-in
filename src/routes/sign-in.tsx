@@ -13,13 +13,6 @@ const formSchema = signInSchema;
 type FormValues = z.infer<typeof formSchema>;
 
 export const Route = createFileRoute("/sign-in")({
-  // `?reason=expired` is set by useAuthorizedServerFn whenever a server fn
-  // 401s while a host is mid-session, so the sign-in screen can show a
-  // friendly "your session expired" banner instead of dumping the user
-  // back to a blank login form with no explanation. Marking `reason` as
-  // optional in the return type is important — without the `?`, every
-  // existing `<Link to="/sign-in">` and `navigate({ to: "/sign-in" })`
-  // in the codebase would be a type error for "missing required search".
   validateSearch: (search: Record<string, unknown>): { reason?: string } => ({
     reason: typeof search.reason === "string" ? search.reason : undefined,
   }),
@@ -33,10 +26,6 @@ export const Route = createFileRoute("/sign-in")({
 });
 
 function SignInRoute() {
-  // Already-authenticated visitors get bounced to wherever the server says
-  // they belong (events, onboarding/club, onboarding/event). Same logic
-  // sign-up and reset-password use, so behaviour is identical across all
-  // auth landings.
   useRequireGuestRedirect();
   const { reason } = Route.useSearch();
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -46,50 +35,36 @@ function SignInRoute() {
     defaultValues: { email: "", password: "" },
   });
 
-  // Map the redirect reason to a friendly explanation. Anything we don't
-  // recognize is intentionally ignored — we don't want a malicious link
-  // like ?reason=<script> rendering arbitrary text.
-  const reasonMessage =
-    reason === "expired"
-      ? "Your session expired. Please sign in again to continue."
-      : null;
+  const reasonMessage = reason === "expired" ? "Your session expired. Please sign in again to continue." : null;
 
   const onSubmit = form.handleSubmit(async (values) => {
     setSubmitError(null);
     setAuthSettling(false);
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: values.email,
-      password: values.password,
-    });
-
+    const { data, error } = await supabase.auth.signInWithPassword({ email: values.email, password: values.password });
     if (error || !data.user) {
       setAuthSettling(false);
       setSubmitError(normalizeSupabaseAuthError(error, "Unable to sign in."));
       return;
     }
-
     setAuthSettling(true);
   });
 
   return (
     <AuthShell>
       <AuthCard>
-        <PageHeadingBlock eyebrow="Welcome back" title="Sign in" description="Return to your mobile operations workspace and keep live attendance moving without delay." />
+        <PageHeadingBlock eyebrow="Welcome back" title="Sign in" description="Return to your UNG-branded event workspace and keep mobile attendance moving without delay." />
         {reasonMessage ? <SuccessBanner message={reasonMessage} /> : null}
         <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-[1.35rem] border border-border/80 bg-surface/70 px-4 py-3"><p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Access</p><p className="mt-1 text-sm font-semibold text-foreground">Host workspace</p></div>
-          <div className="rounded-[1.35rem] border border-border/80 bg-surface/70 px-4 py-3"><p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Designed for</p><p className="mt-1 text-sm font-semibold text-foreground">Phone-first ops</p></div>
+          <div className="rounded-[1.35rem] surface-soft px-4 py-4"><p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-primary/70">Workspace</p><p className="mt-1 font-display text-lg font-bold text-foreground">Host ops</p></div>
+          <div className="rounded-[1.35rem] surface-cream px-4 py-4"><p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-primary/70">Built for</p><p className="mt-1 font-display text-lg font-bold text-foreground">Phone-first teams</p></div>
         </div>
         <form className="space-y-4" onSubmit={(event) => void onSubmit(event)}>
           <EmailInput label="Email" error={form.formState.errors.email?.message} {...form.register("email")} />
           <PasswordInput label="Password" error={form.formState.errors.password?.message} {...form.register("password")} />
           <InlineErrorMessage message={submitError ?? undefined} />
-          <PrimaryButton type="submit" disabled={form.formState.isSubmitting || authSettling}>{authSettling ? "Signing you in..." : "Sign In"}</PrimaryButton>
+          <PrimaryButton type="submit" disabled={form.formState.isSubmitting || authSettling}>{authSettling ? "Signing you in..." : "Sign in"}</PrimaryButton>
         </form>
-        <AuthSupportLinks
-          primary={<SecondaryTextLink to="/forgot-password">Forgot password</SecondaryTextLink>}
-          secondary={<SecondaryTextLink to="/sign-up">Create account</SecondaryTextLink>}
-        />
+        <AuthSupportLinks primary={<SecondaryTextLink to="/forgot-password">Forgot password</SecondaryTextLink>} secondary={<SecondaryTextLink to="/sign-up">Create account</SecondaryTextLink>} />
       </AuthCard>
     </AuthShell>
   );
