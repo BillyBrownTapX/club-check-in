@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { CalendarDays, Clock3, MapPin, Plus, Search } from "lucide-react";
+import { CalendarDays, Clock3, MapPin, Plus, Search, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
 import { HostAppShell } from "@/components/attendance-hq/host-shell";
-import { useRequireHostRedirect } from "@/components/attendance-hq/host-management";
+import { DeleteConfirmButton, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
 import { Chip, IosSearchField, LargeTitleHeader, SectionLabel, SegmentedControl } from "@/components/attendance-hq/ios";
 import { Button } from "@/components/ui/button";
-import { getHostEvents } from "@/lib/attendance-hq.functions";
+import { deleteEvent, getHostEvents } from "@/lib/attendance-hq.functions";
 import { formatEventDate, formatEventTime, type EventListStatusFilter, type ManagementEventSummary } from "@/lib/attendance-hq";
 
 export const Route = createFileRoute("/events/")({
