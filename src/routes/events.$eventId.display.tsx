@@ -9,12 +9,13 @@ import { getEventOperations } from "@/lib/attendance-hq.functions";
 import {
   formatEventDate,
   formatEventTime,
+  formatTimestamp,
+  getCheckInStatus,
   type AttendanceRow,
+  type EventAttendanceSummary,
   type EventWithClub,
 } from "@/lib/attendance-hq";
 
-// Faster polling than the ops console: this view is meant to be projected
-// in the room, so the live count needs to feel near-instant.
 const DISPLAY_POLL_INTERVAL_MS = 3000;
 
 function DisplayError({ error }: { error: Error }) {
@@ -52,14 +53,18 @@ function EventDisplayRoute() {
 
   const [event, setEvent] = useState<EventWithClub | null>(null);
   const [attendance, setAttendance] = useState<AttendanceRow[]>([]);
+  const [summary, setSummary] = useState<EventAttendanceSummary | null>(null);
   const [initialLoaded, setInitialLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
     try {
       const next = await loadOperations({ data: { eventId } });
       setEvent(next.event as EventWithClub);
       setAttendance(next.attendance);
+      setSummary(next.summary);
+      setLastUpdatedAt(new Date().toISOString());
       setLoadError(null);
     } catch (error) {
       setLoadError(error instanceof Error ? error.message : "Unable to load event.");
@@ -103,8 +108,7 @@ function EventDisplayRoute() {
         await document.documentElement.requestFullscreen();
       }
     } catch {
-      // Some browsers reject without a user gesture or in iframes — silent
-      // fallback is fine, the page is already laid out for projection.
+      return;
     }
   };
 
@@ -127,6 +131,17 @@ function EventDisplayRoute() {
   if (loadError && !event) return <DisplayError error={new Error(loadError)} />;
   if (!event) return <DisplayNotFound />;
 
+  const status = getCheckInStatus(event);
+  const statusCopy = status === "open"
+    ? `Check-in is open until ${formatTimestamp(event.check_in_closes_at)}`
+    : status === "upcoming"
+      ? `Check-in opens at ${formatTimestamp(event.check_in_opens_at)}`
+      : status === "archived"
+        ? "This event is archived"
+        : status === "inactive"
+          ? "This event was closed early"
+          : `Check-in closed at ${formatTimestamp(event.check_in_closes_at)}`;
+
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center gap-8 bg-background px-6 py-10 sm:py-16">
       <div className="absolute left-4 top-4 flex gap-2">
@@ -142,7 +157,7 @@ function EventDisplayRoute() {
         </Button>
       </div>
 
-      <div className="space-y-2 text-center">
+      <div className="space-y-3 text-center">
         <p className="text-base font-semibold uppercase tracking-[0.18em] text-muted-foreground sm:text-lg">
           {event.clubs?.club_name ?? "Club event"}
         </p>
@@ -150,17 +165,31 @@ function EventDisplayRoute() {
         <p className="text-lg text-muted-foreground sm:text-xl">
           {formatEventDate(event.event_date)} · {formatEventTime(event.start_time, event.end_time)}
         </p>
+        <p className="text-sm text-muted-foreground sm:text-base">{statusCopy}</p>
       </div>
 
-      <div className="rounded-3xl bg-white p-6 shadow-lg">
-        {checkInUrl ? <QRCode value={checkInUrl} size={384} className="h-auto w-[18rem] sm:w-[24rem] lg:w-[28rem]" /> : null}
-      </div>
-
-      <div className="flex flex-col items-center gap-2">
-        <div className="inline-flex items-center gap-2 rounded-2xl bg-secondary px-5 py-3 text-2xl font-semibold text-foreground sm:text-3xl">
-          <Users className="h-6 w-6" />
-          {attendance.length} checked in
+      <div className="grid w-full max-w-6xl gap-8 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-center">
+        <div className="flex items-center justify-center rounded-[2rem] bg-white p-6 shadow-lg sm:p-8">
+          {checkInUrl ? <QRCode value={checkInUrl} size={420} className="h-auto w-full max-w-[28rem]" /> : null}
         </div>
+        <div className="space-y-4">
+          <div className="rounded-[2rem] border border-border/70 bg-card px-6 py-8 text-center shadow-sm">
+            <div className="inline-flex items-center gap-3 text-muted-foreground">
+              <Users className="h-5 w-5" />
+              <span className="text-sm font-medium uppercase tracking-[0.18em]">Checked in</span>
+            </div>
+            <div className="mt-4 text-7xl font-bold leading-none text-foreground">{attendance.length}</div>
+            <p className="mt-3 text-sm text-muted-foreground">{summary?.recent ?? 0} in the last 15 minutes</p>
+          </div>
+          <div className="rounded-2xl border border-border/70 bg-card px-5 py-4 shadow-sm">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Last updated</p>
+            <p className="mt-2 text-lg font-semibold text-foreground">{lastUpdatedAt ? formatTimestamp(lastUpdatedAt) : "—"}</p>
+            <p className="mt-1 text-sm text-muted-foreground">Polling every {DISPLAY_POLL_INTERVAL_MS / 1000}s while this screen is visible.</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex max-w-4xl flex-col items-center gap-2">
         <p className="max-w-2xl break-all text-center text-sm text-muted-foreground sm:text-base">
           {checkInUrl}
         </p>

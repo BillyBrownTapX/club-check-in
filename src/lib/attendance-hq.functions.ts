@@ -6,26 +6,31 @@ import type { Database } from "@/integrations/supabase/types";
 import {
   buildEventDefaults,
   buildHostOnboardingState,
+  type AttendanceActionLog,
+  type AttendanceActionStudentSnapshot,
+  type AttendanceRow,
+  type Club,
   type ClubDetailPayload,
   type ClubSummary,
   combineDateAndTime,
   createDeviceToken,
   createQrToken,
+  type EventAttendanceSummary,
   type EventFormPayload,
   type EventFormValues,
-  getCheckInStatus,
-  maskEmail,
-  type ManagementEventSummary,
-  shiftTimeString,
-  slugifyClubName,
-  type AttendanceRow,
-  type Club,
+  type EventOperationsPayload,
   type EventSummary,
   type EventTemplateWithClub,
   type EventWithClub,
+  getCheckInMethodLabel,
+  getCheckInStatus,
   type HostOnboardingState,
   type HostProfile,
+  type ManagementEventSummary,
+  maskEmail,
   type PublicStudentPreview,
+  shiftTimeString,
+  slugifyClubName,
 } from "@/lib/attendance-hq";
 async function getSupabaseAdmin() {
   const mod = await import("@/integrations/supabase/client.server");
@@ -44,11 +49,14 @@ import {
   eventTemplateUpdateSchema,
   eventUpdateSchema,
   fastCheckInSchema,
+  manualAttendanceSchema,
   qrTokenSchema,
   rememberedDeviceInputSchema,
   removeAttendanceSchema,
+  restoreAttendanceSchema,
   returningLookupInputSchema,
   studentCheckInInputSchema,
+  toggleEventArchiveSchema,
   validatedEventSchema,
 } from "@/lib/attendance-hq-schemas";
 import { safeMessage } from "@/lib/server-errors";
@@ -177,6 +185,83 @@ function toManagementEventSummary(event: EventSummary): ManagementEventSummary {
   };
 }
 
+const EVENT_STATUS_ORDER: Record<ManagementEventSummary["checkInStatus"], number> = {
+  open: 0,
+  upcoming: 1,
+  closed: 2,
+  inactive: 3,
+  archived: 4,
+};
+
+type AttendanceActionNotePayload = {
+  kind: "manual_check_in" | "removed" | "restored";
+  studentId: string;
+  firstName: string;
+  lastName: string;
+  studentEmail: string;
+  nineHundredNumber: string;
+  checkedInAt?: string | null;
+  attendanceRecordId?: string | null;
+};
+
+function buildAttendanceActionNotes(payload: AttendanceActionNotePayload) {
+  return JSON.stringify(payload);
+}
+
+function parseAttendanceActionLog(action: Database["public"]["Tables"]["attendance_actions"]["Row"]): AttendanceActionLog | null {
+  if (!action.notes) return null;
+  try {
+    const parsed = JSON.parse(action.notes) as Partial<AttendanceActionNotePayload>;
+    if (!parsed.studentId || !parsed.firstName || !parsed.lastName || !parsed.studentEmail || !parsed.nineHundredNumber) {
+      return null;
+    }
+    return {
+      ...action,
+      student: {
+        id: parsed.studentId,
+        first_name: parsed.firstName,
+        last_name: parsed.lastName,
+        student_email: parsed.studentEmail,
+        nine_hundred_number: parsed.nineHundredNumber,
+      },
+      checkedInAt: parsed.checkedInAt ?? null,
+      attendanceRecordId: parsed.attendanceRecordId ?? action.attendance_record_id,
+    };
+  } catch {
+    return null;
+  }
+}
+
+function buildEventAttendanceSummary(
+  attendance: AttendanceRow[],
+  removedCount: number,
+  recentActions: AttendanceActionLog[],
+): EventAttendanceSummary {
+  const recentCutoff = Date.now() - 15 * 60 * 1000;
+  const summary: EventAttendanceSummary = {
+    total: attendance.length,
+    recent: 0,
+    removedCount,
+    lastActionAt: recentActions[0]?.created_at ?? null,
+    methodBreakdown: {
+      firstScan: 0,
+      returning: 0,
+      remembered: 0,
+      manual: 0,
+    },
+  };
+
+  for (const row of attendance) {
+    if (new Date(row.checked_in_at).getTime() >= recentCutoff) summary.recent += 1;
+    if (row.check_in_method === "qr_scan") summary.methodBreakdown.firstScan += 1;
+    else if (row.check_in_method === "returning_lookup") summary.methodBreakdown.returning += 1;
+    else if (row.check_in_method === "remembered_device") summary.methodBreakdown.remembered += 1;
+    else summary.methodBreakdown.manual += 1;
+  }
+
+  return summary;
+}
+
 type AppSupabaseClient = SupabaseClient<Database>;
 
 async function resolveHostOnboardingStateWithClient(supabase: AppSupabaseClient, userId: string): Promise<HostOnboardingState> {
@@ -301,7 +386,7 @@ async function getHostTemplatesForUser(supabase: AppSupabaseClient, userId: stri
 async function getHostEventsForUser(
   supabase: AppSupabaseClient,
   userId: string,
-  filters: { clubId?: string; status: "all" | "upcoming" | "past"; query?: string },
+  filters: { clubId?: string; status: "all" | "active" | "upcoming" | "past"; query?: string },
 ) {
   const clubIds = filters.clubId ? [filters.clubId] : await getOwnedClubIds(supabase, userId);
   if (!clubIds.length) return [] as ManagementEventSummary[];
@@ -310,7 +395,7 @@ async function getHostEventsForUser(
     .from("events")
     .select("*, clubs(id, club_name, club_slug), attendance_records(id)")
     .in("club_id", clubIds)
-    .order("event_date", { ascending: filters.status !== "past" })
+    .order("event_date", { ascending: true })
     .order("start_time", { ascending: true });
 
   if (filters.query) query = query.ilike("event_name", `%${filters.query}%`);
@@ -318,14 +403,30 @@ async function getHostEventsForUser(
   const { data: events, error } = await query;
   if (error) throw new Error(safeMessage(error));
 
-  const today = new Date().toISOString().slice(0, 10);
-  return ((events ?? []) as EventSummary[])
-    .filter((event) => {
-      if (filters.status === "upcoming") return event.event_date >= today;
-      if (filters.status === "past") return event.event_date < today;
-      return true;
-    })
-    .map(toManagementEventSummary);
+  const normalized = ((events ?? []) as EventSummary[]).map(toManagementEventSummary);
+  const filtered = normalized.filter((event) => {
+    if (filters.status === "active") {
+      return event.checkInStatus === "open" || event.checkInStatus === "upcoming";
+    }
+    if (filters.status === "upcoming") return event.checkInStatus === "upcoming";
+    if (filters.status === "past") {
+      return ["closed", "inactive", "archived"].includes(event.checkInStatus);
+    }
+    return true;
+  });
+
+  return filtered.sort((a, b) => {
+    if (filters.status === "all") {
+      const rankDifference = EVENT_STATUS_ORDER[a.checkInStatus] - EVENT_STATUS_ORDER[b.checkInStatus];
+      if (rankDifference !== 0) return rankDifference;
+    }
+
+    const aStamp = new Date(`${a.event_date}T${a.start_time}`).getTime();
+    const bStamp = new Date(`${b.event_date}T${b.start_time}`).getTime();
+    const descendingStatuses = new Set<ManagementEventSummary["checkInStatus"]>(["closed", "inactive", "archived"]);
+    const descending = filters.status === "past" || descendingStatuses.has(a.checkInStatus);
+    return descending ? bStamp - aStamp : aStamp - bStamp;
+  });
 }
 
 async function createEventForUser(
@@ -714,14 +815,49 @@ export const getEventOperations = createServerFn({ method: "GET" })
   .inputValidator((input: { eventId: string }) => input)
   .handler(async ({ data, context }) => {
     const event = await requireOwnedEvent(context.supabase, context.userId, data.eventId);
-    const { data: attendance, error } = await context.supabase
-      .from("attendance_records")
-      .select("*, students(id, first_name, last_name, student_email, nine_hundred_number)")
-      .eq("event_id", data.eventId)
-      .order("checked_in_at", { ascending: false });
+    const [{ data: attendance, error: attendanceError }, { data: actions, error: actionsError }] = await Promise.all([
+      context.supabase
+        .from("attendance_records")
+        .select("*, students(id, first_name, last_name, student_email, nine_hundred_number)")
+        .eq("event_id", data.eventId)
+        .order("checked_in_at", { ascending: false }),
+      context.supabase
+        .from("attendance_actions")
+        .select("*")
+        .eq("event_id", data.eventId)
+        .order("created_at", { ascending: false })
+        .limit(30),
+    ]);
 
-    if (error) throw new Error(safeMessage(error));
-    return { event, attendance: (attendance ?? []) as AttendanceRow[] };
+    if (attendanceError) throw new Error(safeMessage(attendanceError));
+    if (actionsError) throw new Error(safeMessage(actionsError));
+
+    const normalizedAttendance = (attendance ?? []) as AttendanceRow[];
+    const recentActions = ((actions ?? []) as Database["public"]["Tables"]["attendance_actions"]["Row"][])
+      .map(parseAttendanceActionLog)
+      .filter((value): value is AttendanceActionLog => Boolean(value));
+    const currentStudentIds = new Set(normalizedAttendance.map((row) => row.students?.id).filter(Boolean));
+    const removedAttendanceMap = new Map<string, AttendanceActionLog>();
+
+    for (const action of recentActions) {
+      const studentId = action.student?.id;
+      if (!studentId) continue;
+      if (action.action_type === "restored") {
+        removedAttendanceMap.delete(studentId);
+        continue;
+      }
+      if (action.action_type === "removed" && !currentStudentIds.has(studentId) && !removedAttendanceMap.has(studentId)) {
+        removedAttendanceMap.set(studentId, action);
+      }
+    }
+
+    return {
+      event,
+      attendance: normalizedAttendance,
+      removedAttendance: [...removedAttendanceMap.values()],
+      recentActions,
+      summary: buildEventAttendanceSummary(normalizedAttendance, removedAttendanceMap.size, recentActions),
+    } as EventOperationsPayload;
   });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -761,6 +897,7 @@ const METHOD_EXPORT_LABEL: Record<string, string> = {
   qr_scan: "First scan",
   returning_lookup: "Returning",
   remembered_device: "Remembered",
+  host_correction: "Manual",
 };
 
 function buildAttendanceFilename(event: EventWithClub) {
@@ -1141,12 +1278,12 @@ export const removeAttendance = createServerFn({ method: "POST" })
     //    event by sending a mismatched (eventId, attendanceRecordId) pair.
     const { data: record, error: lookupError } = await admin
       .from("attendance_records")
-      .select("id, event_id")
+      .select("id, event_id, student_id, checked_in_at, students(id, first_name, last_name, student_email, nine_hundred_number)")
       .eq("id", data.attendanceRecordId)
       .maybeSingle();
 
     if (lookupError) throw new Error(safeMessage(lookupError));
-    if (!record || record.event_id !== data.eventId) throw notFound();
+    if (!record || record.event_id !== data.eventId || !record.students) throw notFound();
 
     // Audit row MUST be written before the delete: attendance_actions has
     // attendance_record_id REFERENCES attendance_records(id) ON DELETE SET
@@ -1158,7 +1295,16 @@ export const removeAttendance = createServerFn({ method: "POST" })
       attendance_record_id: data.attendanceRecordId,
       host_id: context.userId,
       action_type: "removed",
-      notes: "Removed from host dashboard",
+      notes: buildAttendanceActionNotes({
+        kind: "removed",
+        studentId: record.student_id,
+        firstName: record.students.first_name,
+        lastName: record.students.last_name,
+        studentEmail: record.students.student_email,
+        nineHundredNumber: record.students.nine_hundred_number,
+        checkedInAt: record.checked_in_at,
+        attendanceRecordId: record.id,
+      }),
     });
     if (actionError) throw new Error(safeMessage(actionError, "Unable to record action."));
 
@@ -1168,6 +1314,154 @@ export const removeAttendance = createServerFn({ method: "POST" })
       .eq("id", data.attendanceRecordId);
     if (deleteError) throw new Error(safeMessage(deleteError, "Unable to remove attendance."));
 
+    return { ok: true };
+  });
+
+export const manualCheckIn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(manualAttendanceSchema)
+  .handler(async ({ data, context }) => {
+    const event = await requireOwnedEvent(context.supabase, context.userId, data.eventId);
+    const admin = await getSupabaseAdmin();
+
+    let student: AttendanceActionStudentSnapshot | null = null;
+    const { data: existingStudent, error: existingStudentError } = await admin
+      .from("students")
+      .select("id, first_name, last_name, student_email, nine_hundred_number")
+      .eq("nine_hundred_number", data.nineHundredNumber)
+      .maybeSingle();
+
+    if (existingStudentError) throw new Error(safeMessage(existingStudentError, "Unable to look up student."));
+
+    if (existingStudent) {
+      const { data: updatedStudent, error: updatedStudentError } = await admin
+        .from("students")
+        .update({
+          first_name: data.firstName.trim(),
+          last_name: data.lastName.trim(),
+          student_email: data.studentEmail,
+        })
+        .eq("id", existingStudent.id)
+        .select("id, first_name, last_name, student_email, nine_hundred_number")
+        .single();
+      if (updatedStudentError || !updatedStudent) throw new Error(safeMessage(updatedStudentError, "Unable to update student."));
+      student = updatedStudent as AttendanceActionStudentSnapshot;
+    } else {
+      const { data: createdStudent, error: createdStudentError } = await admin
+        .from("students")
+        .insert({
+          first_name: data.firstName.trim(),
+          last_name: data.lastName.trim(),
+          student_email: data.studentEmail,
+          nine_hundred_number: data.nineHundredNumber,
+        })
+        .select("id, first_name, last_name, student_email, nine_hundred_number")
+        .single();
+      if (createdStudentError || !createdStudent) throw new Error(safeMessage(createdStudentError, "Unable to save student."));
+      student = createdStudent as AttendanceActionStudentSnapshot;
+    }
+
+    const existingAttendance = await getExistingAttendance(event.id, student.id);
+    if (existingAttendance) throw new Error("This student is already checked in.");
+
+    const { data: attendance, error: attendanceError } = await admin
+      .from("attendance_records")
+      .insert({
+        event_id: event.id,
+        student_id: student.id,
+        check_in_method: "host_correction",
+        check_in_source: "host_dashboard",
+      })
+      .select("id, checked_in_at")
+      .single();
+    if (attendanceError || !attendance) throw new Error(safeMessage(attendanceError, "Unable to save attendance."));
+
+    const { error: actionError } = await admin.from("attendance_actions").insert({
+      event_id: event.id,
+      attendance_record_id: attendance.id,
+      host_id: context.userId,
+      action_type: "note",
+      notes: buildAttendanceActionNotes({
+        kind: "manual_check_in",
+        studentId: student.id,
+        firstName: student.first_name,
+        lastName: student.last_name,
+        studentEmail: student.student_email,
+        nineHundredNumber: student.nine_hundred_number,
+        checkedInAt: attendance.checked_in_at,
+        attendanceRecordId: attendance.id,
+      }),
+    });
+    if (actionError) throw new Error(safeMessage(actionError, "Unable to record action."));
+
+    return { ok: true };
+  });
+
+export const restoreAttendance = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(restoreAttendanceSchema)
+  .handler(async ({ data, context }) => {
+    const event = await requireOwnedEvent(context.supabase, context.userId, data.eventId);
+    const admin = await getSupabaseAdmin();
+    const { data: student, error: studentError } = await admin
+      .from("students")
+      .select("id, first_name, last_name, student_email, nine_hundred_number")
+      .eq("id", data.studentId)
+      .maybeSingle();
+
+    if (studentError) throw new Error(safeMessage(studentError, "Unable to look up student."));
+    if (!student) throw notFound();
+
+    const existingAttendance = await getExistingAttendance(event.id, student.id);
+    if (existingAttendance) throw new Error("This student is already checked in.");
+
+    const { data: attendance, error: attendanceError } = await admin
+      .from("attendance_records")
+      .insert({
+        event_id: event.id,
+        student_id: student.id,
+        check_in_method: "host_correction",
+        check_in_source: "host_dashboard",
+      })
+      .select("id, checked_in_at")
+      .single();
+    if (attendanceError || !attendance) throw new Error(safeMessage(attendanceError, "Unable to restore attendance."));
+
+    const { error: actionError } = await admin.from("attendance_actions").insert({
+      event_id: event.id,
+      attendance_record_id: attendance.id,
+      host_id: context.userId,
+      action_type: "restored",
+      notes: buildAttendanceActionNotes({
+        kind: "restored",
+        studentId: student.id,
+        firstName: student.first_name,
+        lastName: student.last_name,
+        studentEmail: student.student_email,
+        nineHundredNumber: student.nine_hundred_number,
+        checkedInAt: attendance.checked_in_at,
+        attendanceRecordId: attendance.id,
+      }),
+    });
+    if (actionError) throw new Error(safeMessage(actionError, "Unable to record action."));
+
+    return { ok: true };
+  });
+
+export const toggleEventArchive = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(toggleEventArchiveSchema)
+  .handler(async ({ data, context }) => {
+    await requireOwnedEvent(context.supabase, context.userId, data.eventId);
+
+    const { error } = await (await getSupabaseAdmin())
+      .from("events")
+      .update({
+        is_archived: data.isArchived,
+        is_active: data.isArchived ? false : true,
+      })
+      .eq("id", data.eventId);
+    if (error) throw new Error(safeMessage(error, data.isArchived ? "Unable to archive event." : "Unable to reopen event."));
     return { ok: true };
   });
 

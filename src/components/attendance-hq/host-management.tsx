@@ -19,6 +19,7 @@ import {
   combineDateAndTime,
   formatEventDate,
   formatEventTime,
+  getCheckInMethodLabel,
   shiftTimeString,
   type Club,
   type ClubSummary,
@@ -36,6 +37,7 @@ import {
   eventTemplateSchema,
   eventTemplateUpdateSchema,
   eventUpdateSchema,
+  validatedEventSchema,
 } from "@/lib/attendance-hq-schemas";
 import { cn } from "@/lib/utils";
 
@@ -245,6 +247,26 @@ export function ClubCard({ club }: { club: ClubSummary }) {
 }
 
 export function EventCard({ event, showClub = true, onDuplicate }: { event: ManagementEventSummary; showClub?: boolean; onDuplicate?: (eventId: string) => void }) {
+  const statusLabel = event.checkInStatus === "open"
+    ? "Open"
+    : event.checkInStatus === "upcoming"
+      ? "Upcoming"
+      : event.checkInStatus === "inactive"
+        ? "Inactive"
+        : event.checkInStatus === "archived"
+          ? "Archived"
+          : "Closed";
+
+  const statusHint = event.checkInStatus === "open"
+    ? "Actively accepting check-ins"
+    : event.checkInStatus === "upcoming"
+      ? "Ready for the next meeting"
+      : event.checkInStatus === "inactive"
+        ? "Closed early by a host"
+        : event.checkInStatus === "archived"
+          ? "Stored for record keeping"
+          : "Review and export attendance";
+
   return (
     <Card className="rounded-2xl border-border/70 shadow-sm">
       <CardContent className="space-y-4 p-5">
@@ -253,17 +275,18 @@ export function EventCard({ event, showClub = true, onDuplicate }: { event: Mana
             <h3 className="truncate text-lg font-semibold text-foreground">{event.event_name}</h3>
             {showClub ? <p className="text-sm text-muted-foreground">{event.clubs?.club_name}</p> : null}
           </div>
-          <StatusBadge active={event.checkInStatus === "open" || event.checkInStatus === "upcoming"} activeLabel={event.checkInStatus === "open" ? "Open" : "Upcoming"} inactiveLabel={event.checkInStatus === "archived" ? "Archived" : "Past"} />
+          <StatusBadge active={event.checkInStatus === "open" || event.checkInStatus === "upcoming"} activeLabel={statusLabel} inactiveLabel={statusLabel} />
         </div>
         <div className="space-y-2 text-sm text-muted-foreground">
           <div className="flex items-center gap-2"><CalendarDays className="h-4 w-4" />{formatEventDate(event.event_date)}</div>
           <div className="flex items-center gap-2"><Clock3 className="h-4 w-4" />{formatEventTime(event.start_time, event.end_time)}</div>
           {event.location ? <div className="flex items-center gap-2"><MapPin className="h-4 w-4" />{event.location}</div> : null}
         </div>
-        <div className="flex items-center justify-between rounded-xl bg-secondary px-4 py-3 text-sm">
-          <span className="text-muted-foreground">Attendance</span>
-          <span className="font-semibold text-foreground">{event.attendanceCount}</span>
+        <div className="grid grid-cols-2 gap-3 text-sm">
+          <MetaPill label="Attendance" value={event.attendanceCount} />
+          <MetaPill label="Status" value={statusLabel} />
         </div>
+        <p className="text-sm text-muted-foreground">{statusHint}</p>
         <div className="grid grid-cols-3 gap-2">
           <SecondaryButton asChild><Link to="/events/$eventId" params={{ eventId: event.id }} search={{ created: "" }}>Manage</Link></SecondaryButton>
           <SecondaryButton asChild><Link to="/events/$eventId/edit" params={{ eventId: event.id }} search={{ created: "" }}>Edit</Link></SecondaryButton>
@@ -534,11 +557,18 @@ export function TemplateDialog({ open, onOpenChange, clubId, initialValues, onSu
   );
 }
 
-function getOffsetMinutes(referenceIso: string, eventDate: string, startTime: string) {
+function getMinutesBeforeStart(referenceIso: string, eventDate: string, startTime: string) {
   const reference = new Date(referenceIso).getTime();
   const eventStart = new Date(combineDateAndTime(eventDate, `${startTime}:00`)).getTime();
-  if (Number.isNaN(reference) || Number.isNaN(eventStart)) return 0;
-  return Math.round((reference - eventStart) / 60000);
+  if (Number.isNaN(reference) || Number.isNaN(eventStart)) return 15;
+  return Math.max(0, Math.round((eventStart - reference) / 60000));
+}
+
+function getMinutesAfterEnd(referenceIso: string, eventDate: string, endTime: string) {
+  const reference = new Date(referenceIso).getTime();
+  const eventEnd = new Date(combineDateAndTime(eventDate, `${endTime}:00`)).getTime();
+  if (Number.isNaN(reference) || Number.isNaN(eventEnd)) return 15;
+  return Math.max(0, Math.round((reference - eventEnd) / 60000));
 }
 
 function DateTimeReadonly({ label, value }: { label: string; value: string }) {
@@ -558,31 +588,32 @@ function DateTimeReadonly({ label, value }: { label: string; value: string }) {
 export function EventForm({ payload, title, description, submitLabel, onSubmit, cancelAction }: { payload: EventFormPayload; title: string; description: string; submitLabel: string; onSubmit: (values: EventValues | EventUpdateValues) => Promise<void>; cancelAction?: React.ReactNode }) {
   const navigate = useNavigate();
   const form = useForm<EventFormValues>({
-    resolver: zodResolver(eventSchema),
+    resolver: zodResolver(validatedEventSchema),
     defaultValues: payload.initialValues,
   });
   const [error, setError] = useState("");
   const [offsets, setOffsets] = useState(() => ({
-    openMinutes: getOffsetMinutes(payload.initialValues.checkInOpensAt, payload.initialValues.eventDate, payload.initialValues.startTime),
-    closeMinutes: getOffsetMinutes(payload.initialValues.checkInClosesAt, payload.initialValues.eventDate, payload.initialValues.startTime),
+    openMinutesBeforeStart: getMinutesBeforeStart(payload.initialValues.checkInOpensAt, payload.initialValues.eventDate, payload.initialValues.startTime),
+    closeMinutesAfterEnd: getMinutesAfterEnd(payload.initialValues.checkInClosesAt, payload.initialValues.eventDate, payload.initialValues.endTime),
   }));
 
   useEffect(() => {
     form.reset(payload.initialValues);
     setOffsets({
-      openMinutes: getOffsetMinutes(payload.initialValues.checkInOpensAt, payload.initialValues.eventDate, payload.initialValues.startTime),
-      closeMinutes: getOffsetMinutes(payload.initialValues.checkInClosesAt, payload.initialValues.eventDate, payload.initialValues.startTime),
+      openMinutesBeforeStart: getMinutesBeforeStart(payload.initialValues.checkInOpensAt, payload.initialValues.eventDate, payload.initialValues.startTime),
+      closeMinutesAfterEnd: getMinutesAfterEnd(payload.initialValues.checkInClosesAt, payload.initialValues.eventDate, payload.initialValues.endTime),
     });
   }, [form, payload.initialValues]);
 
   const eventDate = form.watch("eventDate");
   const startTime = form.watch("startTime");
+  const endTime = form.watch("endTime");
 
   useEffect(() => {
-    if (!eventDate || !startTime) return;
-    form.setValue("checkInOpensAt", combineDateAndTime(eventDate, `${shiftTimeString(startTime, offsets.openMinutes)}:00`), { shouldValidate: true });
-    form.setValue("checkInClosesAt", combineDateAndTime(eventDate, `${shiftTimeString(startTime, offsets.closeMinutes)}:00`), { shouldValidate: true });
-  }, [eventDate, form, offsets.closeMinutes, offsets.openMinutes, startTime]);
+    if (!eventDate || !startTime || !endTime) return;
+    form.setValue("checkInOpensAt", combineDateAndTime(eventDate, `${shiftTimeString(startTime, -offsets.openMinutesBeforeStart)}:00`), { shouldValidate: true });
+    form.setValue("checkInClosesAt", combineDateAndTime(eventDate, `${shiftTimeString(endTime, offsets.closeMinutesAfterEnd)}:00`), { shouldValidate: true });
+  }, [endTime, eventDate, form, offsets.closeMinutesAfterEnd, offsets.openMinutesBeforeStart, startTime]);
 
   const submit = form.handleSubmit(async (values) => {
     setError("");
@@ -620,7 +651,7 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
             </FormCard>
           ) : null}
           <FormCard>
-            <form className="space-y-4" onSubmit={(event) => void submit(event)}>
+            <form className="space-y-5" onSubmit={(event) => void submit(event)}>
               <SelectInput
                 label="Club"
                 value={form.watch("clubId")}
@@ -637,17 +668,39 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
                 <TimeInput label="Start time" error={form.formState.errors.startTime?.message} {...form.register("startTime")} />
                 <TimeInput label="End time" error={form.formState.errors.endTime?.message} {...form.register("endTime")} />
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-3 rounded-2xl border border-border/70 bg-card px-4 py-4">
+                <div>
+                  <p className="text-sm font-medium text-foreground">Check-in timing</p>
+                  <p className="text-sm text-muted-foreground">Tune the window for early arrivals, walk-ins, and post-event cleanup.</p>
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <TextInput
+                    type="number"
+                    min={0}
+                    label="Open minutes before start"
+                    value={String(offsets.openMinutesBeforeStart)}
+                    onChange={(event) => setOffsets((prev) => ({ ...prev, openMinutesBeforeStart: Math.max(0, Number(event.target.value || 0)) }))}
+                  />
+                  <TextInput
+                    type="number"
+                    min={0}
+                    label="Close minutes after end"
+                    value={String(offsets.closeMinutesAfterEnd)}
+                    onChange={(event) => setOffsets((prev) => ({ ...prev, closeMinutesAfterEnd: Math.max(0, Number(event.target.value || 0)) }))}
+                  />
+                </div>
                 <input type="hidden" {...form.register("checkInOpensAt")} />
                 <input type="hidden" {...form.register("checkInClosesAt")} />
-                <DateTimeReadonly label="Check-in opens" value={form.watch("checkInOpensAt")} />
-                <DateTimeReadonly label="Check-in closes" value={form.watch("checkInClosesAt")} />
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <DateTimeReadonly label="Check-in opens" value={form.watch("checkInOpensAt")} />
+                  <DateTimeReadonly label="Check-in closes" value={form.watch("checkInClosesAt")} />
+                </div>
               </div>
               {form.formState.errors.checkInOpensAt?.message ? <p className="text-sm text-destructive">{form.formState.errors.checkInOpensAt.message}</p> : null}
               {form.formState.errors.checkInClosesAt?.message ? <p className="text-sm text-destructive">{form.formState.errors.checkInClosesAt.message}</p> : null}
               {error ? <p className="text-sm text-destructive">{error}</p> : null}
               <div className="flex flex-col gap-3 sm:flex-row sm:justify-between">
-                <p className="text-sm text-muted-foreground">You can edit this event later.</p>
+                <p className="text-sm text-muted-foreground">Saving changes reactivates the event and uses the updated check-in window.</p>
                 <div className="flex gap-2">
                   {cancelAction ?? <SecondaryButton asChild><Link to="/events" search={{ clubId: "", status: "all", query: "" }}>Cancel</Link></SecondaryButton>}
                   <PrimaryButton type="submit">{submitLabel}</PrimaryButton>

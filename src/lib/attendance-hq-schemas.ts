@@ -94,7 +94,7 @@ export const eventUpdateSchema = eventSchema.extend({
 
 export const eventListFilterSchema = z.object({
   clubId: z.string().uuid().optional().or(z.literal("")),
-  status: z.enum(["all", "upcoming", "past"]).default("all"),
+  status: z.enum(["all", "active", "upcoming", "past"]).default("all"),
   query: z.string().trim().max(120).optional().or(z.literal("")),
 });
 
@@ -116,10 +116,6 @@ export const studentRegistrationSchema = z.object({
   rememberDevice: z.boolean().default(true),
 });
 
-// Public check-in inputs are scoped by qr_token (the per-event capability the
-// student physically scanned), never by raw event/student UUIDs. This makes
-// every public action re-validate access against the same proof — the QR token
-// — and prevents cross-event or guessed-id attacks via the public endpoints.
 export const qrTokenSchema = z
   .string()
   .trim()
@@ -147,9 +143,6 @@ export const rememberedDeviceInputSchema = z.object({
   deviceToken: z.string().trim().min(24).max(255),
 });
 
-// Fast check-in only takes the qr_token + the device token. The server
-// resolves the student from the device session — clients are never trusted
-// to assert which student they are.
 export const fastCheckInSchema = z.object({
   qrToken: qrTokenSchema,
   deviceToken: z.string().trim().min(24).max(255),
@@ -160,8 +153,26 @@ export const removeAttendanceSchema = z.object({
   eventId: z.string().uuid(),
 });
 
+export const restoreAttendanceSchema = z.object({
+  eventId: z.string().uuid(),
+  studentId: z.string().uuid(),
+});
+
+export const manualAttendanceSchema = z.object({
+  eventId: z.string().uuid(),
+  firstName: z.string().trim().min(1, "Enter first name").max(80, "Too long"),
+  lastName: z.string().trim().min(1, "Enter last name").max(80, "Too long"),
+  studentEmail: emailSchema,
+  nineHundredNumber: z.string().trim().refine(isValidNineHundredNumber, "Enter a valid 9-digit 900 number"),
+});
+
 export const closeCheckInEarlySchema = z.object({
   eventId: z.string().uuid(),
+});
+
+export const toggleEventArchiveSchema = z.object({
+  eventId: z.string().uuid(),
+  isArchived: z.boolean(),
 });
 
 export const duplicateEventTemplateSchema = z.object({
