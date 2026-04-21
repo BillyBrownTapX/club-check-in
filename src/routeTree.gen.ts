@@ -68,9 +68,9 @@ const OnboardingClubRoute = OnboardingClubRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const EventsEventIdRoute = EventsEventIdRouteImport.update({
-  id: '/$eventId',
-  path: '/$eventId',
-  getParentRoute: () => EventsRoute,
+  id: '/events/$eventId',
+  path: '/events/$eventId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ClubsClubIdRoute = ClubsClubIdRouteImport.update({
   id: '/clubs/$clubId',
@@ -179,6 +179,7 @@ export interface RootRouteChildren {
   SignUpRoute: typeof SignUpRoute
   CheckInQrTokenRoute: typeof CheckInQrTokenRoute
   ClubsClubIdRoute: typeof ClubsClubIdRoute
+  EventsEventIdRoute: typeof EventsEventIdRoute
   OnboardingClubRoute: typeof OnboardingClubRoute
   OnboardingEventRoute: typeof OnboardingEventRoute
   ClubsIndexRoute: typeof ClubsIndexRoute
@@ -252,10 +253,10 @@ declare module '@tanstack/react-router' {
     }
     '/events/$eventId': {
       id: '/events/$eventId'
-      path: '/$eventId'
+      path: '/events/$eventId'
       fullPath: '/events/$eventId'
       preLoaderRoute: typeof EventsEventIdRouteImport
-      parentRoute: typeof EventsRoute
+      parentRoute: typeof rootRouteImport
     }
     '/clubs/$clubId': {
       id: '/clubs/$clubId'
@@ -282,6 +283,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignUpRoute: SignUpRoute,
   CheckInQrTokenRoute: CheckInQrTokenRoute,
   ClubsClubIdRoute: ClubsClubIdRoute,
+  EventsEventIdRoute: EventsEventIdRoute,
   OnboardingClubRoute: OnboardingClubRoute,
   OnboardingEventRoute: OnboardingEventRoute,
   ClubsIndexRoute: ClubsIndexRoute,
@@ -290,12 +292,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
