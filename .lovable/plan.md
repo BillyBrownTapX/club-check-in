@@ -1,180 +1,170 @@
 
-Build the public student check-in flow as a dedicated mobile-first route set centered on `/check-in/$qrToken`, reusing the existing backend foundation but isolating the UI from host features.
+Build the host onboarding flow as a guided activation path that starts at authentication and ends at the newly created event detail page, without exposing hosts to empty states or unrelated dashboard complexity.
 
-1. Route structure and page ownership
-- Add a new TanStack route file for `/check-in/$qrToken`.
-- Keep the student flow self-contained in this route with internal screen state for:
-  - event entry
-  - first-time registration
-  - returning lookup
-  - identity confirmation
-  - success
-  - blocked/error states
-- Leave host routes untouched in this task.
-- Replace the placeholder `/` page with a minimal landing page only as needed to keep the app valid, but keep implementation effort focused on the public check-in experience.
+1. Authentication foundation
+- Add dedicated routes for `/sign-up`, `/sign-in`, and `/forgot-password`.
+- Add the required public `/reset-password` route to complete password recovery correctly.
+- Use the existing `host_profiles` table and auth listener pattern already present in the app.
+- Because the required behavior is “start immediately,” configure sign-up so new hosts can continue directly into onboarding without waiting on email verification.
 
-2. Public mobile component system
-- Refactor the existing shared primitives into purpose-built student flow components:
-  - `PublicCheckInShell`
-  - `EventInfoCard`
-  - `ActionChoiceCard`
-  - `CheckInFormCard`
-  - `IdentityConfirmationCard`
-  - `SuccessStateCard`
-  - `ErrorStateCard`
-  - `StatusBadge`
+2. Shared onboarding UI system
+- Create purpose-built onboarding components:
+  - `AuthShell`
+  - `AuthCard`
+  - `OnboardingShell`
+  - `ProgressIndicator`
+  - `FormCard`
+  - `PageHeadingBlock`
   - `PrimaryButton`
-  - `SecondaryTextButton`
-  - `MobileInputField`
-  - `MobileNumericField`
-- Tighten the mobile UI styling:
-  - single-column only
-  - max width around phone form width
-  - large headings
-  - 48px+ CTA height
-  - larger inputs than current shared `Input`
-  - calmer neutral surfaces and softer radii
-- Keep desktop as the same mobile layout with slightly wider breathing room, not a new layout.
+  - `SecondaryTextLink`
+  - `TextInput`
+  - `EmailInput`
+  - `PasswordInput`
+  - `DateInput`
+  - `TimeInput`
+  - `InlineErrorMessage`
+  - `SuccessBanner`
+- Keep all onboarding forms single-column, centered, touch-friendly, and visually consistent with the existing premium restrained design system.
+- Reuse the product logo and neutral styling already established in `primitives.tsx` and `styles.css`.
 
-3. Loader and event resolution
-- Use the existing `getPublicEventByQr` server function from the route loader.
-- Add route-level error and not-found handling so invalid tokens and missing events render polished in-app states instead of generic failures.
-- Normalize event availability into clear public states:
-  - invalid link
-  - event not found
-  - check-in open
-  - not open yet
-  - closed
-  - closed early / inactive
-  - archived/unavailable
+3. Auth page behavior
+- `/sign-up`
+  - Show full name, email, and password.
+  - Submit through a host sign-up flow that creates the auth user and ensures the host profile exists.
+  - Automatically sign the new host into the app client-side and route immediately to `/onboarding/club`.
+- `/sign-in`
+  - Show email and password with clear support links.
+  - On success, route based on onboarding state:
+    - no clubs → `/onboarding/club`
+    - has club but no events → `/onboarding/event`
+    - fully onboarded → dashboard or primary host landing page
+- `/forgot-password`
+  - Collect email and send reset link.
+  - Keep the page minimal and confirmation-focused.
+- `/reset-password`
+  - Let hosts set a new password after following the reset link.
+  - Redirect to sign-in or onboarding-aware host routing after success.
 
-4. Entry screen behavior
-- Render the event info card first with:
+4. Onboarding state resolution
+- Add a server function to resolve host onboarding status from authenticated data:
+  - host profile
+  - first club if any
+  - first event if any
+  - completion state
+- Use this status to:
+  - guard onboarding routes
+  - prevent repeating completed steps
+  - send returning hosts to the correct next step
+- Add route guards for `/onboarding/club` and `/onboarding/event` so only authenticated hosts can access them.
+
+5. Create first club step
+- Add `/onboarding/club` with the shared onboarding shell.
+- Show subtle progress: “Step 1 of 2”.
+- Keep the form extremely short:
   - club name
+  - description optional
+- Generate the slug automatically from club name on the server.
+- On success:
+  - create the club linked to the authenticated host
+  - route immediately to `/onboarding/event`
+- If the host already has a club, redirect forward instead of showing a redundant form.
+
+6. Create first event step
+- Add `/onboarding/event` with the same onboarding shell.
+- Show subtle progress: “Step 2 of 2”.
+- Preload the host’s first club from onboarding status instead of asking them to choose a club.
+- Use a focused form for:
   - event name
-  - date
-  - time
+  - event date
+  - start time
+  - end time
   - location
-  - status badge
-- Below that, show:
-  - heading: “Check in for this event”
-  - short instruction text
-  - full-width action cards
-- Primary actions:
-  - first-time flow
-  - returning flow
-- Optional remembered-device fast path:
-  - show only when a local device token exists and a matching remembered session is found for the event/student context
-  - still route to an explicit confirmation step before attendance is written
+  - check-in opens at
+  - check-in closes at
+- Add smart defaults:
+  - when start time is chosen, suggest check-in opens 15 minutes before
+  - suggest check-in closes 20 minutes after start
+  - keep both values editable
+- On success:
+  - create the event with a unique QR token
+  - redirect directly to `/events/:eventId`
+  - pass a success banner/toast message such as “Your event is ready. Open the QR code to start check-in.”
 
-5. First-time registration screen
-- Build a dedicated form using `react-hook-form` + `zodResolver` with the existing `studentRegistrationSchema`.
-- Use mobile-optimized input wrappers with:
-  - visible labels
-  - large tap targets
-  - numeric keypad for 900 number
-  - short inline error messages
-- Copy:
-  - heading: “First-time check-in”
-  - concise supporting text only
-- CTA:
-  - full-width “Save and Check In”
-- Secondary action:
-  - lighter text button back to returning flow
+7. Routing and handoff logic
+- Keep `/events/:eventId` as the onboarding destination rather than adding a separate success page.
+- Add lightweight redirect helpers so:
+  - authenticated hosts visiting `/sign-in` or `/sign-up` are forwarded appropriately
+  - hosts without a club go to `/onboarding/club`
+  - hosts with a club but no event go to `/onboarding/event`
+  - fully onboarded hosts land on the main host area
+- Preserve redirect-back behavior for protected host routes after sign-in where useful.
 
-6. Returning lookup screen
-- Build a minimal single-input screen around the 900 number.
-- Validate client-side with the existing `returningLookupSchema`.
-- Keep copy extremely short:
-  - heading: “Returning check-in”
-  - subtext: “Enter your 900 number to continue”
-- CTA:
-  - full-width “Continue”
-- Fallback:
-  - lighter text button to first-time flow
+8. Server-side changes
+- Refactor auth-related server functions so onboarding works with real session behavior, not just account creation:
+  - keep password reset server support
+  - add onboarding status server function
+  - ensure club creation and event creation can be used cleanly inside onboarding
+- Harden creation flows to return structured validation and ownership-safe results.
+- Ensure club/event creation always uses the authenticated host context and never trusts client-provided ownership data.
+- Confirm host profile creation is resilient:
+  - rely on the existing trigger where possible
+  - add a safe recovery path if profile lookup fails after sign-up
 
-7. Identity confirmation flow
-- After returning lookup success, show a dedicated confirmation step using masked email and short name.
-- For remembered-device fast path, show the same confirmation pattern with “Check in as …” on entry, but still require tapping “Check In”.
-- Do not write attendance until the confirmation CTA is tapped.
-- Secondary action returns to the previous selection/lookup state.
+9. Form validation and UX details
+- Reuse Zod-based schemas where they already fit.
+- Add any missing auth schemas or onboarding-specific client validation.
+- Show inline errors only; no browser alerts.
+- Keep one clear primary CTA per screen.
+- Use larger inputs and buttons than generic admin forms so onboarding feels deliberate and easy on mobile/tablet.
 
-8. Success and error states
-- Build consistent state-card UI for:
-  - invalid check-in link
-  - event not found
-  - check-in not open yet
-  - check-in closed
-  - already checked in
-  - student not found
-  - invalid 900 number
-- Build a separate success screen with:
-  - strong success state icon
-  - “You’re checked in”
-  - confirmation details card
-  - exact check-in timestamp
-  - “Done” CTA returning to the event entry state or dismissing to the route base state
+10. Route metadata and boundaries
+- Add route-specific `head()` metadata for sign-up, sign-in, forgot password, reset password, onboarding club, and onboarding event.
+- Add error and not-found handling for any onboarding route using loaders.
+- Keep the TanStack Start router structure intact and avoid editing generated route files manually.
 
-9. Server-function hardening for public check-in
-- Refactor the existing public check-in server functions to enforce business rules consistently on the server, not only in UI:
-  - validate event exists and is active
-  - enforce check-in window using `check_in_opens_at` and `check_in_closes_at`
-  - prevent duplicate attendance for the same event/student
-  - return structured result states instead of raw DB errors where possible
-- Update:
-  - `studentCheckIn`
-  - `lookupStudent`
-  - `confirmReturningStudent`
-  - `fastCheckIn`
-- Ensure lookup only returns minimal student data needed for confirmation:
-  - id
-  - first name
-  - last initial or last name for client formatting
-  - masked/confirmable email data only
-- Preserve exact timestamp storage on successful check-in.
+11. Technical details
+- New route files to add:
+  - `sign-up.tsx`
+  - `sign-in.tsx`
+  - `forgot-password.tsx`
+  - `reset-password.tsx`
+  - `onboarding.club.tsx`
+  - `onboarding.event.tsx`
+  - optionally an authenticated layout route for host-only onboarding guards
+- Likely supporting additions:
+  - onboarding/auth components file
+  - onboarding routing helpers
+  - new server function for onboarding status
+- Update the auth provider only as needed to expose enough session state for route decisions and client redirects.
 
-10. Remembered-device behavior
-- Complete the unfinished remembered-device logic:
-  - on first-time success, create or upsert a `student_device_sessions` row when `rememberDevice` is true
-  - store the generated local device token in browser storage using the existing `DEVICE_TOKEN_KEY`
-  - on entry, if a token exists, resolve whether it maps to a valid remembered student session
-- Keep this flow private and minimal:
-  - no unnecessary student data exposed
-  - still requires explicit confirmation before check-in
+12. Backend and auth configuration work required
+- Since immediate onboarding after sign-up is required, update backend auth settings to allow that flow.
+- If email verification remains enabled today, change the configuration so new hosts can proceed directly after account creation.
+- No new data tables are required for this onboarding scope; existing `host_profiles`, `clubs`, and `events` support it.
 
-11. Data and security details
-- Keep all validation both client-side and server-side with Zod-backed schemas.
-- Do not expose full student records publicly.
-- Handle duplicate 900 numbers in first-time flow gracefully:
-  - if the 900 number already exists, route the user into confirmation or show a clear “already used before” path instead of crashing
-- Use the existing backend tables where possible.
-- If current public flow needs better remembered-device lookup support, add a small backend change in a migration rather than weakening security.
+13. Acceptance checks
+- New host can:
+  - sign up
+  - enter `/onboarding/club`
+  - create first club
+  - create first event
+  - land directly on `/events/:eventId`
+- Returning host behavior:
+  - no club → `/onboarding/club`
+  - has club, no event → `/onboarding/event`
+  - fully onboarded → main host landing page
+- Forgot/reset password flow works end-to-end.
+- Mobile, tablet, and desktop layouts remain clean, single-column at the form core, and visually guided.
+- No host is dropped onto an empty generic dashboard immediately after sign-up.
 
-12. Technical implementation details
-- Create the route before linking to it so TanStack route typing stays valid.
-- Add route-specific `head()` metadata for `/check-in/$qrToken`.
-- Keep route loader + component error boundaries in place.
-- Prefer static imports and existing UI/form utilities.
-- Avoid editing generated route tree or auto-generated backend client files manually.
-
-13. QA and acceptance checks
-- Verify the mobile flow end to end:
-  - valid event loads from QR token
-  - first-time registration succeeds
-  - returning lookup requires confirmation
-  - remembered-device path still requires confirmation
-  - duplicate check-ins show the correct state
-  - not-open and closed events block correctly
-  - invalid token and student-not-found states render cleanly
-- Check responsiveness at phone widths first, then confirm it still looks intentional on tablet/desktop without introducing multi-column patterns.
-
-14. Expected deliverable
-- A polished launch-ready student-facing flow at `/check-in/$qrToken` with:
-  - fast event entry
-  - first-time registration
-  - returning lookup
-  - identity confirmation
-  - success state
-  - blocked/error states
-  - optional remembered-device fast path with explicit confirmation
-- No host dashboard, club CRUD, analytics, or unrelated screens included in this implementation batch.
+14. Deliverable
+- A polished activation funnel for hosts that covers:
+  - sign-up
+  - sign-in
+  - forgot/reset password
+  - create first club
+  - create first event
+  - progress indication
+  - onboarding-aware redirects
+  - direct handoff into the event detail experience
+- The result should feel like guided setup into live value, not generic auth plus blank application state.
