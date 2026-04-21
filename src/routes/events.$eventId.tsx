@@ -159,6 +159,7 @@ function EventDetailRoute() {
   const manualCheckInMutation = useAuthorizedServerFn(manualCheckIn);
   const closeEarlyMutation = useAuthorizedServerFn(closeCheckInEarly);
   const duplicateEventMutation = useAuthorizedServerFn(duplicateEvent);
+  const deleteEventMutation = useAuthorizedServerFn(deleteEvent);
   const exportAttendanceFn = useAuthorizedServerFn(exportEventAttendance);
   const toggleArchiveMutation = useAuthorizedServerFn(toggleEventArchive);
 
