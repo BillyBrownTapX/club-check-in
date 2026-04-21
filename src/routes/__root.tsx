@@ -1,8 +1,16 @@
 import type { ReactNode } from "react";
 import { HeadContent, Link, Outlet, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { AttendanceLogo } from "@/components/attendance-hq/primitives";
 import { AttendanceAuthProvider } from "@/components/attendance-hq/auth-provider";
+
+function StaticBrandMark() {
+  return (
+    <div className="inline-flex items-center gap-2">
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground font-display text-lg font-extrabold">A</div>
+      <span className="font-display text-lg font-extrabold tracking-tight text-foreground">Attendance HQ</span>
+    </div>
+  );
+}
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
 import { PRODUCT_NAME } from "@/lib/attendance-hq";
