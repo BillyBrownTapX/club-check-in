@@ -36,6 +36,8 @@ function ClubDetailRoute() {
   const navigate = useNavigate();
   const getClub = useAuthorizedServerFn(getClubDetail);
   const updateClubMutation = useAuthorizedServerFn(updateClub);
+  const deleteClubMutation = useAuthorizedServerFn(deleteClub);
+  const deleteEventMutation = useAuthorizedServerFn(deleteEvent);
   const createTemplateMutation = useAuthorizedServerFn(createEventTemplate);
   const updateTemplateMutation = useAuthorizedServerFn(updateEventTemplate);
   const duplicateTemplateMutation = useAuthorizedServerFn(duplicateEventTemplate);
@@ -45,6 +47,18 @@ function ClubDetailRoute() {
   const [data, setData] = useState<Awaited<ReturnType<typeof getClubDetail>> | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fetching, setFetching] = useState(true);
+
+  const handleDeleteClub = async () => {
+    await deleteClubMutation({ data: { clubId } });
+    toast.success("Club deleted");
+    navigate({ to: "/clubs" });
+  };
+
+  const handleDeleteEvent = async (eventId: string) => {
+    await deleteEventMutation({ data: { eventId } });
+    toast.success("Event deleted");
+    setData(await getClub({ data: { clubId } }));
+  };
 
   useEffect(() => {
     if (loading || !user) return;
