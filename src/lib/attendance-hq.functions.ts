@@ -572,6 +572,7 @@ export const createClubManagement = createServerFn({ method: "POST" })
         club_name: data.clubName.trim(),
         club_slug: slug,
         description: data.description?.trim() || null,
+        logo_url: data.logoPath?.trim() || null,
       })
       .select("*")
       .single();
@@ -597,6 +598,7 @@ export const updateClub = createServerFn({ method: "POST" })
         club_name: data.clubName.trim(),
         description: data.description?.trim() || null,
         is_active: data.isActive,
+        logo_url: data.logoPath === undefined ? undefined : (data.logoPath?.trim() || null),
       })
       .eq("id", data.clubId)
       .select("*")

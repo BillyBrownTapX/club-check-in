@@ -4,6 +4,7 @@ import { CalendarDays, Copy, Plus } from "lucide-react";
 import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
 import { ClubDialog, EmptyStateBlock, ManagementPageShell, PageHeader, PrimaryButton, SecondaryButton, StatsCard, TemplateCard, TemplateDialog, EventCard, FormCard, getManagementErrorMessage, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
 import { createEventTemplate, duplicateEventTemplate, getClubDetail, updateClub, updateEventTemplate } from "@/lib/attendance-hq.functions";
+import { useSignedLogoUrl } from "@/hooks/use-signed-logo";
 import type { EventTemplateWithClub, ManagementEventSummary } from "@/lib/attendance-hq";
 
 function ClubDetailNotFound() {
@@ -83,13 +84,16 @@ function ClubDetailRoute() {
 
         <FormCard>
           <div className="flex flex-col gap-4">
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <h2 className="text-xl font-semibold text-foreground">{data.club.club_name}</h2>
-                <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{data.club.is_active ? "Active" : "Inactive"}</span>
+            <div className="flex items-start gap-4">
+              <ClubHeaderLogo path={data.club.logo_url ?? null} name={data.club.club_name} />
+              <div className="space-y-2">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-xl font-semibold text-foreground">{data.club.club_name}</h2>
+                  <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">{data.club.is_active ? "Active" : "Inactive"}</span>
+                </div>
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{data.club.universities?.name ?? "University needed"}</p>
+                <p className="text-sm text-muted-foreground">{data.club.description || "Add a short description to help your team identify this club."}</p>
               </div>
-              <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground">{data.club.universities?.name ?? "University needed"}</p>
-              <p className="text-sm text-muted-foreground">{data.club.description || "Add a short description to help your team identify this club."}</p>
             </div>
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <PrimaryButton asChild><Link to="/events/new" search={{ clubId: data.club.id, templateId: "", duplicateFrom: "" }}>Create Event</Link></PrimaryButton>
@@ -164,7 +168,7 @@ function ClubDetailRoute() {
           title="Edit Club"
           description="Keep this club’s details current."
           universities={data.universities}
-          initialValues={{ clubId: data.club.id, universityId: data.club.university_id ?? "", clubName: data.club.club_name, description: data.club.description ?? "", isActive: data.club.is_active }}
+          initialValues={{ clubId: data.club.id, universityId: data.club.university_id ?? "", clubName: data.club.club_name, description: data.club.description ?? "", isActive: data.club.is_active, logoPath: data.club.logo_url ?? null }}
           onSubmit={async (values) => {
              await updateClubMutation({ data: values as never });
              setData(await getClub({ data: { clubId } }));
@@ -196,5 +200,15 @@ function ClubDetailRoute() {
         />
       </div>
     </ManagementPageShell>
+  );
+}
+
+function ClubHeaderLogo({ path, name }: { path: string | null; name: string }) {
+  const url = useSignedLogoUrl(path);
+  const initials = name.trim().split(/\s+/).slice(0, 2).map((w) => w[0]?.toUpperCase()).join("") || "C";
+  return (
+    <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-brand font-display text-lg font-extrabold text-primary-foreground shadow-[0_14px_30px_-20px_color-mix(in_oklab,var(--color-primary)_40%,transparent)]">
+      {url ? <img src={url} alt={`${name} logo`} className="h-full w-full object-cover" /> : <span>{initials}</span>}
+    </div>
   );
 }

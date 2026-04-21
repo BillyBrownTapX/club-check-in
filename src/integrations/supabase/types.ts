@@ -123,6 +123,7 @@ export type Database = {
           host_id: string
           id: string
           is_active: boolean
+          logo_url: string | null
           university_id: string | null
           updated_at: string
         }
@@ -134,6 +135,7 @@ export type Database = {
           host_id: string
           id?: string
           is_active?: boolean
+          logo_url?: string | null
           university_id?: string | null
           updated_at?: string
         }
@@ -145,6 +147,7 @@ export type Database = {
           host_id?: string
           id?: string
           is_active?: boolean
+          logo_url?: string | null
           university_id?: string | null
           updated_at?: string
         }

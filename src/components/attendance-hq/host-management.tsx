@@ -1,6 +1,9 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { CalendarDays, ChevronRight, Clock3, Copy, MapPin, Plus, Search, WandSparkles } from "lucide-react";
+import { CalendarDays, ChevronRight, Clock3, Copy, ImagePlus, Loader2, MapPin, Plus, Search, Trash2, WandSparkles } from "lucide-react";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useSignedLogoUrl } from "@/hooks/use-signed-logo";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import type { z } from "zod";
@@ -410,25 +413,137 @@ type TemplateUpdateValues = z.infer<typeof eventTemplateUpdateSchema>;
 type EventValues = z.infer<typeof eventSchema>;
 type EventUpdateValues = z.infer<typeof eventUpdateSchema>;
 
+// Club logo upload field — controlled by form state. Uploads the selected
+// image to the private `host-logos` bucket under the host's own folder,
+// and returns the storage path via onChange so the server function can
+// persist it on the clubs row.
+export function ClubLogoField({
+  value,
+  onChange,
+  clubId,
+  label = "Club logo",
+  disabled,
+}: {
+  value: string | null | undefined;
+  onChange: (path: string | null) => void;
+  clubId?: string;
+  label?: string;
+  disabled?: boolean;
+}) {
+  const { user } = useAttendanceAuth();
+  const previewUrl = useSignedLogoUrl(value ?? null);
+  const [uploading, setUploading] = useState(false);
+  const inputIdSuffix = useMemo(() => Math.random().toString(36).slice(2, 8), []);
+  const inputId = `club-logo-${inputIdSuffix}`;
+
+  async function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file || !user) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file.");
+      return;
+    }
+    if (file.size > 3 * 1024 * 1024) {
+      toast.error("Logo must be 3MB or smaller.");
+      return;
+    }
+
+    setUploading(true);
+    const extension = file.name.split(".").pop()?.toLowerCase() || "png";
+    const scope = clubId ? clubId : `draft-${Math.random().toString(36).slice(2, 10)}`;
+    const filePath = `${user.id}/clubs/${scope}/logo-${Date.now()}.${extension}`;
+    const { error: uploadError } = await supabase.storage
+      .from("host-logos")
+      .upload(filePath, file, { upsert: true, cacheControl: "3600" });
+    setUploading(false);
+    if (uploadError) {
+      toast.error("Unable to upload logo.");
+      return;
+    }
+    onChange(filePath);
+    toast.success("Logo uploaded.");
+  }
+
+  const hasLogo = Boolean(value);
+
+  return (
+    <div className="space-y-2">
+      <Label className="text-sm font-semibold text-foreground">{label}</Label>
+      <div className="flex items-center gap-4 rounded-xl border border-primary/10 bg-secondary/40 p-3">
+        <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-brand text-primary-foreground shadow-[0_10px_24px_-18px_color-mix(in_oklab,var(--color-primary)_40%,transparent)]">
+          {previewUrl ? (
+            <img src={previewUrl} alt="Club logo preview" className="h-full w-full object-cover" />
+          ) : (
+            <ImagePlus className="h-6 w-6 opacity-90" />
+          )}
+          {uploading ? (
+            <span className="absolute inset-0 flex items-center justify-center bg-foreground/25">
+              <Loader2 className="h-5 w-5 animate-spin text-white" />
+            </span>
+          ) : null}
+        </div>
+        <div className="min-w-0 flex-1 space-y-2">
+          <p className="text-sm text-muted-foreground">Square PNG or JPG, up to 3MB. Optional.</p>
+          <div className="flex flex-wrap gap-2">
+            <input
+              id={inputId}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              className="sr-only"
+              onChange={(nextEvent) => void handleFileChange(nextEvent)}
+              disabled={disabled || uploading}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="rounded-full"
+              onClick={() => document.getElementById(inputId)?.click()}
+              disabled={disabled || uploading}
+            >
+              {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+              {hasLogo ? "Replace" : "Upload logo"}
+            </Button>
+            {hasLogo ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="rounded-full text-destructive hover:text-destructive"
+                onClick={() => onChange(null)}
+                disabled={disabled || uploading}
+              >
+                <Trash2 className="h-4 w-4" />
+                Remove
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface DialogBaseProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
 
-export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, title, description, universities }: DialogBaseProps & { initialValues?: Partial<ClubUpdateValues>; onSubmit: (values: ClubCreateValues | ClubUpdateValues) => Promise<void>; title: string; description: string; universities: University[] }) {
+export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, title, description, universities }: DialogBaseProps & { initialValues?: Partial<ClubUpdateValues> & { logoPath?: string | null }; onSubmit: (values: ClubCreateValues | ClubUpdateValues) => Promise<void>; title: string; description: string; universities: University[] }) {
   const isEdit = Boolean(initialValues?.clubId);
   const form = useForm<ClubCreateValues | ClubUpdateValues>({
     resolver: zodResolver(isEdit ? clubUpdateSchema : clubSchema),
     defaultValues: isEdit
-      ? { clubId: initialValues?.clubId ?? "", universityId: initialValues?.universityId ?? "", clubName: initialValues?.clubName ?? "", description: initialValues?.description ?? "", isActive: initialValues?.isActive ?? true }
-      : { universityId: "", clubName: "", description: "" },
+      ? { clubId: initialValues?.clubId ?? "", universityId: initialValues?.universityId ?? "", clubName: initialValues?.clubName ?? "", description: initialValues?.description ?? "", isActive: initialValues?.isActive ?? true, logoPath: initialValues?.logoPath ?? null }
+      : { universityId: "", clubName: "", description: "", logoPath: null },
   });
   const [error, setError] = useState("");
 
   useEffect(() => {
     form.reset(isEdit
-      ? { clubId: initialValues?.clubId ?? "", universityId: initialValues?.universityId ?? "", clubName: initialValues?.clubName ?? "", description: initialValues?.description ?? "", isActive: initialValues?.isActive ?? true }
-      : { universityId: "", clubName: "", description: "" });
+      ? { clubId: initialValues?.clubId ?? "", universityId: initialValues?.universityId ?? "", clubName: initialValues?.clubName ?? "", description: initialValues?.description ?? "", isActive: initialValues?.isActive ?? true, logoPath: initialValues?.logoPath ?? null }
+      : { universityId: "", clubName: "", description: "", logoPath: null });
   }, [form, initialValues, isEdit, open]);
 
   const submit = form.handleSubmit(async (values) => {
@@ -452,6 +567,11 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, title,
           </div>
         </DialogHeader>
         <form className="space-y-4 px-6 pb-6 pt-2" onSubmit={(event) => void submit(event)}>
+          <ClubLogoField
+            value={(form.watch("logoPath") as string | null | undefined) ?? null}
+            onChange={(path) => form.setValue("logoPath", path as never, { shouldDirty: true })}
+            clubId={initialValues?.clubId}
+          />
           <SelectInput label="University" value={form.watch("universityId") as string} onValueChange={(value) => form.setValue("universityId", value as never, { shouldValidate: true })} placeholder="Choose a university" options={universities.map((university) => ({ value: university.id, label: university.name }))} />
           <TextInput label="Club name" error={form.formState.errors.clubName?.message} {...form.register("clubName")} />
           <TextAreaInput label="Description" error={form.formState.errors.description?.message} {...form.register("description")} />

@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { FormCard, InlineErrorMessage, OnboardingShell, PageHeadingBlock, PrimaryButton, ProgressIndicator, SecondaryTextLink, TextAreaField, TextInput } from "@/components/attendance-hq/host-onboarding";
 import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
-import { getManagementErrorMessage, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
+import { ClubLogoField, getManagementErrorMessage, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
 import { clubSchema } from "@/lib/attendance-hq-schemas";
 import { createClubManagement, getHostOnboardingState, getUniversitiesForHost } from "@/lib/attendance-hq.functions";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -36,7 +36,7 @@ function OnboardingClubRoute() {
   const [universities, setUniversities] = useState<Array<{ id: string; name: string }>>([]);
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: { universityId: "", clubName: "", description: "" },
+    defaultValues: { universityId: "", clubName: "", description: "", logoPath: null },
   });
 
   useEffect(() => {
@@ -76,7 +76,7 @@ function OnboardingClubRoute() {
   const onSubmit = form.handleSubmit(async (values) => {
     setSubmitError(null);
     try {
-      await createClub({ data: { universityId: values.universityId, clubName: values.clubName, description: values.description } });
+      await createClub({ data: { universityId: values.universityId, clubName: values.clubName, description: values.description, logoPath: values.logoPath ?? null } });
       navigate({ to: "/onboarding/event" });
     } catch (error) {
       setSubmitError(getManagementErrorMessage(error, "Unable to create club."));
@@ -91,6 +91,10 @@ function OnboardingClubRoute() {
         <ProgressIndicator step={1} total={2} label="Create your club" />
         <PageHeadingBlock eyebrow="Setup" title="Create your first club" description="Add the club or organization you’ll manage most often so your workspace feels ready from day one." />
         <form className="space-y-4" onSubmit={(event) => void onSubmit(event)}>
+          <ClubLogoField
+            value={form.watch("logoPath") ?? null}
+            onChange={(path) => form.setValue("logoPath", path, { shouldDirty: true })}
+          />
           <div className="space-y-2">
             <label className="text-sm font-semibold text-foreground">University</label>
             <Select value={form.watch("universityId")} onValueChange={(value) => form.setValue("universityId", value, { shouldValidate: true })}>
