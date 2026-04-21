@@ -26,7 +26,7 @@ export const Route = createFileRoute("/sign-in")({
 });
 
 function SignInRoute() {
-  useRequireGuestRedirect();
+  const { loading: guardLoading } = useRequireGuestRedirect();
   const { reason } = Route.useSearch();
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [authSettling, setAuthSettling] = useState(false);
@@ -59,12 +59,12 @@ function SignInRoute() {
           <div className="rounded-[1.35rem] surface-cream px-4 py-4"><p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-primary/70">Built for</p><p className="mt-1 font-display text-lg font-bold text-foreground">Phone-first teams</p></div>
         </div>
         <form className="space-y-4" onSubmit={(event) => void onSubmit(event)}>
-          <EmailInput label="Email" error={form.formState.errors.email?.message} {...form.register("email")} />
-          <PasswordInput label="Password" error={form.formState.errors.password?.message} {...form.register("password")} />
+          <EmailInput label="Email" disabled={guardLoading} error={form.formState.errors.email?.message} {...form.register("email")} />
+          <PasswordInput label="Password" disabled={guardLoading} error={form.formState.errors.password?.message} {...form.register("password")} />
           <InlineErrorMessage message={submitError ?? undefined} />
-          <PrimaryButton type="submit" disabled={form.formState.isSubmitting || authSettling}>{authSettling ? "Signing you in..." : "Sign in"}</PrimaryButton>
+          <PrimaryButton type="submit" disabled={guardLoading || form.formState.isSubmitting || authSettling}>{guardLoading ? "Loading..." : authSettling ? "Signing you in..." : "Sign in"}</PrimaryButton>
         </form>
-        <AuthSupportLinks primary={<SecondaryTextLink to="/forgot-password">Forgot password</SecondaryTextLink>} secondary={<SecondaryTextLink to="/sign-up">Create account</SecondaryTextLink>} />
+        <AuthSupportLinks primary={<SecondaryTextLink from="/" to="/forgot-password">Forgot password</SecondaryTextLink>} secondary={<SecondaryTextLink from="/" to="/sign-up">Create account</SecondaryTextLink>} />
       </AuthCard>
     </AuthShell>
   );

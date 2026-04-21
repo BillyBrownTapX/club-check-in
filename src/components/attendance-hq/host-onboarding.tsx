@@ -100,9 +100,9 @@ export function PrimaryButton(props: React.ComponentProps<typeof Button>) {
   );
 }
 
-export function SecondaryTextLink({ to, children, className }: { to: string; children: React.ReactNode; className?: string }) {
+export function SecondaryTextLink({ to, from, children, className }: { to: string; from?: string; children: React.ReactNode; className?: string }) {
   return (
-    <Link to={to as never} className={cn("text-[13.5px] font-semibold text-primary transition-colors hover:text-foreground", className)}>
+    <Link to={to as never} from={from as never} className={cn("text-[13.5px] font-semibold text-primary transition-colors hover:text-foreground", className)}>
       {children}
     </Link>
   );
