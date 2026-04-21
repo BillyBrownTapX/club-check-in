@@ -12,33 +12,33 @@ import { AttendanceLogo } from "@/components/attendance-hq/primitives";
 export function AuthShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto flex min-h-screen max-w-6xl flex-col px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:px-6 lg:px-8">
         <header className="flex items-center justify-between py-2">
           <AttendanceLogo />
         </header>
-        <main className="flex flex-1 items-center justify-center py-10 sm:py-14">{children}</main>
+        <main className="flex flex-1 items-center justify-center py-8 sm:py-14">{children}</main>
       </div>
     </div>
   );
 }
 
 export function AuthCard({ children }: { children: React.ReactNode }) {
-  return <Card className="w-full max-w-[28rem] rounded-3xl border-border/70 shadow-sm"><CardContent className="space-y-6 p-6 sm:p-7">{children}</CardContent></Card>;
+  return <Card className="w-full max-w-[28rem] rounded-[2rem] border-border/70 bg-card/95 shadow-[0_20px_48px_-28px_color-mix(in_oklab,var(--color-primary)_42%,transparent)]"><CardContent className="space-y-6 p-6 sm:p-7">{children}</CardContent></Card>;
 }
 
 export function OnboardingShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto flex min-h-screen max-w-4xl flex-col px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto flex min-h-screen max-w-4xl flex-col px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:px-6 lg:px-8">
         <header className="py-2"><AttendanceLogo /></header>
-        <main className="flex flex-1 items-center justify-center py-8 sm:py-12">{children}</main>
+        <main className="flex flex-1 items-center justify-center py-6 sm:py-12">{children}</main>
       </div>
     </div>
   );
 }
 
 export function FormCard({ children }: { children: React.ReactNode }) {
-  return <Card className="w-full max-w-[32rem] rounded-3xl border-border/70 shadow-sm"><CardContent className="space-y-6 p-6 sm:p-7">{children}</CardContent></Card>;
+  return <Card className="w-full max-w-[32rem] rounded-[2rem] border-border/70 bg-card/95 shadow-[0_20px_48px_-28px_color-mix(in_oklab,var(--color-primary)_42%,transparent)]"><CardContent className="space-y-6 p-6 sm:p-7">{children}</CardContent></Card>;
 }
 
 export function ProgressIndicator({ step, total, label }: { step: number; total: number; label: string }) {
@@ -49,8 +49,8 @@ export function ProgressIndicator({ step, total, label }: { step: number; total:
         <span className="font-medium text-foreground">Step {step} of {total}</span>
         <span className="text-muted-foreground">{label}</span>
       </div>
-      <div className="h-2 rounded-full bg-secondary">
-        <div className="h-2 rounded-full bg-primary transition-all" style={{ width: progress }} />
+      <div className="h-2.5 rounded-full bg-secondary">
+        <div className="h-2.5 rounded-full bg-primary transition-all" style={{ width: progress }} />
       </div>
     </div>
   );
@@ -61,7 +61,7 @@ export function PageHeadingBlock({ eyebrow, title, description }: { eyebrow?: st
     <div className="space-y-3">
       {eyebrow ? <p className="text-[0.7rem] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{eyebrow}</p> : null}
       <div className="space-y-2">
-        <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">{title}</h1>
+        <h1 className="text-[2rem] font-semibold tracking-tight text-foreground sm:text-4xl">{title}</h1>
         <p className="max-w-xl text-sm leading-6 text-muted-foreground sm:text-base">{description}</p>
       </div>
     </div>
@@ -117,7 +117,7 @@ export function TextAreaField({ label, error, className, ...props }: React.Compo
 
 export function SuccessBanner({ message }: { message: string }) {
   return (
-    <div className="flex items-start gap-3 rounded-2xl border border-success/20 bg-success/10 px-4 py-3 text-sm text-foreground">
+    <div className="flex items-start gap-3 rounded-[1.4rem] border border-success/20 bg-success/10 px-4 py-3 text-sm text-foreground">
       <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-success" />
       <span>{message}</span>
     </div>

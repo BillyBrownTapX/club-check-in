@@ -34,9 +34,9 @@ const statusToneMap: Record<CheckInStatus, string> = {
 export function PublicCheckInShell({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-background">
-      <div className="mx-auto flex min-h-screen w-full max-w-[28rem] flex-col px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-5 sm:px-6 sm:pt-8">
+      <div className="mx-auto flex min-h-screen w-full max-w-[28rem] flex-col px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))] sm:px-6 sm:pt-8">
         <div className="mb-5 flex items-center gap-3 px-1">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
+          <div className="flex h-11 w-11 items-center justify-center rounded-[1.3rem] bg-primary text-primary-foreground shadow-[0_12px_24px_-16px_color-mix(in_oklab,var(--color-primary)_75%,transparent)]">
             <QrCode className="h-5 w-5" />
           </div>
           <div>
@@ -56,7 +56,7 @@ export function StatusBadge({ status }: { status: CheckInStatus }) {
 
 export function EventInfoCard({ event, status }: { event: EventWithClub; status: CheckInStatus }) {
   return (
-    <Card className="rounded-3xl border-border/70 shadow-sm">
+    <Card className="rounded-[2rem] border-border/70 bg-card/95 shadow-[0_18px_42px_-28px_color-mix(in_oklab,var(--color-primary)_38%,transparent)]">
       <CardHeader className="space-y-4 p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
@@ -90,7 +90,7 @@ export function ActionChoiceCard({
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center gap-4 rounded-3xl border border-border/70 bg-card p-5 text-left shadow-sm transition-transform duration-150 hover:-translate-y-0.5"
+      className="flex w-full items-center gap-4 rounded-[1.75rem] border border-border/70 bg-card/95 p-5 text-left shadow-[0_16px_36px_-26px_color-mix(in_oklab,var(--color-primary)_30%,transparent)] transition-transform duration-150 hover:-translate-y-0.5"
     >
       <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-secondary text-secondary-foreground">{icon}</div>
       <div className="min-w-0 flex-1">
@@ -103,12 +103,12 @@ export function ActionChoiceCard({
 }
 
 export function CheckInFormCard({ children }: { children: ReactNode }) {
-  return <Card className="rounded-3xl border-border/70 shadow-sm"><CardContent className="space-y-4 p-5 pt-5">{children}</CardContent></Card>;
+  return <Card className="rounded-[2rem] border-border/70 bg-card/95 shadow-[0_18px_42px_-28px_color-mix(in_oklab,var(--color-primary)_38%,transparent)]"><CardContent className="space-y-4 p-5 pt-5">{children}</CardContent></Card>;
 }
 
 export function IdentityConfirmationCard({ student }: { student: PublicStudentPreview }) {
   return (
-    <Card className="rounded-3xl border-border/70 shadow-sm">
+    <Card className="rounded-[2rem] border-border/70 bg-card/95 shadow-[0_18px_42px_-28px_color-mix(in_oklab,var(--color-primary)_38%,transparent)]">
       <CardContent className="space-y-4 p-6 text-center">
         <div className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Student found</div>
         <div className="space-y-2">
@@ -122,7 +122,7 @@ export function IdentityConfirmationCard({ student }: { student: PublicStudentPr
 
 export function SuccessStateCard({ event, checkedInAt }: { event: EventWithClub; checkedInAt: string }) {
   return (
-    <Card className="rounded-3xl border-success/20 shadow-sm">
+    <Card className="rounded-[2rem] border-success/20 bg-card/95 shadow-[0_18px_42px_-28px_color-mix(in_oklab,var(--color-primary)_38%,transparent)]">
       <CardContent className="space-y-5 p-6 text-center">
         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-success/12 text-success">
           <CheckCircle2 className="h-8 w-8" />
@@ -146,7 +146,7 @@ export function SuccessStateCard({ event, checkedInAt }: { event: EventWithClub;
 
 export function ErrorStateCard({ title, description, marker = <ShieldAlert className="h-7 w-7" />, action }: { title: string; description: string; marker?: ReactNode; action?: ReactNode; }) {
   return (
-    <Card className="rounded-3xl border-border/70 shadow-sm">
+    <Card className="rounded-[2rem] border-border/70 bg-card/95 shadow-[0_18px_42px_-28px_color-mix(in_oklab,var(--color-primary)_38%,transparent)]">
       <CardContent className="space-y-5 p-6 text-center">
         <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-destructive/10 text-destructive">{marker}</div>
         <div className="space-y-2">
