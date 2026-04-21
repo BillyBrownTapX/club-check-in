@@ -1,8 +1,16 @@
 import type { ReactNode } from "react";
 import { HeadContent, Link, Outlet, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { AttendanceLogo } from "@/components/attendance-hq/primitives";
 import { AttendanceAuthProvider } from "@/components/attendance-hq/auth-provider";
+
+function StaticBrandMark() {
+  return (
+    <div className="inline-flex items-center gap-2">
+      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground font-display text-lg font-extrabold">A</div>
+      <span className="font-display text-lg font-extrabold tracking-tight text-foreground">Attendance HQ</span>
+    </div>
+  );
+}
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
 import { PRODUCT_NAME } from "@/lib/attendance-hq";
@@ -28,7 +36,7 @@ function NotFoundComponent() {
       <div className="w-full max-w-lg">
         <BrandedShellCard>
           <div className="flex flex-col items-center text-center">
-            <AttendanceLogo />
+            <StaticBrandMark />
             <div className="mt-8 inline-flex rounded-full bg-secondary px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-primary">404</div>
             <h1 className="mt-5 font-display text-4xl font-extrabold tracking-tight text-foreground">Page not found</h1>
             <p className="mt-3 max-w-md text-sm leading-6 text-muted-foreground">The page you tried to open is unavailable. Head back to the main workspace and continue from there.</p>
@@ -44,7 +52,7 @@ function NotFoundComponent() {
 }
 
 function RootErrorComponent({ error }: { error: Error }) {
-  if (typeof console !== "undefined") console.error("[root-error]", error);
+  if (typeof console !== "undefined") console.error("[root-error]", error?.message, error?.stack);
   const isConfigError = /supabase environment variables/i.test(error?.message ?? "");
 
   return (
@@ -52,7 +60,7 @@ function RootErrorComponent({ error }: { error: Error }) {
       <div className="w-full max-w-lg">
         <BrandedShellCard>
           <div className="flex flex-col items-center text-center">
-            <AttendanceLogo />
+            <StaticBrandMark />
             <div className="mt-8 inline-flex rounded-full bg-destructive/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.18em] text-destructive">Attention</div>
             <h1 className="mt-5 font-display text-3xl font-extrabold tracking-tight text-foreground">
               {isConfigError ? `${PRODUCT_NAME} isn’t configured` : "Something went wrong"}
