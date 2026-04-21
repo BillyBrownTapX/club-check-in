@@ -74,6 +74,8 @@
 
 :root {
   --radius: 1rem;
+  --visual-bottom: 0px;
+  --tabbar-bottom-offset: env(safe-area-inset-bottom, 0px);
   /* UNG brand */
   --ung-blue: oklch(0.41 0.165 259);
   --ung-blue-light: oklch(0.52 0.161 257);
