@@ -796,7 +796,13 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, onDele
             onChange={(path) => form.setValue("logoPath", path as never, { shouldDirty: true })}
             clubId={initialValues?.clubId}
           />
-          <SelectInput label="University" value={form.watch("universityId") as string} onValueChange={(value) => form.setValue("universityId", value as never, { shouldValidate: true })} placeholder="Choose a university" options={universities.map((university) => ({ value: university.id, label: university.name }))} error={(form.formState.errors as Record<string, { message?: string } | undefined>).universityId?.message} />
+          {!isEdit && !hasUniversities ? (
+            <div className="rounded-2xl border border-primary/15 bg-secondary/40 p-4 text-sm leading-6 text-muted-foreground">
+              <p className="font-semibold text-foreground">Add a university first</p>
+              <p className="mt-1">You'll need a university in your workspace before creating a club. Reach out to support to add one if you don't see it listed.</p>
+            </div>
+          ) : null}
+          <SelectInput label="University" value={form.watch("universityId") as string} onValueChange={(value) => form.setValue("universityId", value as never, { shouldValidate: true })} placeholder={hasUniversities ? "Choose a university" : "No universities available"} options={universities.map((university) => ({ value: university.id, label: university.name }))} error={(form.formState.errors as Record<string, { message?: string } | undefined>).universityId?.message} disabled={!hasUniversities} />
           <TextInput label="Club name" error={form.formState.errors.clubName?.message} {...form.register("clubName")} />
           <TextAreaInput label="Description" error={form.formState.errors.description?.message} {...form.register("description")} />
           {isEdit ? (
@@ -808,8 +814,16 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, onDele
               <Switch checked={(form.watch("isActive") as boolean | undefined) ?? true} onCheckedChange={(checked) => form.setValue("isActive", checked as never)} />
             </div>
           ) : null}
+          {missingClubFields.length > 0 ? (
+            <div className="rounded-2xl bg-destructive/10 p-4 text-sm text-destructive" role="alert">
+              <p className="font-semibold">Please fix the following before saving:</p>
+              <ul className="mt-1 list-disc pl-5">
+                {missingClubFields.map((label) => <li key={label}>{label}</li>)}
+              </ul>
+            </div>
+          ) : null}
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          <PrimaryButton type="submit" className="w-full" disabled={isSubmitting}>{isSubmitting ? (isEdit ? "Saving…" : "Creating…") : (isEdit ? "Save Club" : "Create Club")}</PrimaryButton>
+          <PrimaryButton type="submit" className="w-full" disabled={isSubmitting || (!isEdit && !hasUniversities)}>{isSubmitting ? (isEdit ? "Saving…" : "Creating…") : (isEdit ? "Save Club" : "Create Club")}</PrimaryButton>
           {isEdit && onDelete ? (
             <DeleteConfirmButton
               trigger={
