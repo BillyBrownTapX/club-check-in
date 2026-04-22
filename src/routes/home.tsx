@@ -1,13 +1,27 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useMemo } from "react";
+import { Link, createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { Activity, CalendarPlus, ChevronRight, ListChecks, Plus, QrCode } from "lucide-react";
-import { useAttendanceAuth, useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
+import { useAttendanceAuth, useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
 import { HostAppShell, HomeTopActions } from "@/components/attendance-hq/host-shell";
 import { useRequireHostRedirect, getManagementErrorMessage } from "@/components/attendance-hq/host-management";
 import { ActionTile, Chip, GroupedList, LargeTitleHeader, ListRow, SectionLabel, StatTile } from "@/components/attendance-hq/ios";
 import { InstallBanner } from "@/components/attendance-hq/install-cta";
+import { Button } from "@/components/ui/button";
 import { getHostClubSummaries, getHostEvents } from "@/lib/attendance-hq.functions";
-import { formatEventDate, formatEventTime, getCheckInStatus, type ClubSummary, type ManagementEventSummary } from "@/lib/attendance-hq";
+import { formatEventDate, formatEventTime } from "@/lib/attendance-hq";
+import { queryKeys } from "@/lib/query-keys";
+
+function HomeError({ error, reset }: { error: Error; reset: () => void }) {
+  const router = useRouter();
+  return (
+    <HostAppShell>
+      <div className="ios-card mt-6 rounded-3xl p-6 text-center">
+        <p className="text-sm text-destructive">{getManagementErrorMessage(error, "Unable to load home.")}</p>
+        <Button className="mt-4" variant="hero" onClick={() => { router.invalidate(); reset(); }}>Try again</Button>
+      </div>
+    </HostAppShell>
+  );
+}
 
 export const Route = createFileRoute("/home")({
   head: () => ({
@@ -17,32 +31,31 @@ export const Route = createFileRoute("/home")({
     ],
   }),
   component: HomeRoute,
+  errorComponent: HomeError,
 });
 
 function HomeRoute() {
   const { loading, user } = useRequireHostRedirect();
   const auth = useAttendanceAuth();
-  const getClubs = useAuthorizedServerFn(getHostClubSummaries);
-  const getEvents = useAuthorizedServerFn(getHostEvents);
   const navigate = useNavigate();
-  const [clubs, setClubs] = useState<ClubSummary[]>([]);
-  const [events, setEvents] = useState<ManagementEventSummary[]>([]);
-  const [fetching, setFetching] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (loading || !user) return;
-    let cancelled = false;
-    void Promise.all([getClubs(), getEvents({ data: { clubId: "", status: "all", query: "" } })])
-      .then(([nextClubs, nextEvents]) => {
-        if (cancelled) return;
-        setClubs(nextClubs);
-        setEvents(nextEvents);
-      })
-      .catch((e) => { if (!cancelled) setError(getManagementErrorMessage(e, "Unable to load home.")); })
-      .finally(() => { if (!cancelled) setFetching(false); });
-    return () => { cancelled = true; };
-  }, [getClubs, getEvents, loading, user]);
+  const clubsQuery = useAuthorizedQuery(
+    queryKeys.clubs.summaries(),
+    getHostClubSummaries,
+    undefined,
+    { staleTime: 30_000 },
+  );
+  const eventsQuery = useAuthorizedQuery(
+    queryKeys.events.list({ clubId: "", status: "all", query: "" }),
+    getHostEvents,
+    { clubId: "", status: "all" as const, query: "" },
+    { staleTime: 30_000 },
+  );
+
+  const clubs = clubsQuery.data ?? [];
+  const events = eventsQuery.data ?? [];
+  const fetching = clubsQuery.isLoading || eventsQuery.isLoading;
+  const queryError = clubsQuery.error ?? eventsQuery.error;
 
   const greeting = useMemo(() => {
     const hr = new Date().getHours();
@@ -89,8 +102,8 @@ function HomeRoute() {
 
       {fetching ? (
         <div className="ios-card mt-2 rounded-3xl p-6 text-center text-sm text-muted-foreground">Loading your day…</div>
-      ) : error ? (
-        <div className="ios-card mt-2 rounded-3xl p-5 text-sm text-destructive">{error}</div>
+      ) : queryError ? (
+        <div className="ios-card mt-2 rounded-3xl p-5 text-sm text-destructive">{getManagementErrorMessage(queryError, "Unable to load home.")}</div>
       ) : (
         <>
           <InstallBanner />

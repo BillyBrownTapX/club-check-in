@@ -2,6 +2,14 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { Session, User } from "@supabase/supabase-js";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryKey,
+  type UseMutationOptions,
+  type UseQueryOptions,
+} from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 type AuthContextValue = {
@@ -148,3 +156,110 @@ export function useAuthorizedServerFn<T extends (...args: any[]) => Promise<any>
 
   return authorizedInvoke;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Query helpers
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Why these wrappers exist:
+//  - Every authorized server fn must run through `useAuthorizedServerFn` so a
+//    401 triggers the centralized sign-out + redirect path.
+//  - Every authorized query must wait until the auth context is hydrated
+//    (`!loading && !!user`) — otherwise we fire a request without a bearer
+//    token, the server returns 401, and the redirect path bounces a user who
+//    is in fact signed in. Today every route guards with `loading || !user`
+//    in a useEffect; this hook centralizes that gate.
+//  - Mutations need a `queryClient.invalidateQueries` helper so write paths
+//    are one-liners. Returning the queryClient also lets call sites do
+//    optimistic updates when needed.
+
+type AuthorizedQueryOptions<TData, TError = Error> = Omit<
+  UseQueryOptions<TData, TError, TData, QueryKey>,
+  "queryKey" | "queryFn" | "enabled"
+> & {
+  /**
+   * Additional gate beyond the auth-hydrated check. When false, the query is
+   * disabled even if the user is signed in (e.g. waiting on a route param).
+   */
+  enabled?: boolean;
+};
+
+/**
+ * Run an authorized server fn through TanStack Query.
+ *
+ * The query is automatically gated on auth hydration so it never fires a
+ * tokenless request. The `queryFn` calls the server fn through
+ * `useAuthorizedServerFn`, so a 401 still triggers the central sign-out path.
+ */
+// We type `serverFn` loosely (any[] args) because TanStack Start's
+// RequiredFetcher is stricter than `(opts?: { data }) => …`. Mirroring it
+// would force casts at every call site. Runtime contract is stable: every
+// server fn accepts `({ data })` (or zero args when no validator).
+export function useAuthorizedQuery<TData, TPayload = void>(
+  queryKey: QueryKey,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  serverFn: (...args: any[]) => Promise<TData>,
+  payload?: TPayload,
+  options?: AuthorizedQueryOptions<TData>,
+) {
+  const { loading, user } = useAttendanceAuth();
+  const invoke = useAuthorizedServerFn(serverFn);
+  const externalEnabled = options?.enabled ?? true;
+
+  return useQuery<TData, Error, TData, QueryKey>({
+    ...options,
+    queryKey,
+    enabled: !loading && !!user && externalEnabled,
+    queryFn: async () => {
+      if (payload === undefined) {
+        return (await (invoke as () => Promise<TData>)()) as TData;
+      }
+      return (await (invoke as (opts: { data: TPayload }) => Promise<TData>)({ data: payload })) as TData;
+    },
+  });
+}
+
+type AuthorizedMutationOptions<TData, TVariables, TError = Error> = Omit<
+  UseMutationOptions<TData, TError, TVariables, unknown>,
+  "mutationFn"
+> & {
+  /**
+   * Query key prefixes to invalidate after a successful mutation. Prefix
+   * matching means `['events']` invalidates both `['events', 'list', ...]`
+   * and `['events', 'detail', id]` — typos in deep keys still recover.
+   */
+  invalidate?: ReadonlyArray<QueryKey>;
+};
+
+/**
+ * Run an authorized server fn as a TanStack Query mutation. After a
+ * successful mutation, every key in `invalidate` is invalidated by prefix.
+ */
+export function useAuthorizedMutation<TData, TVariables = void>(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  serverFn: (...args: any[]) => Promise<TData>,
+  options?: AuthorizedMutationOptions<TData, TVariables>,
+) {
+  const invoke = useAuthorizedServerFn(serverFn);
+  const queryClient = useQueryClient();
+  const { invalidate, onSuccess, ...rest } = options ?? {};
+
+  return useMutation<TData, Error, TVariables, unknown>({
+    ...rest,
+    mutationFn: async (variables: TVariables) => {
+      if (variables === undefined) {
+        return (await (invoke as () => Promise<TData>)()) as TData;
+      }
+      return (await (invoke as (opts: { data: TVariables }) => Promise<TData>)({ data: variables })) as TData;
+    },
+    onSuccess: (data, variables, onMutateResult, context) => {
+      if (invalidate?.length) {
+        for (const key of invalidate) {
+          void queryClient.invalidateQueries({ queryKey: key });
+        }
+      }
+      return onSuccess?.(data, variables, onMutateResult, context);
+    },
+  });
+}
+
