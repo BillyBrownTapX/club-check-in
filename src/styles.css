@@ -325,11 +325,12 @@
     left: 0;
     right: 0;
     bottom: var(--visual-bottom, 0px);
-    z-index: 40;
-    transform: translate3d(0, 0, 0);
-    -webkit-transform: translate3d(0, 0, 0);
-    will-change: transform;
+    z-index: 50;
+    /* No transform here — transforms create a containing block and on iOS
+       can cause a fixed bar to drift with parent scroll. */
+    will-change: auto;
     pointer-events: none;
+    contain: layout paint;
   }
   .ios-cta-shadow { box-shadow: var(--shadow-cta-blue); }
   .ios-cta-shadow-gold { box-shadow: var(--shadow-cta-gold); }

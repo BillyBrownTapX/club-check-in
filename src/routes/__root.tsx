@@ -130,6 +130,12 @@ function RootComponent() {
     return () => mq?.removeEventListener?.("change", apply);
   }, []);
 
+  // Keep the fixed tab bar pinned to the bottom of the visible viewport.
+  // We intentionally only react to visualViewport `resize` (keyboard open/close,
+  // address-bar height change) — NOT `scroll`. Reacting to scroll causes the
+  // bar to visibly drift on iOS Safari rubber-band / address-bar transitions.
+  // We also threshold small offsets to 0 so normal browser chrome changes
+  // don't nudge the bar a few pixels mid-interaction.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const vv = window.visualViewport;
@@ -138,17 +144,17 @@ function RootComponent() {
     const sync = () => {
       cancelAnimationFrame(frame);
       frame = requestAnimationFrame(() => {
-        const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+        const raw = window.innerHeight - vv.height - vv.offsetTop;
+        // Treat anything under 120px as "no keyboard" — ignore browser-chrome jitter.
+        const offset = raw > 120 ? Math.round(raw) : 0;
         document.documentElement.style.setProperty("--visual-bottom", `${offset}px`);
       });
     };
     sync();
     vv.addEventListener("resize", sync);
-    vv.addEventListener("scroll", sync);
     return () => {
       cancelAnimationFrame(frame);
       vv.removeEventListener("resize", sync);
-      vv.removeEventListener("scroll", sync);
     };
   }, []);
 
