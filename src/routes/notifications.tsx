@@ -1,12 +1,25 @@
-import { useEffect, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { Bell, CalendarCheck, UserCheck } from "lucide-react";
-import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
+import { useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
 import { HostAppShell } from "@/components/attendance-hq/host-shell";
-import { useRequireHostRedirect } from "@/components/attendance-hq/host-management";
+import { useRequireHostRedirect, getManagementErrorMessage } from "@/components/attendance-hq/host-management";
 import { GroupedList, LargeTitleHeader, ListRow, SectionLabel } from "@/components/attendance-hq/ios";
+import { Button } from "@/components/ui/button";
 import { getHostEvents } from "@/lib/attendance-hq.functions";
-import { formatEventDate, type ManagementEventSummary } from "@/lib/attendance-hq";
+import { formatEventDate } from "@/lib/attendance-hq";
+import { queryKeys } from "@/lib/query-keys";
+
+function NotificationsError({ error, reset }: { error: Error; reset: () => void }) {
+  const router = useRouter();
+  return (
+    <HostAppShell>
+      <div className="ios-card mt-6 rounded-3xl p-6 text-center">
+        <p className="text-sm text-destructive">{getManagementErrorMessage(error, "Unable to load activity.")}</p>
+        <Button className="mt-4" variant="hero" onClick={() => { router.invalidate(); reset(); }}>Try again</Button>
+      </div>
+    </HostAppShell>
+  );
+}
 
 export const Route = createFileRoute("/notifications")({
   head: () => ({
@@ -16,22 +29,23 @@ export const Route = createFileRoute("/notifications")({
     ],
   }),
   component: NotificationsRoute,
+  errorComponent: NotificationsError,
 });
 
 function NotificationsRoute() {
   const { loading, user } = useRequireHostRedirect();
-  const getEvents = useAuthorizedServerFn(getHostEvents);
-  const [events, setEvents] = useState<ManagementEventSummary[]>([]);
-  const [fetching, setFetching] = useState(true);
 
-  useEffect(() => {
-    if (loading || !user) return;
-    let cancelled = false;
-    void getEvents({ data: { clubId: "", status: "all", query: "" } })
-      .then((next) => { if (!cancelled) setEvents(next); })
-      .finally(() => { if (!cancelled) setFetching(false); });
-    return () => { cancelled = true; };
-  }, [getEvents, loading, user]);
+  // Reuses the same key as Home / Events list, so navigation between them is
+  // instant — no extra fetch.
+  const eventsQuery = useAuthorizedQuery(
+    queryKeys.events.list({ clubId: "", status: "all", query: "" }),
+    getHostEvents,
+    { clubId: "", status: "all" as const, query: "" },
+    { staleTime: 30_000 },
+  );
+
+  const events = eventsQuery.data ?? [];
+  const fetching = eventsQuery.isLoading;
 
   if (loading || !user) return <HostAppShell><div className="py-16 text-center text-sm text-muted-foreground">Loading…</div></HostAppShell>;
 
