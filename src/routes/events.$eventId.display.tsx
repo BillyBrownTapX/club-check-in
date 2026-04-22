@@ -62,12 +62,13 @@ function EventDisplayRoute() {
 
   // Realtime → invalidate the cache. Query dedupes parallel invalidations,
   // so a burst of inserts coalesces into one network request.
-  useEventRealtime({
+  const { status: realtimeStatus, hasEverConnected: realtimeEverConnected } = useEventRealtime({
     eventId,
     enabled: !!displayQuery.data,
     onChange: () => { void queryClient.invalidateQueries({ queryKey: queryKeys.events.display(eventId) }); },
     fallbackPollMs: DISPLAY_FALLBACK_POLL_INTERVAL_MS,
   });
+  const realtimeReconnecting = realtimeEverConnected && realtimeStatus !== "connected" && realtimeStatus !== "idle";
 
   const event = (displayQuery.data?.event ?? null) as EventWithClub | null;
   const attendanceCount = displayQuery.data?.attendanceCount ?? 0;
@@ -126,8 +127,10 @@ function EventDisplayRoute() {
             </Link>
           </Button>
           <Chip tone="gold" className="border-white/30 bg-white/15 text-white">
-            <span className="inline-flex h-1.5 w-1.5 rounded-full bg-success" />
-            {status === "open" ? "Live" : status}
+            <span
+              className={`inline-flex h-1.5 w-1.5 rounded-full ${realtimeReconnecting ? "bg-warning animate-pulse" : "bg-success"}`}
+            />
+            {realtimeReconnecting ? "Reconnecting" : status === "open" ? "Live" : status}
           </Chip>
           <Button variant="ghost" size="icon" className="rounded-full text-white hover:bg-white/15 hover:text-white" onClick={() => void handleEnterFullscreen()}>
             <Maximize2 className="h-5 w-5" />
