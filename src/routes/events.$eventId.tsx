@@ -167,8 +167,12 @@ function EventDetailRoute() {
   const { eventId } = Route.useParams();
   const search = Route.useSearch();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const loadOperations = useAuthorizedServerFn(getEventOperations);
+  // Mutations still go through useAuthorizedServerFn so we can compose them
+  // with optimistic local UI (e.g. handleConfirmRemove flashes the row out
+  // before the network resolves). After each mutation we invalidate the
+  // events.detail key — realtime piles on too, but Query dedupes.
   const removeAttendanceMutation = useAuthorizedServerFn(removeAttendance);
   const restoreAttendanceMutation = useAuthorizedServerFn(restoreAttendance);
   const manualCheckInMutation = useAuthorizedServerFn(manualCheckIn);
@@ -178,15 +182,48 @@ function EventDetailRoute() {
   const exportAttendanceFn = useAuthorizedServerFn(exportEventAttendance);
   const toggleArchiveMutation = useAuthorizedServerFn(toggleEventArchive);
 
-  const [event, setEvent] = useState<EventWithClub | null>(null);
-  const [attendance, setAttendance] = useState<AttendanceRow[]>([]);
-  const [removedAttendance, setRemovedAttendance] = useState<AttendanceActionLog[]>([]);
-  const [recentActions, setRecentActions] = useState<AttendanceActionLog[]>([]);
-  const [summary, setSummary] = useState<EventAttendanceSummary | null>(null);
-  const [hardError, setHardError] = useState<string | null>(null);
-  const [softError, setSoftError] = useState<string | null>(null);
-  const [initialLoaded, setInitialLoaded] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
+  // Single source of truth: the events.detail query. Realtime invalidates
+  // it, manual refresh invalidates it, mutations invalidate it.
+  const operationsQuery = useAuthorizedQuery(
+    queryKeys.events.detail(eventId),
+    getEventOperations,
+    { eventId },
+    { staleTime: 0 },
+  );
+
+  const data = operationsQuery.data ?? null;
+  const event = (data?.event ?? null) as EventWithClub | null;
+  const attendanceFromQuery = data?.attendance ?? [];
+  const removedAttendance = data?.removedAttendance ?? [];
+  const recentActions = data?.recentActions ?? [];
+  const summary = data?.summary ?? null;
+  const initialLoaded = !!data;
+  const refreshing = operationsQuery.isFetching && initialLoaded;
+  const lastRefreshAt = operationsQuery.dataUpdatedAt ? new Date(operationsQuery.dataUpdatedAt) : null;
+  const hardError = !data ? operationsQuery.error : null;
+  const softError = data ? operationsQuery.error : null;
+
+  // Local optimistic overlay for attendance removal — clears as soon as the
+  // server-confirmed query data refreshes.
+  const [optimisticRemovedIds, setOptimisticRemovedIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    // After each refetch, drop optimistic ids that the server already
+    // reflects (i.e. no longer in the attendance list).
+    if (!data) return;
+    setOptimisticRemovedIds((prev) => {
+      if (prev.size === 0) return prev;
+      const stillPresent = new Set(attendanceFromQuery.map((row) => row.id));
+      const next = new Set<string>();
+      for (const id of prev) if (stillPresent.has(id)) next.add(id);
+      return next.size === prev.size ? prev : next;
+    });
+  }, [data, attendanceFromQuery]);
+
+  const attendance = useMemo(
+    () => attendanceFromQuery.filter((row) => !optimisticRemovedIds.has(row.id)),
+    [attendanceFromQuery, optimisticRemovedIds],
+  );
+
   const [pendingRemoveRow, setPendingRemoveRow] = useState<AttendanceRow | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [closeEarlyOpen, setCloseEarlyOpen] = useState(false);
@@ -200,14 +237,12 @@ function EventDetailRoute() {
   const [manualError, setManualError] = useState<string | null>(null);
   const [manualForm, setManualForm] = useState<ManualFormState>(EMPTY_MANUAL_FORM);
   const [restoringStudentId, setRestoringStudentId] = useState<string | null>(null);
-  const [lastRefreshAt, setLastRefreshAt] = useState<Date | null>(null);
   const [rosterQuery, setRosterQuery] = useState("");
   const [methodFilter, setMethodFilter] = useState<RosterMethodFilter>("all");
   const [sortMode, setSortMode] = useState<RosterSort>("newest");
   const [historyTab, setHistoryTab] = useState<"recent" | "removed" | "actions" | "review">("recent");
 
   const createdToastFired = useRef(false);
-  const inFlightRef = useRef<Promise<void> | null>(null);
 
   useEffect(() => {
     if (search.created !== "1" || createdToastFired.current) return;
@@ -216,42 +251,9 @@ function EventDetailRoute() {
     navigate({ to: "/events/$eventId", params: { eventId }, search: { created: "" }, replace: true });
   }, [eventId, navigate, search.created]);
 
-  const refresh = useCallback(async () => {
-    if (inFlightRef.current) return inFlightRef.current;
-    const run = (async () => {
-      try {
-        const next = await loadOperations({ data: { eventId } });
-        setEvent(next.event as EventWithClub);
-        setAttendance(next.attendance);
-        setRemovedAttendance(next.removedAttendance);
-        setRecentActions(next.recentActions);
-        setSummary(next.summary);
-        setSoftError(null);
-        setHardError(null);
-        setLastRefreshAt(new Date());
-      } catch (error) {
-        const message = getManagementErrorMessage(error, "Unable to load event.");
-        if (!event) setHardError(message);
-        else setSoftError(message);
-      } finally {
-        inFlightRef.current = null;
-      }
-    })();
-    inFlightRef.current = run;
-    return run;
-  }, [event, eventId, loadOperations]);
-
-  useEffect(() => {
-    if (loading || !user) return;
-    let cancelled = false;
-    void (async () => {
-      await refresh();
-      if (!cancelled) setInitialLoaded(true);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [loading, refresh, user]);
+  const refresh = async () => {
+    await queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) });
+  };
 
   useEventRealtime({
     eventId,
