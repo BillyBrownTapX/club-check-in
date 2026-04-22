@@ -935,98 +935,12 @@ export const getEventDisplayPayload = createServerFn({ method: "GET" })
     } as EventDisplayPayload;
   });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Attendance CSV export
-//
-// Server-side so the column set, escaping rules, and ownership check live in
-// exactly one place. Hosts can only export events they own (requireOwnedEvent
-// throws notFound() otherwise — no cross-tenant leakage). The query is keyed
-// solely by event_id, so even a misbehaving client cannot widen the result
-// set to other clubs' attendance. The CSV string is built here so the client
-// download path is just `new Blob([csv])` — no client-side schema drift.
-// ─────────────────────────────────────────────────────────────────────────────
-
-const CSV_HEADERS = [
-  "First name",
-  "Last name",
-  "Student email",
-  "900 number",
-  "Checked in at",
-  "Check-in method",
-  "Event name",
-  "Event date",
-  "Location",
-  "Club name",
-] as const;
-
-function escapeCsvCell(value: string | number | null | undefined): string {
-  if (value === null || value === undefined) return "";
-  const str = String(value);
-  if (/[",\r\n]/.test(str)) {
-    return `"${str.replace(/"/g, '""')}"`;
-  }
-  return str;
-}
-
-const METHOD_EXPORT_LABEL: Record<string, string> = {
-  qr_scan: "First scan",
-  returning_lookup: "Returning",
-  remembered_device: "Remembered",
-  host_correction: "Manual",
-};
-
-function buildAttendanceFilename(event: EventWithClub) {
-  const safeName = event.event_name.replace(/[^a-z0-9-_]+/gi, "_").slice(0, 60) || "event";
-  return `${safeName}-attendance-${event.event_date}.csv`;
-}
-
-export const exportEventAttendance = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator(z.object({ eventId: z.string().uuid() }))
-  .handler(async ({ data, context }) => {
-    const event = await requireOwnedEvent(context.supabase, context.userId, data.eventId);
-    const { data: rows, error } = await context.supabase
-      .from("attendance_records")
-      .select("checked_in_at, check_in_method, students(first_name, last_name, student_email, nine_hundred_number)")
-      .eq("event_id", data.eventId)
-      .order("checked_in_at", { ascending: true });
-
-    if (error) throw new Error(safeMessage(error));
-
-    const clubName = event.clubs?.club_name ?? "";
-    const records = (rows ?? []) as Array<{
-      checked_in_at: string;
-      check_in_method: string | null;
-      students: {
-        first_name: string;
-        last_name: string;
-        student_email: string;
-        nine_hundred_number: string | null;
-      } | null;
-    }>;
-
-    const csvLines = [
-      CSV_HEADERS.map(escapeCsvCell).join(","),
-      ...records.map((row) => [
-        escapeCsvCell(row.students?.first_name),
-        escapeCsvCell(row.students?.last_name),
-        escapeCsvCell(row.students?.student_email),
-        escapeCsvCell(row.students?.nine_hundred_number),
-        escapeCsvCell(row.checked_in_at),
-        escapeCsvCell(row.check_in_method ? METHOD_EXPORT_LABEL[row.check_in_method] ?? row.check_in_method : ""),
-        escapeCsvCell(event.event_name),
-        escapeCsvCell(event.event_date),
-        escapeCsvCell(event.location ?? ""),
-        escapeCsvCell(clubName),
-      ].join(",")),
-    ];
-
-    return {
-      filename: buildAttendanceFilename(event),
-      csv: csvLines.join("\r\n"),
-      count: records.length,
-    };
-  });
+// Attendance CSV export lives in a dedicated streaming server route at
+// src/routes/api.host.events.$eventId.attendance[.]csv.ts. Building the
+// CSV in a server fn forced us to JSON-encode the entire payload and ship
+// it back to the client as one string; the route version streams pages of
+// 1000 rows directly into the response body so memory stays flat and the
+// browser shows the native download dialog immediately.
 
 // PublicStudentPreview deliberately omits the student UUID. Public responses
 // must never leak primary keys — clients identify themselves on each step by
