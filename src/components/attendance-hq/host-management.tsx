@@ -1089,8 +1089,12 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
       }
     },
     () => {
-      setError("Some fields need attention — see highlighted errors above.");
       const firstField = Object.keys(form.formState.errors)[0];
+      const firstLabel = firstField ? EVENT_FIELD_LABELS[firstField] ?? firstField : "the highlighted fields";
+      const firstMessage = firstField ? form.formState.errors[firstField as keyof typeof form.formState.errors]?.message : undefined;
+      const description = firstMessage ? `${firstLabel}: ${firstMessage}` : `Please fix ${firstLabel} before saving.`;
+      setError(description);
+      toast.error("Can't save event yet", { description });
       if (firstField) {
         form.setFocus(firstField as keyof EventFormValues);
       }
