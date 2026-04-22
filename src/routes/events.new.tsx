@@ -1,12 +1,26 @@
-import { useEffect, useState } from "react";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
-import { EventForm, ManagementPageShell, getManagementErrorMessage, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
+import { useEffect } from "react";
+import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
+import { useAuthorizedMutation, useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
+import { Button } from "@/components/ui/button";
+import {
+  EventForm,
+  ManagementPageShell,
+  getManagementErrorMessage,
+  useRequireHostRedirect,
+} from "@/components/attendance-hq/host-management";
 import { createEvent, duplicateEvent, getEventFormPayload } from "@/lib/attendance-hq.functions";
-import type { EventFormPayload } from "@/lib/attendance-hq";
+import { queryKeys } from "@/lib/query-keys";
 
-function EventCreateError({ error }: { error: Error }) {
-  return <ManagementPageShell><div className="py-16 text-center text-sm text-muted-foreground">{error.message}</div></ManagementPageShell>;
+function EventCreateError({ error, reset }: { error: Error; reset: () => void }) {
+  const router = useRouter();
+  return (
+    <ManagementPageShell>
+      <div className="ios-card mt-6 rounded-3xl p-6 text-center">
+        <p className="text-sm text-destructive">{getManagementErrorMessage(error, "Unable to load event form.")}</p>
+        <Button className="mt-4" variant="hero" onClick={() => { router.invalidate(); reset(); }}>Try again</Button>
+      </div>
+    </ManagementPageShell>
+  );
 }
 
 function EventCreateNotFound() {
@@ -39,42 +53,41 @@ function EventCreateRoute() {
   const { loading, user } = useRequireHostRedirect();
   const navigate = useNavigate();
   const search = Route.useSearch();
-  const loadPayload = useAuthorizedServerFn(getEventFormPayload);
-  const createEventMutation = useAuthorizedServerFn(createEvent);
-  const duplicateEventMutation = useAuthorizedServerFn(duplicateEvent);
-  const [payload, setPayload] = useState<EventFormPayload | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
+  const payloadInput = { eventId: "", ...search };
+
+  const payloadQuery = useAuthorizedQuery(
+    queryKeys.events.formPayload(payloadInput),
+    getEventFormPayload,
+    payloadInput,
+  );
+
+  const createEventMutation = useAuthorizedMutation(createEvent, {
+    invalidate: [queryKeys.events.all, queryKeys.clubs.all],
+  });
+  const duplicateEventMutation = useAuthorizedMutation(duplicateEvent, {
+    invalidate: [queryKeys.events.all, queryKeys.clubs.all],
+  });
+
+  const payload = payloadQuery.data;
+
+  // A host can hit /events/new from the mobile + button before they've created
+  // their first club. Bounce them through onboarding instead of rendering an
+  // event form with no club to attach to.
   useEffect(() => {
-    if (loading || !user) return;
-    let cancelled = false;
+    if (payload && payload.clubs.length === 0) {
+      navigate({ to: "/onboarding/club" });
+    }
+  }, [payload, navigate]);
 
-    void loadPayload({ data: search })
-      .then((nextPayload) => {
-        if (cancelled) return;
-        // A host can hit /events/new from the mobile + button before
-        // they've created their first club. Bounce them through onboarding
-        // instead of showing an event form with no club to attach to.
-        if (nextPayload.clubs.length === 0) {
-          navigate({ to: "/onboarding/club" });
-          return;
-        }
-        setPayload(nextPayload);
-      })
-      .catch((loadError) => {
-        if (!cancelled) setError(getManagementErrorMessage(loadError, "Unable to load event form."));
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [loadPayload, loading, navigate, search, user]);
-
-  if (loading || !user || !payload) {
+  if (loading || !user || (payloadQuery.isLoading && !payload)) {
     return <ManagementPageShell hideTabBar><div className="py-16 text-center text-sm text-muted-foreground">Loading event form…</div></ManagementPageShell>;
   }
 
-  if (error) return <EventCreateError error={new Error(error)} />;
+  if (payloadQuery.error) return <EventCreateError error={payloadQuery.error} reset={() => payloadQuery.refetch()} />;
+  if (!payload || payload.clubs.length === 0) {
+    return <ManagementPageShell hideTabBar><div className="py-16 text-center text-sm text-muted-foreground">Loading event form…</div></ManagementPageShell>;
+  }
 
   return (
     <EventForm
@@ -84,12 +97,12 @@ function EventCreateRoute() {
       submitLabel={payload.sourceEventId ? "Create Duplicate" : "Create Event"}
       onSubmit={async (values) => {
         if (payload.sourceEventId) {
-          const result = await duplicateEventMutation({ data: { ...values, sourceEventId: payload.sourceEventId } });
+          const result = await duplicateEventMutation.mutateAsync({ ...values, sourceEventId: payload.sourceEventId } as never);
           navigate({ to: "/events/$eventId", params: { eventId: result.event.id }, search: { created: "1" } });
           return;
         }
 
-        const result = await createEventMutation({ data: values });
+        const result = await createEventMutation.mutateAsync(values as never);
         navigate({ to: "/events/$eventId", params: { eventId: result.event.id }, search: { created: "1" } });
       }}
     />

@@ -1,8 +1,7 @@
-import { useEffect, useState } from "react";
-import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
+import { useAuthorizedMutation, useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
 import { Button } from "@/components/ui/button";
 import {
   DeleteConfirmButton,
@@ -13,10 +12,18 @@ import {
   useRequireHostRedirect,
 } from "@/components/attendance-hq/host-management";
 import { deleteEvent, getEventFormPayload, updateEvent } from "@/lib/attendance-hq.functions";
-import type { EventFormPayload } from "@/lib/attendance-hq";
+import { queryKeys } from "@/lib/query-keys";
 
-function EventEditError({ error }: { error: Error }) {
-  return <ManagementPageShell><div className="py-16 text-center text-sm text-muted-foreground">{error.message}</div></ManagementPageShell>;
+function EventEditError({ error, reset }: { error: Error; reset: () => void }) {
+  const router = useRouter();
+  return (
+    <ManagementPageShell>
+      <div className="ios-card mt-6 rounded-3xl p-6 text-center">
+        <p className="text-sm text-destructive">{getManagementErrorMessage(error, "Unable to load event.")}</p>
+        <Button className="mt-4" variant="hero" onClick={() => { router.invalidate(); reset(); }}>Try again</Button>
+      </div>
+    </ManagementPageShell>
+  );
 }
 
 function EventEditNotFound() {
@@ -44,34 +51,32 @@ function EventEditRoute() {
   const { loading, user } = useRequireHostRedirect();
   const { eventId } = Route.useParams();
   const navigate = useNavigate();
-  const loadPayload = useAuthorizedServerFn(getEventFormPayload);
-  const updateEventMutation = useAuthorizedServerFn(updateEvent);
-  const deleteEventMutation = useAuthorizedServerFn(deleteEvent);
-  const [payload, setPayload] = useState<EventFormPayload | null>(null);
-  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (loading || !user) return;
-    let cancelled = false;
+  const payloadInput = { eventId, clubId: "", templateId: "", duplicateFrom: "" };
 
-    void loadPayload({ data: { eventId } })
-      .then((nextPayload) => {
-        if (!cancelled) setPayload(nextPayload);
-      })
-      .catch((loadError) => {
-        if (!cancelled) setError(getManagementErrorMessage(loadError, "Unable to load event."));
-      });
+  const payloadQuery = useAuthorizedQuery(
+    queryKeys.events.formPayload(payloadInput),
+    getEventFormPayload,
+    payloadInput,
+  );
 
-    return () => {
-      cancelled = true;
-    };
-  }, [eventId, loadPayload, loading, user]);
+  const updateEventMutation = useAuthorizedMutation(updateEvent, {
+    invalidate: [queryKeys.events.all, queryKeys.events.detail(eventId), queryKeys.clubs.all],
+  });
+  const deleteEventMutation = useAuthorizedMutation(deleteEvent, {
+    invalidate: [queryKeys.events.all, queryKeys.clubs.all],
+  });
 
-  if (loading || !user || !payload) {
+  const payload = payloadQuery.data;
+
+  if (loading || !user || (payloadQuery.isLoading && !payload)) {
     return <ManagementPageShell hideTabBar><div className="py-16 text-center text-sm text-muted-foreground">Loading event…</div></ManagementPageShell>;
   }
 
-  if (error) return <EventEditError error={new Error(error)} />;
+  if (payloadQuery.error) return <EventEditError error={payloadQuery.error} reset={() => payloadQuery.refetch()} />;
+  if (!payload) {
+    return <ManagementPageShell hideTabBar><div className="py-16 text-center text-sm text-muted-foreground">Loading event…</div></ManagementPageShell>;
+  }
 
   return (
     <EventForm
@@ -98,7 +103,7 @@ function EventEditRoute() {
             title="Delete this event?"
             description="This permanently removes the event, its attendance records, and action history. This cannot be undone."
             onConfirm={async () => {
-              await deleteEventMutation({ data: { eventId } });
+              await deleteEventMutation.mutateAsync({ eventId } as never);
               toast.success("Event deleted");
               navigate({ to: "/events", search: { clubId: "", status: "all", query: "" } });
             }}
@@ -106,7 +111,7 @@ function EventEditRoute() {
         </div>
       }
       onSubmit={async (values) => {
-        const result = await updateEventMutation({ data: { ...values, eventId } });
+        const result = await updateEventMutation.mutateAsync({ ...values, eventId } as never);
         navigate({ to: "/events/$eventId", params: { eventId: result.id }, search: { created: "" } });
       }}
     />
