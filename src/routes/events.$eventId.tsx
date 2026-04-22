@@ -71,7 +71,6 @@ import {
   closeCheckInEarly,
   deleteEvent,
   duplicateEvent,
-  exportEventAttendance,
   getEventOperations,
   manualCheckIn,
   removeAttendance,
@@ -168,7 +167,7 @@ export const Route = createFileRoute("/events/$eventId")({
 });
 
 function EventDetailRoute() {
-  const { loading, user } = useRequireHostRedirect();
+  const { loading, user, session } = useRequireHostRedirect();
   const { eventId } = Route.useParams();
   const search = Route.useSearch();
   const navigate = useNavigate();
@@ -184,7 +183,6 @@ function EventDetailRoute() {
   const closeEarlyMutation = useAuthorizedServerFn(closeCheckInEarly);
   const duplicateEventMutation = useAuthorizedServerFn(duplicateEvent);
   const deleteEventMutation = useAuthorizedServerFn(deleteEvent);
-  const exportAttendanceFn = useAuthorizedServerFn(exportEventAttendance);
   const toggleArchiveMutation = useAuthorizedServerFn(toggleEventArchive);
 
   // Single source of truth: the events.detail query. Realtime invalidates
@@ -341,24 +339,40 @@ function EventDetailRoute() {
 
   const handleExportCsv = async () => {
     if (exporting) return;
+    // The streaming CSV endpoint is a server route, not a server fn — the
+    // browser navigates to it directly so the download happens via native
+    // browser machinery (correct filename via Content-Disposition, real
+    // progress, no in-memory Blob copy of the entire CSV). Auth rides
+    // on a short-lived ?token= URL param because window.location.assign
+    // can't send an Authorization header.
     setExporting(true);
     try {
-      const result = await exportAttendanceFn({ data: { eventId } });
-      const blob = new Blob(["﻿", result.csv], { type: "text/csv;charset=utf-8" });
-      const url = URL.createObjectURL(blob);
+      const accessToken = session?.access_token;
+      if (!accessToken) {
+        toast.error("Your session expired. Please sign in again.");
+        return;
+      }
+      const url = `/api/host/events/${encodeURIComponent(eventId)}/attendance.csv?token=${encodeURIComponent(accessToken)}`;
+      // Anchor click (vs window.location.assign) so the page itself doesn't
+      // navigate — the browser opens the download in the background and
+      // the host stays on the event ops view.
       const a = document.createElement("a");
       a.href = url;
-      a.download = result.filename;
+      a.rel = "noopener";
+      // Setting download here is a hint; Content-Disposition from the
+      // server is authoritative and gives us the per-event filename.
+      a.download = "";
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      if (result.count === 0) toast.message("Exported empty attendance file", { description: "No one has checked in yet." });
-      else toast.success(`Exported ${result.count} attendance ${result.count === 1 ? "record" : "records"}`);
+      toast.success("Preparing your CSV download…");
     } catch (error) {
       toast.error(getManagementErrorMessage(error, "Unable to export attendance."));
     } finally {
-      setExporting(false);
+      // The download is handed off to the browser at this point; there's no
+      // server-fn promise to await, so flip the flag back immediately so the
+      // button isn't stuck in "Exporting…" if the host wants to re-export.
+      setTimeout(() => setExporting(false), 600);
     }
   };
 
