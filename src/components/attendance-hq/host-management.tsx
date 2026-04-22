@@ -1090,6 +1090,10 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
     },
     () => {
       setError("Some fields need attention — see highlighted errors above.");
+      const firstField = Object.keys(form.formState.errors)[0];
+      if (firstField) {
+        form.setFocus(firstField as keyof EventFormValues);
+      }
     },
   );
 
