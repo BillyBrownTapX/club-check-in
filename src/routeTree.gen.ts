@@ -28,6 +28,7 @@ import { Route as ClubsClubIdRouteImport } from './routes/clubs.$clubId'
 import { Route as CheckInQrTokenRouteImport } from './routes/check-in.$qrToken'
 import { Route as EventsEventIdEditRouteImport } from './routes/events.$eventId.edit'
 import { Route as EventsEventIdDisplayRouteImport } from './routes/events.$eventId.display'
+import { Route as ApiHostEventsEventIdAttendanceDotcsvRouteImport } from './routes/api.host.events.$eventId.attendance[.]csv'
 
 const SignUpRoute = SignUpRouteImport.update({
   id: '/sign-up',
@@ -124,6 +125,12 @@ const EventsEventIdDisplayRoute = EventsEventIdDisplayRouteImport.update({
   path: '/display',
   getParentRoute: () => EventsEventIdRoute,
 } as any)
+const ApiHostEventsEventIdAttendanceDotcsvRoute =
+  ApiHostEventsEventIdAttendanceDotcsvRouteImport.update({
+    id: '/api/host/events/$eventId/attendance.csv',
+    path: '/api/host/events/$eventId/attendance.csv',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -145,6 +152,7 @@ export interface FileRoutesByFullPath {
   '/events/': typeof EventsIndexRoute
   '/events/$eventId/display': typeof EventsEventIdDisplayRoute
   '/events/$eventId/edit': typeof EventsEventIdEditRoute
+  '/api/host/events/$eventId/attendance.csv': typeof ApiHostEventsEventIdAttendanceDotcsvRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -166,6 +174,7 @@ export interface FileRoutesByTo {
   '/events': typeof EventsIndexRoute
   '/events/$eventId/display': typeof EventsEventIdDisplayRoute
   '/events/$eventId/edit': typeof EventsEventIdEditRoute
+  '/api/host/events/$eventId/attendance.csv': typeof ApiHostEventsEventIdAttendanceDotcsvRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -188,6 +197,7 @@ export interface FileRoutesById {
   '/events/': typeof EventsIndexRoute
   '/events/$eventId/display': typeof EventsEventIdDisplayRoute
   '/events/$eventId/edit': typeof EventsEventIdEditRoute
+  '/api/host/events/$eventId/attendance.csv': typeof ApiHostEventsEventIdAttendanceDotcsvRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -211,6 +221,7 @@ export interface FileRouteTypes {
     | '/events/'
     | '/events/$eventId/display'
     | '/events/$eventId/edit'
+    | '/api/host/events/$eventId/attendance.csv'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -232,6 +243,7 @@ export interface FileRouteTypes {
     | '/events'
     | '/events/$eventId/display'
     | '/events/$eventId/edit'
+    | '/api/host/events/$eventId/attendance.csv'
   id:
     | '__root__'
     | '/'
@@ -253,6 +265,7 @@ export interface FileRouteTypes {
     | '/events/'
     | '/events/$eventId/display'
     | '/events/$eventId/edit'
+    | '/api/host/events/$eventId/attendance.csv'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -273,6 +286,7 @@ export interface RootRouteChildren {
   OnboardingEventRoute: typeof OnboardingEventRoute
   ClubsIndexRoute: typeof ClubsIndexRoute
   EventsIndexRoute: typeof EventsIndexRoute
+  ApiHostEventsEventIdAttendanceDotcsvRoute: typeof ApiHostEventsEventIdAttendanceDotcsvRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -410,6 +424,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EventsEventIdDisplayRouteImport
       parentRoute: typeof EventsEventIdRoute
     }
+    '/api/host/events/$eventId/attendance.csv': {
+      id: '/api/host/events/$eventId/attendance.csv'
+      path: '/api/host/events/$eventId/attendance.csv'
+      fullPath: '/api/host/events/$eventId/attendance.csv'
+      preLoaderRoute: typeof ApiHostEventsEventIdAttendanceDotcsvRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -445,6 +466,8 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingEventRoute: OnboardingEventRoute,
   ClubsIndexRoute: ClubsIndexRoute,
   EventsIndexRoute: EventsIndexRoute,
+  ApiHostEventsEventIdAttendanceDotcsvRoute:
+    ApiHostEventsEventIdAttendanceDotcsvRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
