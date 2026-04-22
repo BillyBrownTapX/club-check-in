@@ -851,7 +851,7 @@ export const duplicateEvent = createServerFn({ method: "POST" })
 
 export const getEventOperations = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { eventId: string }) => input)
+  .inputValidator(eventIdInputSchema)
   .handler(async ({ data, context }) => {
     const event = await requireOwnedEvent(context.supabase, context.userId, data.eventId);
     const [{ data: attendance, error: attendanceError }, { data: actions, error: actionsError }] = await Promise.all([
@@ -901,7 +901,7 @@ export const getEventOperations = createServerFn({ method: "GET" })
 
 export const getEventDisplayPayload = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { eventId: string }) => input)
+  .inputValidator(eventIdInputSchema)
   .handler(async ({ data, context }) => {
     const event = await requireOwnedEvent(context.supabase, context.userId, data.eventId);
     const [{ count: attendanceCount, error: attendanceCountError }, { data: actions, error: actionsError }] = await Promise.all([
