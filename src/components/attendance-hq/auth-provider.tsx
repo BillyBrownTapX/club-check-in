@@ -250,13 +250,13 @@ export function useAuthorizedMutation<TData, TVariables = void>(
       }
       return (await invoke({ data: variables } as { data: TVariables })) as TData;
     },
-    onSuccess: (data, variables, context) => {
+    onSuccess: (data, variables, onMutateResult, context) => {
       if (invalidate?.length) {
         for (const key of invalidate) {
           void queryClient.invalidateQueries({ queryKey: key });
         }
       }
-      return onSuccess?.(data, variables, context);
+      return onSuccess?.(data, variables, onMutateResult, context);
     },
   });
 }
