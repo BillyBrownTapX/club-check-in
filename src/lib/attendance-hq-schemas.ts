@@ -184,3 +184,59 @@ export const deleteClubSchema = z.object({
 export const deleteEventSchema = z.object({
   eventId: z.string().uuid(),
 });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tightened validators for previously loose server-fn inputs.
+// Every server fn must validate its surface area — even GET handlers — so a
+// malformed or hostile client cannot reach the database with non-UUID strings,
+// arbitrary-length names, or unbounded text.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const eventIdInputSchema = z.object({
+  eventId: z.string().uuid("Invalid event id"),
+});
+
+export const clubIdInputSchema = z.object({
+  clubId: z.string().uuid("Invalid club id"),
+});
+
+// Optional clubId for the templates list (an empty string means "all clubs").
+export const clubIdOptionalInputSchema = z.object({
+  clubId: z
+    .union([z.string().uuid(), z.literal("")])
+    .optional()
+    .transform((value) => value ?? ""),
+});
+
+// Event form payload — every id is optional (this same fn powers /events/new,
+// /events/:id/edit, and template-prefilled new events) but each MUST be a UUID
+// or empty string when present.
+const optionalUuidOrEmpty = z
+  .union([z.string().uuid(), z.literal("")])
+  .optional()
+  .transform((value) => value ?? "");
+
+export const eventFormPayloadInputSchema = z.object({
+  eventId: optionalUuidOrEmpty,
+  duplicateFrom: optionalUuidOrEmpty,
+  clubId: optionalUuidOrEmpty,
+  templateId: optionalUuidOrEmpty,
+});
+
+// Host profile bootstrap — both fields optional (the handler falls back to
+// the JWT email claim) but length-capped to prevent storing unbounded names.
+export const hostOnboardingInputSchema = z
+  .object({
+    fullName: z.string().trim().min(1).max(120).optional(),
+    email: emailSchema.optional(),
+  })
+  .partial()
+  .optional()
+  .transform((value) => value ?? {});
+
+// Duplicate-event input: same shape as eventUpdateSchema but keyed off the
+// source event id we copy from. Reuses the timing validation so the two paths
+// stay in lockstep.
+export const duplicateEventSchema = eventTimingValidation(
+  eventSchema.extend({ sourceEventId: z.string().uuid() }),
+);
