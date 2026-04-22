@@ -1231,10 +1231,16 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
         </div>
 
         <StickyCtaBar>
+          {Object.keys(form.formState.errors).length > 0 ? (
+            <p className="mb-2 rounded-xl bg-destructive/10 px-3 py-2 text-center text-xs font-medium text-destructive">
+              Fix highlighted fields above ({Object.keys(form.formState.errors).length})
+            </p>
+          ) : null}
           <Button
             type="submit"
+            variant="hero"
+            className="h-12 w-full rounded-xl text-base font-semibold"
             disabled={isSubmitting}
-            className="h-12 w-full rounded-2xl bg-primary text-[15px] font-bold text-primary-foreground"
           >
             {isSubmitting ? "Saving…" : submitLabel}
           </Button>
