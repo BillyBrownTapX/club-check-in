@@ -255,12 +255,13 @@ function EventDetailRoute() {
     await queryClient.invalidateQueries({ queryKey: queryKeys.events.detail(eventId) });
   };
 
-  useEventRealtime({
+  const { status: realtimeStatus, hasEverConnected: realtimeEverConnected } = useEventRealtime({
     eventId,
     enabled: initialLoaded,
     onChange: () => { void refresh(); },
     fallbackPollMs: FALLBACK_POLL_INTERVAL_MS,
   });
+  const realtimeReconnecting = realtimeEverConnected && realtimeStatus !== "connected" && realtimeStatus !== "idle";
 
   const checkInUrl = useMemo(() => {
     if (!event) return "";
@@ -541,6 +542,17 @@ function EventDetailRoute() {
             </div>
           </div>
         </div>
+
+        {realtimeReconnecting ? (
+          <div className="flex items-center gap-2 rounded-2xl border border-warning/30 bg-warning/10 px-4 py-2.5 text-[13px] text-foreground">
+            <span className="relative flex h-2 w-2">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-warning opacity-60" />
+              <span className="relative inline-flex h-2 w-2 rounded-full bg-warning" />
+            </span>
+            <span className="font-medium">Reconnecting…</span>
+            <span className="text-muted-foreground">Live updates paused — falling back to refresh every 30s.</span>
+          </div>
+        ) : null}
 
         {softError ? (
           <div className="flex items-start gap-3 rounded-2xl border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-foreground">
