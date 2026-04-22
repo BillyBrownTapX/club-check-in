@@ -276,16 +276,17 @@ export function SearchInput({ value, onChange }: { value: string; onChange: (val
 
 const EMPTY_SELECT_VALUE = "__empty__";
 
-export function SelectInput({ label, value, onValueChange, placeholder, options, error }: { label: string; value: string; onValueChange: (value: string) => void; placeholder: string; options: { value: string; label: string }[]; error?: string }) {
+export function SelectInput({ label, value, onValueChange, placeholder, options, error, disabled }: { label: string; value: string; onValueChange: (value: string) => void; placeholder: string; options: { value: string; label: string }[]; error?: string; disabled?: boolean }) {
+  const safeOptions = options.filter((option) => Boolean(option.value));
   return (
       <div className="space-y-2 min-w-[10rem]">
       <Label className="text-sm font-semibold text-foreground">{label}</Label>
-      <Select value={value || EMPTY_SELECT_VALUE} onValueChange={(nextValue) => onValueChange(nextValue === EMPTY_SELECT_VALUE ? "" : nextValue)}>
-        <SelectTrigger className={cn("h-12 rounded-2xl border-border/80 bg-background/90", error && "border-destructive ring-1 ring-destructive/40")}>
+      <Select value={value || EMPTY_SELECT_VALUE} onValueChange={(nextValue) => onValueChange(nextValue === EMPTY_SELECT_VALUE ? "" : nextValue)} disabled={disabled}>
+        <SelectTrigger disabled={disabled} className={cn("h-12 rounded-2xl border-border/80 bg-background/90", error && "border-destructive ring-1 ring-destructive/40", disabled && "opacity-60")}>
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
-          {options.map((option) => <SelectItem key={option.value || EMPTY_SELECT_VALUE} value={option.value || EMPTY_SELECT_VALUE}>{option.label}</SelectItem>)}
+          {safeOptions.map((option) => <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>)}
         </SelectContent>
       </Select>
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
@@ -749,17 +750,35 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, onDele
       : { universityId: "", clubName: "", description: "", logoPath: null });
   }, [form, initialValues, isEdit, open]);
 
-  const submit = form.handleSubmit(async (values) => {
-    if (form.formState.isSubmitting) return;
-    setError("");
-    try {
-      await onSubmit(values);
-      onOpenChange(false);
-    } catch (submitError) {
-      setError(getManagementErrorMessage(submitError, "Unable to save club."));
-    }
-  });
+  const submit = form.handleSubmit(
+    async (values) => {
+      if (form.formState.isSubmitting) return;
+      setError("");
+      try {
+        await onSubmit(values);
+        onOpenChange(false);
+      } catch (submitError) {
+        const message = getManagementErrorMessage(submitError, "Unable to save club.");
+        setError(message);
+        toast.error(message);
+      }
+    },
+    () => {
+      setError("Please fix the highlighted fields before saving.");
+    },
+  );
   const isSubmitting = form.formState.isSubmitting;
+  const hasUniversities = universities.length > 0;
+  const clubFieldLabels: Record<string, string> = {
+    universityId: "University",
+    clubName: "Club name",
+    description: "Description",
+    logoPath: "Logo",
+    isActive: "Active status",
+  };
+  const missingClubFields = Object.keys(form.formState.errors)
+    .map((key) => clubFieldLabels[key] ?? key)
+    .filter((label, index, all) => all.indexOf(label) === index);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -777,7 +796,13 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, onDele
             onChange={(path) => form.setValue("logoPath", path as never, { shouldDirty: true })}
             clubId={initialValues?.clubId}
           />
-          <SelectInput label="University" value={form.watch("universityId") as string} onValueChange={(value) => form.setValue("universityId", value as never, { shouldValidate: true })} placeholder="Choose a university" options={universities.map((university) => ({ value: university.id, label: university.name }))} error={(form.formState.errors as Record<string, { message?: string } | undefined>).universityId?.message} />
+          {!isEdit && !hasUniversities ? (
+            <div className="rounded-2xl border border-primary/15 bg-secondary/40 p-4 text-sm leading-6 text-muted-foreground">
+              <p className="font-semibold text-foreground">Add a university first</p>
+              <p className="mt-1">You'll need a university in your workspace before creating a club. Reach out to support to add one if you don't see it listed.</p>
+            </div>
+          ) : null}
+          <SelectInput label="University" value={form.watch("universityId") as string} onValueChange={(value) => form.setValue("universityId", value as never, { shouldValidate: true })} placeholder={hasUniversities ? "Choose a university" : "No universities available"} options={universities.map((university) => ({ value: university.id, label: university.name }))} error={(form.formState.errors as Record<string, { message?: string } | undefined>).universityId?.message} disabled={!hasUniversities} />
           <TextInput label="Club name" error={form.formState.errors.clubName?.message} {...form.register("clubName")} />
           <TextAreaInput label="Description" error={form.formState.errors.description?.message} {...form.register("description")} />
           {isEdit ? (
@@ -789,8 +814,16 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, onDele
               <Switch checked={(form.watch("isActive") as boolean | undefined) ?? true} onCheckedChange={(checked) => form.setValue("isActive", checked as never)} />
             </div>
           ) : null}
+          {missingClubFields.length > 0 ? (
+            <div className="rounded-2xl bg-destructive/10 p-4 text-sm text-destructive" role="alert">
+              <p className="font-semibold">Please fix the following before saving:</p>
+              <ul className="mt-1 list-disc pl-5">
+                {missingClubFields.map((label) => <li key={label}>{label}</li>)}
+              </ul>
+            </div>
+          ) : null}
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          <PrimaryButton type="submit" className="w-full" disabled={isSubmitting}>{isSubmitting ? (isEdit ? "Saving…" : "Creating…") : (isEdit ? "Save Club" : "Create Club")}</PrimaryButton>
+          <PrimaryButton type="submit" className="w-full" disabled={isSubmitting || (!isEdit && !hasUniversities)}>{isSubmitting ? (isEdit ? "Saving…" : "Creating…") : (isEdit ? "Save Club" : "Create Club")}</PrimaryButton>
           {isEdit && onDelete ? (
             <DeleteConfirmButton
               trigger={
@@ -873,17 +906,37 @@ export function TemplateDialog({ open, onOpenChange, clubId, initialValues, onSu
         });
   }, [clubId, form, initialValues, isEdit, open]);
 
-  const submit = form.handleSubmit(async (values) => {
-    if (form.formState.isSubmitting) return;
-    setError("");
-    try {
-      await onSubmit(values);
-      onOpenChange(false);
-    } catch (submitError) {
-      setError(getManagementErrorMessage(submitError, "Unable to save template."));
-    }
-  });
+  const submit = form.handleSubmit(
+    async (values) => {
+      if (form.formState.isSubmitting) return;
+      setError("");
+      try {
+        await onSubmit(values);
+        onOpenChange(false);
+      } catch (submitError) {
+        const message = getManagementErrorMessage(submitError, "Unable to save template.");
+        setError(message);
+        toast.error(message);
+      }
+    },
+    () => {
+      setError("Please fix the highlighted fields before saving.");
+    },
+  );
   const isSubmitting = form.formState.isSubmitting;
+  const templateFieldLabels: Record<string, string> = {
+    templateName: "Template name",
+    defaultEventName: "Default event name",
+    defaultLocation: "Default location",
+    defaultStartTime: "Default start time",
+    defaultEndTime: "Default end time",
+    defaultCheckInOpenOffsetMinutes: "Open offset minutes",
+    defaultCheckInCloseOffsetMinutes: "Close offset minutes",
+    clubId: "Club",
+  };
+  const missingTemplateFields = Object.keys(form.formState.errors)
+    .map((key) => templateFieldLabels[key] ?? key)
+    .filter((label, index, all) => all.indexOf(label) === index);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -907,6 +960,14 @@ export function TemplateDialog({ open, onOpenChange, clubId, initialValues, onSu
             <TextInput type="number" label="Open offset minutes" error={form.formState.errors.defaultCheckInOpenOffsetMinutes?.message} {...form.register("defaultCheckInOpenOffsetMinutes", { valueAsNumber: true })} />
             <TextInput type="number" label="Close offset minutes" error={form.formState.errors.defaultCheckInCloseOffsetMinutes?.message} {...form.register("defaultCheckInCloseOffsetMinutes", { valueAsNumber: true })} />
           </div>
+          {missingTemplateFields.length > 0 ? (
+            <div className="rounded-2xl bg-destructive/10 p-4 text-sm text-destructive" role="alert">
+              <p className="font-semibold">Please fix the following before saving:</p>
+              <ul className="mt-1 list-disc pl-5">
+                {missingTemplateFields.map((label) => <li key={label}>{label}</li>)}
+              </ul>
+            </div>
+          ) : null}
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           <PrimaryButton type="submit" className="w-full" disabled={isSubmitting}>{isSubmitting ? (isEdit ? "Saving…" : "Creating…") : (isEdit ? "Save Template" : "Create Template")}</PrimaryButton>
         </form>
