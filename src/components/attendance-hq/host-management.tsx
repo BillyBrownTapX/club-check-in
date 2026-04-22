@@ -1233,7 +1233,8 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
         <StickyCtaBar>
           {Object.keys(form.formState.errors).length > 0 ? (
             <p className="mb-2 rounded-xl bg-destructive/10 px-3 py-2 text-center text-xs font-medium text-destructive">
-              Fix highlighted fields above ({Object.keys(form.formState.errors).length})
+              Fix {EVENT_FIELD_LABELS[Object.keys(form.formState.errors)[0]] ?? Object.keys(form.formState.errors)[0]}
+              {Object.keys(form.formState.errors).length > 1 ? ` and ${Object.keys(form.formState.errors).length - 1} more` : ""}
             </p>
           ) : null}
           <Button
