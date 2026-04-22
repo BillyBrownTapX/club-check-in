@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
+import { toast } from "sonner";
 import { useAuthorizedMutation, useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
 import { Button } from "@/components/ui/button";
 import {
@@ -98,11 +99,13 @@ function EventCreateRoute() {
       onSubmit={async (values) => {
         if (payload.sourceEventId) {
           const result = await duplicateEventMutation.mutateAsync({ ...values, sourceEventId: payload.sourceEventId } as never);
+          toast.success("Event duplicated", { description: result.event.event_name });
           navigate({ to: "/events/$eventId", params: { eventId: result.event.id }, search: { created: "1" } });
           return;
         }
 
         const result = await createEventMutation.mutateAsync(values as never);
+        toast.success("Event created", { description: result.event.event_name });
         navigate({ to: "/events/$eventId", params: { eventId: result.event.id }, search: { created: "1" } });
       }}
     />
