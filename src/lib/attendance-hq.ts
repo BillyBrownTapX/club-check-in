@@ -12,7 +12,10 @@ export type DeviceSession = Tables<"student_device_sessions">;
 
 export type EventSummary = Event & {
   clubs: Pick<Club, "id" | "club_name" | "club_slug"> | null;
-  attendance_records?: Pick<AttendanceRecord, "id">[];
+  // PostgREST returns embedded aggregates as `[{ count: N }]`. We keep the legacy
+  // `attendance_records?: { id }[]` shape as an optional fallback for places that
+  // haven't migrated yet — `toManagementEventSummary` reads whichever is present.
+  attendance_records?: Pick<AttendanceRecord, "id">[] | { count: number }[];
 };
 
 export type ClubWithUniversity = Club & {
@@ -38,7 +41,7 @@ export type ClubSummary = Club & {
 
 export type ManagementEventSummary = Event & {
   clubs: Pick<Club, "id" | "club_name" | "club_slug"> | null;
-  attendance_records?: Pick<AttendanceRecord, "id">[];
+  attendance_records?: Pick<AttendanceRecord, "id">[] | { count: number }[];
   attendanceCount: number;
   checkInStatus: CheckInStatus;
 };

@@ -181,10 +181,23 @@ export const getHostOnboardingState = createServerFn({ method: "GET" })
     return { profile, onboarding };
   });
 
+// PostgREST returns embedded `attendance_records(count)` as `[{ count: N }]`.
+// Older callers may still embed `attendance_records(id)` (an array of rows).
+// Read either shape so we can roll the optimization out per-call without breaking
+// any consumer that hasn't been migrated yet.
+function extractAttendanceCount(
+  records: EventSummary["attendance_records"] | undefined,
+): number {
+  if (!records || records.length === 0) return 0;
+  const first = records[0] as { count?: number; id?: string };
+  if (typeof first.count === "number") return first.count;
+  return records.length;
+}
+
 function toManagementEventSummary(event: EventSummary): ManagementEventSummary {
   return {
     ...event,
-    attendanceCount: event.attendance_records?.length ?? 0,
+    attendanceCount: extractAttendanceCount(event.attendance_records),
     checkInStatus: getCheckInStatus(event),
   };
 }
@@ -349,7 +362,10 @@ async function getHostClubSummariesForUser(supabase: AppSupabaseClient, userId: 
   const { data: events, error: eventsError } = clubIds.length
     ? await supabase
         .from("events")
-        .select("id, club_id, event_date, check_in_opens_at, check_in_closes_at, is_active, is_archived, attendance_records(id)")
+        // attendance_records(count) returns a single aggregate row per event
+        // instead of one row per check-in. On busy clubs this is the difference
+        // between transferring tens of thousands of ids and a handful of ints.
+        .select("id, club_id, event_date, check_in_opens_at, check_in_closes_at, is_active, is_archived, attendance_records(count)")
         .in("club_id", clubIds)
     : { data: [], error: null };
 
@@ -361,12 +377,12 @@ async function getHostClubSummariesForUser(supabase: AppSupabaseClient, userId: 
     counts.set(club.id, { upcomingEventsCount: 0, pastEventsCount: 0, totalCheckIns: 0 });
   }
 
-  for (const event of events ?? []) {
+  for (const event of (events ?? []) as Array<{ club_id: string; event_date: string; attendance_records?: { count: number }[] }>) {
     const current = counts.get(event.club_id);
     if (!current) continue;
     if (event.event_date >= now) current.upcomingEventsCount += 1;
     else current.pastEventsCount += 1;
-    current.totalCheckIns += event.attendance_records?.length ?? 0;
+    current.totalCheckIns += event.attendance_records?.[0]?.count ?? 0;
   }
 
   return ((clubs ?? []) as Club[]).map((club) => ({
@@ -405,7 +421,7 @@ async function getHostEventsForUser(
 
   let query = supabase
     .from("events")
-    .select("*, clubs(id, club_name, club_slug), attendance_records(id)")
+    .select("*, clubs(id, club_name, club_slug), attendance_records(count)")
     .in("club_id", clubIds)
     .order("event_date", { ascending: true })
     .order("start_time", { ascending: true });
@@ -525,7 +541,7 @@ export const getClubDetail = createServerFn({ method: "GET" })
       getUniversities(context.supabase),
       context.supabase
         .from("events")
-        .select("*, clubs(id, club_name, club_slug, university_id, universities(id, name, slug)), attendance_records(id)")
+        .select("*, clubs(id, club_name, club_slug, university_id, universities(id, name, slug)), attendance_records(count)")
         .eq("club_id", club.id)
         .order("event_date", { ascending: false })
         .order("start_time", { ascending: false }),
