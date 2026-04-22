@@ -1,61 +1,61 @@
 
 
-## Goal
+## Why nothing seems to happen on "Create Event"
 
-Bring `/events/new` in line with the rest of the host routes (`clubs.index`, `events.index`, `notifications`, `events.$eventId`, `events.$eventId.edit` patterns). It's the last route still using the legacy hand-rolled `useEffect + useState + useAuthorizedServerFn` data-loading pattern.
+Diagnosis from your session replay + the bootstrap network response:
 
-## What changes
+- The button flashes **"Saving…" → "Create Event" within ~5ms** on every click. That's faster than any network call — it means React Hook Form ran sync validation, found errors, and called the *invalid* branch of `handleSubmit` without ever invoking `onSubmit`.
+- The bootstrap `initialValues` from `getEventFormPayload` come back with `eventName: ""` (and `location: ""`). The Zod schema requires `eventName.trim().min(2, "Enter an event name")`.
+- So validation fails on `eventName`, the in-field error appears next to the Event name input, and an error banner ("Fix these before saving") gets rendered — but **both are above the fold of a long form, while the Create button is in a sticky bar pinned to the bottom of the viewport**. From the user's perspective, the click does nothing.
 
-### 1. `src/lib/query-keys.ts`
-Add an `eventFormPayload` key under `events`, parameterized by the bootstrap inputs:
+The data layer is fine. This is purely a feedback / discoverability problem after the recent refactor — the form is silently rejecting the submit with no visible signal near the button.
 
-```ts
-events: {
-  ...
-  formPayload: (input: { eventId: string; clubId: string; templateId: string; duplicateFrom: string }) =>
-    ["events", "form-payload", input] as const,
-},
+## What to change
+
+### `src/components/attendance-hq/host-management.tsx` — `EventForm`
+
+**1. Surface the blocking errors near the button**
+
+Inside `StickyCtaBar`, above the `<Button>`, render a compact one-line error pill whenever `Object.keys(form.formState.errors).length > 0`:
+
+```
+"Fix highlighted fields above" + a count
 ```
 
-### 2. `src/routes/events.new.tsx` — full rewrite to match siblings
+This is the minimum signal so a user clicking the bottom CTA immediately sees *why* nothing happened, even if the full error summary is scrolled out of view.
 
-**Data loading**: replace the manual `useEffect` + `loadPayload().then()` + `useState<EventFormPayload | null>` flow with a single `useAuthorizedQuery` call (same shape used in `clubs.index.tsx` and `events.index.tsx`).
+**2. Auto-scroll to the first error on failed submit**
 
-**Mutations**: replace the two raw `useAuthorizedServerFn(createEvent)` / `useAuthorizedServerFn(duplicateEvent)` calls with `useAuthorizedMutation`, invalidating `queryKeys.events.all` and `queryKeys.clubs.all` so the events list and club summaries refresh after creation (currently they don't auto-refresh on create — minor latent bug).
+In the existing `handleSubmit` invalid branch (line 1091-1093), in addition to setting the local `error` string, find the first errored field name and scroll its input into view, focused:
 
-**Error component**: upgrade `EventCreateError` to accept `{ error, reset }` and render the same `ios-card` + "Try again" button pattern used by `ClubsError` / `EventsError`, calling `router.invalidate(); reset();`.
+```ts
+() => {
+  setError("Some fields need attention — see highlighted errors above.");
+  const firstField = Object.keys(form.formState.errors)[0];
+  if (firstField) {
+    form.setFocus(firstField as keyof EventFormValues);
+  }
+}
+```
 
-**Empty-club redirect**: keep the existing "no clubs → `/onboarding/club`" bounce, but move it into a `useEffect` that watches `query.data` (so it survives the switch to TanStack Query).
+`form.setFocus` from RHF both focuses the input and (because all our inputs are real DOM inputs) the browser scrolls them into view. This single line fixes the "click does nothing" feeling for both create and edit flows.
 
-**Loading & error rendering**: drop the local `error` state — read directly from `query.error` and render via `getManagementErrorMessage`, matching siblings.
+**3. Default the event name when creating from scratch**
 
-**Behavior preserved**: search-param parsing, head/meta tags, title/description/submit-label switching for duplicate vs. create, post-submit navigation to `/events/$eventId` with `created: "1"`.
-
-### 3. `src/routes/events.$eventId.edit.tsx` — same treatment (consistency)
-
-This file uses the identical legacy pattern (`useEffect` + `useState<EventFormPayload | null>` + manual error state). Apply the same refactor:
-- `useAuthorizedQuery` with `queryKeys.events.formPayload({ eventId, clubId: "", templateId: "", duplicateFrom: "" })`
-- `useAuthorizedMutation` for `updateEvent` and `deleteEvent`, invalidating `queryKeys.events.all`, `queryKeys.events.detail(eventId)`, and `queryKeys.clubs.all`
-- Upgrade `EventEditError` to the `{ error, reset }` shape with retry button
-
-This keeps the create and edit screens symmetrical — both currently share the legacy pattern, and updating only one would create a new inconsistency.
-
-## Why
-
-- **Cache reuse**: a `useAuthorizedQuery`-driven form payload becomes invalidatable. After creating/duplicating an event the cache is bumped automatically, so back-navigating to `/events` shows the new event without a manual refetch.
-- **Pattern parity**: every other host route already uses this exact shape. New contributors won't have to learn two data-loading idioms.
-- **Cleaner error UX**: error state surfaces in a styled `ios-card` with a Try-again button instead of a bare grey paragraph.
-- **Smaller component**: `events.new.tsx` shrinks from ~97 lines to ~70, with no `useState`/`useEffect` plumbing.
+In `getEventFormPayload`'s create-from-scratch path (no template, no duplicate source), seed `eventName` with a sensible default like `"Untitled event"` so a host can submit immediately and rename later. This matches how most calendar apps behave and removes the most common foot-gun — but it's optional and only worth doing if you want a frictionless first-create. If you'd rather keep an explicit name requirement, skip this step; #1 and #2 alone solve the "nothing happens" complaint.
 
 ## Files touched
 
-- `src/lib/query-keys.ts` — add `events.formPayload` key
-- `src/routes/events.new.tsx` — refactor to query + mutation pattern
-- `src/routes/events.$eventId.edit.tsx` — same refactor for consistency
+- `src/components/attendance-hq/host-management.tsx` — `EventForm` (sticky-bar error pill + auto-focus first error)
+- `src/lib/attendance-hq.functions.ts` — *only if* you want #3 (default event name in `getEventFormPayload`)
 
 ## Out of scope
 
-- No changes to `EventForm`, `getEventFormPayload`, `createEvent`, `updateEvent`, `duplicateEvent`, or any server function.
-- No visual / copy changes — purely an internal pattern alignment.
-- No new dependencies.
+- No schema relaxation — `eventName.min(2)` is the right rule.
+- No changes to mutations, query keys, or server functions.
+- No changes to the `EventForm` layout or visual design beyond the sticky-bar inline error.
+
+## Open question
+
+Do you want option #3 (default `"Untitled event"` so hosts can submit instantly), or keep the explicit-name requirement and rely solely on the inline error feedback from #1 + #2?
 
