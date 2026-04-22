@@ -40,19 +40,25 @@ async function getSupabaseAdmin() {
 }
 
 import {
+  clubIdInputSchema,
+  clubIdOptionalInputSchema,
   clubSchema,
   clubUpdateSchema,
   closeCheckInEarlySchema,
   confirmReturningInputSchema,
   deleteClubSchema,
   deleteEventSchema,
+  duplicateEventSchema,
   duplicateEventTemplateSchema,
+  eventFormPayloadInputSchema,
+  eventIdInputSchema,
   eventSchema,
   eventListFilterSchema,
   eventTemplateSchema,
   eventTemplateUpdateSchema,
   eventUpdateSchema,
   fastCheckInSchema,
+  hostOnboardingInputSchema,
   manualAttendanceSchema,
   qrTokenSchema,
   rememberedDeviceInputSchema,
@@ -170,7 +176,7 @@ export const getPublicEventByQr = createServerFn({ method: "GET" })
 // having to know about it.
 export const getHostOnboardingState = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input?: { fullName?: string; email?: string } | undefined) => input ?? {})
+  .inputValidator(hostOnboardingInputSchema)
   .handler(async ({ data, context }) => {
     const claimsEmail = typeof context.claims.email === "string" ? context.claims.email : null;
     const profile = await ensureHostProfile(context.userId, {
@@ -519,7 +525,7 @@ export const getUniversitiesForHost = createServerFn({ method: "GET" })
 
 export const getHostTemplates = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { clubId?: string }) => ({ clubId: input.clubId ?? "" }))
+  .inputValidator(clubIdOptionalInputSchema)
   .handler(async ({ data, context }) => {
     return getHostTemplatesForUser(context.supabase, context.userId, data.clubId);
   });
@@ -533,7 +539,7 @@ export const getHostEvents = createServerFn({ method: "GET" })
 
 export const getClubDetail = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { clubId: string }) => input)
+  .inputValidator(clubIdInputSchema)
   .handler(async ({ data, context }) => {
     const club = await requireOwnedClub(context.supabase, context.userId, data.clubId);
 
@@ -719,12 +725,7 @@ export const duplicateEventTemplate = createServerFn({ method: "POST" })
 
 export const getEventFormPayload = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((input: { eventId?: string; duplicateFrom?: string; clubId?: string; templateId?: string }) => ({
-    eventId: input.eventId ?? "",
-    duplicateFrom: input.duplicateFrom ?? "",
-    clubId: input.clubId ?? "",
-    templateId: input.templateId ?? "",
-  }))
+  .inputValidator(eventFormPayloadInputSchema)
   .handler(async ({ data, context }) => {
     const [universities, clubIds] = await Promise.all([getUniversities(context.supabase), getOwnedClubIds(context.supabase, context.userId)]);
     const clubs = clubIds.length
@@ -841,13 +842,7 @@ export const updateEvent = createServerFn({ method: "POST" })
 
 export const duplicateEvent = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator(eventSchema.extend({ sourceEventId: z.string().uuid() }).refine((value) => value.endTime > value.startTime, {
-    message: "End time must be after start time",
-    path: ["endTime"],
-  }).refine((value) => new Date(value.checkInClosesAt).getTime() > new Date(value.checkInOpensAt).getTime(), {
-    message: "Check-in close must be after open",
-    path: ["checkInClosesAt"],
-  }))
+  .inputValidator(duplicateEventSchema)
   .handler(async ({ data, context }) => {
     await requireOwnedEvent(context.supabase, context.userId, data.sourceEventId);
     const { sourceEventId: _sourceEventId, ...eventData } = data;
