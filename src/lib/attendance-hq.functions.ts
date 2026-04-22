@@ -181,10 +181,23 @@ export const getHostOnboardingState = createServerFn({ method: "GET" })
     return { profile, onboarding };
   });
 
+// PostgREST returns embedded `attendance_records(count)` as `[{ count: N }]`.
+// Older callers may still embed `attendance_records(id)` (an array of rows).
+// Read either shape so we can roll the optimization out per-call without breaking
+// any consumer that hasn't been migrated yet.
+function extractAttendanceCount(
+  records: EventSummary["attendance_records"] | undefined,
+): number {
+  if (!records || records.length === 0) return 0;
+  const first = records[0] as { count?: number; id?: string };
+  if (typeof first.count === "number") return first.count;
+  return records.length;
+}
+
 function toManagementEventSummary(event: EventSummary): ManagementEventSummary {
   return {
     ...event,
-    attendanceCount: event.attendance_records?.length ?? 0,
+    attendanceCount: extractAttendanceCount(event.attendance_records),
     checkInStatus: getCheckInStatus(event),
   };
 }
