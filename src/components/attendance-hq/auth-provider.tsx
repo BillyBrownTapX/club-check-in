@@ -191,9 +191,14 @@ type AuthorizedQueryOptions<TData, TError = Error> = Omit<
  * tokenless request. The `queryFn` calls the server fn through
  * `useAuthorizedServerFn`, so a 401 still triggers the central sign-out path.
  */
+// We type `serverFn` loosely (any[] args) because TanStack Start's
+// RequiredFetcher is stricter than `(opts?: { data }) => …`. Mirroring it
+// would force casts at every call site. Runtime contract is stable: every
+// server fn accepts `({ data })` (or zero args when no validator).
 export function useAuthorizedQuery<TData, TPayload = void>(
   queryKey: QueryKey,
-  serverFn: (options?: { data: TPayload }) => Promise<TData>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  serverFn: (...args: any[]) => Promise<TData>,
   payload?: TPayload,
   options?: AuthorizedQueryOptions<TData>,
 ) {
@@ -206,14 +211,10 @@ export function useAuthorizedQuery<TData, TPayload = void>(
     queryKey,
     enabled: !loading && !!user && externalEnabled,
     queryFn: async () => {
-      // Server fns built with TanStack Start always accept the `{ data }`
-      // shape, even when the validator is `() => undefined`. We pass an empty
-      // payload when the caller doesn't supply one to keep both call shapes
-      // consistent.
       if (payload === undefined) {
         return (await (invoke as () => Promise<TData>)()) as TData;
       }
-      return (await invoke({ data: payload } as { data: TPayload })) as TData;
+      return (await (invoke as (opts: { data: TPayload }) => Promise<TData>)({ data: payload })) as TData;
     },
   });
 }
