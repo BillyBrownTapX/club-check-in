@@ -308,7 +308,7 @@ function EventDetailRoute() {
     return <ManagementPageShell><div className="py-16 text-center text-sm text-muted-foreground">Loading event…</div></ManagementPageShell>;
   }
 
-  if (hardError && !event) return <EventDetailHardError message={hardError} onRetry={() => void refresh()} />;
+  if (hardError && !event) return <EventDetailHardError message={getManagementErrorMessage(hardError, "Unable to load event.")} onRetry={() => void refresh()} />;
   if (!event) return <EventDetailNotFound />;
 
   const status = getCheckInStatus(event);
@@ -360,15 +360,25 @@ function EventDetailRoute() {
     if (!pendingRemoveRow) return;
     setRemovingId(pendingRemoveRow.id);
     const row = pendingRemoveRow;
-    const previous = attendance;
-    setAttendance((prev) => prev.filter((item) => item.id !== row.id));
+    // Optimistic: hide the row immediately. The overlay clears once the
+    // refetch returns server-confirmed data without it.
+    setOptimisticRemovedIds((prev) => {
+      const next = new Set(prev);
+      next.add(row.id);
+      return next;
+    });
     setPendingRemoveRow(null);
     try {
       await removeAttendanceMutation({ data: { attendanceRecordId: row.id, eventId } });
       toast.success("Attendance removed");
       await refresh();
     } catch (error) {
-      setAttendance(previous);
+      // Roll back the optimistic hide.
+      setOptimisticRemovedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(row.id);
+        return next;
+      });
       toast.error(getManagementErrorMessage(error, "Unable to remove attendance."));
     } finally {
       setRemovingId(null);
@@ -461,9 +471,7 @@ function EventDetailRoute() {
   };
 
   const handleManualRefresh = async () => {
-    setRefreshing(true);
     await refresh();
-    setRefreshing(false);
   };
 
   const statusChipTone: "success" | "blue" | "muted" | "destructive" =
@@ -539,7 +547,7 @@ function EventDetailRoute() {
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-destructive" />
             <div className="flex-1 space-y-1">
               <p className="font-medium">Live updates paused</p>
-              <p className="text-muted-foreground">{softError}</p>
+              <p className="text-muted-foreground">{getManagementErrorMessage(softError, "Live updates paused.")}</p>
             </div>
             <Button type="button" variant="outline" size="sm" className="rounded-xl" onClick={() => void handleManualRefresh()}>
               Retry
