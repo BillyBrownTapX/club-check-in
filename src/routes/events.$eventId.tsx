@@ -87,8 +87,9 @@ import {
   type EventAttendanceSummary,
   type EventWithClub,
 } from "@/lib/attendance-hq";
+import { useEventRealtime } from "@/hooks/use-event-realtime";
 
-const POLL_INTERVAL_MS = 5000;
+const FALLBACK_POLL_INTERVAL_MS = 30_000;
 
 type RosterMethodFilter = "all" | "qr_scan" | "returning_lookup" | "remembered_device" | "host_correction";
 type RosterSort = "newest" | "oldest" | "name";
@@ -250,14 +251,12 @@ function EventDetailRoute() {
     };
   }, [loading, refresh, user]);
 
-  useEffect(() => {
-    if (!initialLoaded) return;
-    const id = window.setInterval(() => {
-      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
-      void refresh();
-    }, POLL_INTERVAL_MS);
-    return () => window.clearInterval(id);
-  }, [initialLoaded, refresh]);
+  useEventRealtime({
+    eventId,
+    enabled: initialLoaded,
+    onChange: () => { void refresh(); },
+    fallbackPollMs: FALLBACK_POLL_INTERVAL_MS,
+  });
 
   const checkInUrl = useMemo(() => {
     if (!event) return "";
