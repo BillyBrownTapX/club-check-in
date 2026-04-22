@@ -236,7 +236,8 @@ type AuthorizedMutationOptions<TData, TVariables, TError = Error> = Omit<
  * successful mutation, every key in `invalidate` is invalidated by prefix.
  */
 export function useAuthorizedMutation<TData, TVariables = void>(
-  serverFn: (options?: { data: TVariables }) => Promise<TData>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  serverFn: (...args: any[]) => Promise<TData>,
   options?: AuthorizedMutationOptions<TData, TVariables>,
 ) {
   const invoke = useAuthorizedServerFn(serverFn);
