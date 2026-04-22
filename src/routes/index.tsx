@@ -8,6 +8,12 @@ export const Route = createFileRoute("/")({
     meta: [
       { title: "Attendance HQ — QR attendance for college clubs" },
       { name: "description", content: "Run mobile QR check-in for university club events with a polished, iOS-native workflow." },
+      { property: "og:title", content: "Attendance HQ — QR attendance for college clubs" },
+      { property: "og:description", content: "Run mobile QR check-in for university club events with a polished, iOS-native workflow." },
+      { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://attendance-hq.com/" },
+      { name: "twitter:title", content: "Attendance HQ — QR attendance for college clubs" },
+      { name: "twitter:description", content: "Run mobile QR check-in for university club events with a polished, iOS-native workflow." },
     ],
   }),
   component: Index,

@@ -157,6 +157,11 @@ export const Route = createFileRoute("/events/$eventId")({
     meta: [
       { title: "Event ops — Attendance HQ" },
       { name: "description", content: "Live attendance monitoring and host actions for an Attendance HQ event." },
+      { property: "og:title", content: "Event ops — Attendance HQ" },
+      { property: "og:description", content: "Live attendance monitoring and host actions for an Attendance HQ event." },
+      { name: "twitter:title", content: "Event ops — Attendance HQ" },
+      { name: "twitter:description", content: "Live attendance monitoring and host actions for an Attendance HQ event." },
+      { name: "robots", content: "noindex, nofollow" },
     ],
   }),
   component: EventDetailRoute,

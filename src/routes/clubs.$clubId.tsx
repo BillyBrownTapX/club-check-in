@@ -71,6 +71,11 @@ export const Route = createFileRoute("/clubs/$clubId")({
     meta: [
       { title: "Club management — Attendance HQ" },
       { name: "description", content: "Manage one club, its events, and reusable event templates." },
+      { property: "og:title", content: "Club management — Attendance HQ" },
+      { property: "og:description", content: "Manage one club, its events, and reusable event templates." },
+      { name: "twitter:title", content: "Club management — Attendance HQ" },
+      { name: "twitter:description", content: "Manage one club, its events, and reusable event templates." },
+      { name: "robots", content: "noindex, nofollow" },
     ],
   }),
   component: ClubDetailRoute,

@@ -63,6 +63,9 @@ export const Route = createFileRoute("/check-in/$qrToken")({
       { name: "description", content: "Mobile check-in for college club events with Attendance HQ." },
       { property: "og:title", content: "Event Check-In — Attendance HQ" },
       { property: "og:description", content: "Fast mobile check-in for college club events." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:title", content: "Event Check-In — Attendance HQ" },
+      { name: "twitter:description", content: "Fast mobile check-in for college club events." },
     ],
   }),
   loader: async ({ params }) => {

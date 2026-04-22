@@ -20,6 +20,10 @@ export const Route = createFileRoute("/sign-in")({
     meta: [
       { title: "Sign in — Attendance HQ" },
       { name: "description", content: "Sign in to Attendance HQ and continue setting up or managing your event." },
+      { property: "og:title", content: "Sign in — Attendance HQ" },
+      { property: "og:description", content: "Sign in to Attendance HQ and continue setting up or managing your event." },
+      { name: "twitter:title", content: "Sign in — Attendance HQ" },
+      { name: "twitter:description", content: "Sign in to Attendance HQ and continue setting up or managing your event." },
     ],
   }),
   component: SignInRoute,

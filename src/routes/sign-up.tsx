@@ -17,6 +17,10 @@ export const Route = createFileRoute("/sign-up")({
     meta: [
       { title: "Create account — Attendance HQ" },
       { name: "description", content: "Create your Attendance HQ account and set up your first club in minutes." },
+      { property: "og:title", content: "Create account — Attendance HQ" },
+      { property: "og:description", content: "Create your Attendance HQ account and set up your first club in minutes." },
+      { name: "twitter:title", content: "Create account — Attendance HQ" },
+      { name: "twitter:description", content: "Create your Attendance HQ account and set up your first club in minutes." },
     ],
   }),
   component: SignUpRoute,

@@ -30,6 +30,11 @@ export const Route = createFileRoute("/events/$eventId/edit")({
     meta: [
       { title: "Edit Event — Attendance HQ" },
       { name: "description", content: "Update event details without changing the existing QR code." },
+      { property: "og:title", content: "Edit Event — Attendance HQ" },
+      { property: "og:description", content: "Update event details without changing the existing QR code." },
+      { name: "twitter:title", content: "Edit Event — Attendance HQ" },
+      { name: "twitter:description", content: "Update event details without changing the existing QR code." },
+      { name: "robots", content: "noindex, nofollow" },
     ],
   }),
   component: EventEditRoute,
