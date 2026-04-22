@@ -112,6 +112,7 @@ function EventEditRoute() {
       }
       onSubmit={async (values) => {
         const result = await updateEventMutation.mutateAsync({ ...values, eventId } as never);
+        toast.success("Event updated", { description: result.event_name });
         navigate({ to: "/events/$eventId", params: { eventId: result.id }, search: { created: "" } });
       }}
     />
