@@ -1,14 +1,27 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { CalendarDays, Clock3, MapPin, Plus, Search, Trash2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Link, createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
+import { CalendarDays, Clock3, MapPin, Plus, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
+import { useAuthorizedMutation, useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
 import { HostAppShell } from "@/components/attendance-hq/host-shell";
-import { DeleteConfirmButton, useRequireHostRedirect } from "@/components/attendance-hq/host-management";
+import { DeleteConfirmButton, useRequireHostRedirect, getManagementErrorMessage } from "@/components/attendance-hq/host-management";
 import { Chip, IosSearchField, LargeTitleHeader, SectionLabel, SegmentedControl } from "@/components/attendance-hq/ios";
 import { Button } from "@/components/ui/button";
 import { deleteEvent, getHostEvents } from "@/lib/attendance-hq.functions";
 import { formatEventDate, formatEventTime, type EventListStatusFilter, type ManagementEventSummary } from "@/lib/attendance-hq";
+import { queryKeys } from "@/lib/query-keys";
+
+function EventsError({ error, reset }: { error: Error; reset: () => void }) {
+  const router = useRouter();
+  return (
+    <HostAppShell>
+      <div className="ios-card mt-6 rounded-3xl p-6 text-center">
+        <p className="text-sm text-destructive">{getManagementErrorMessage(error, "Unable to load events.")}</p>
+        <Button className="mt-4" variant="hero" onClick={() => { router.invalidate(); reset(); }}>Try again</Button>
+      </div>
+    </HostAppShell>
+  );
+}
 
 export const Route = createFileRoute("/events/")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -23,37 +36,37 @@ export const Route = createFileRoute("/events/")({
     ],
   }),
   component: EventsRoute,
+  errorComponent: EventsError,
 });
 
 type Tab = "upcoming" | "live" | "past";
 
 function EventsRoute() {
   const { loading, user } = useRequireHostRedirect();
-  const getEvents = useAuthorizedServerFn(getHostEvents);
-  const deleteEventMutation = useAuthorizedServerFn(deleteEvent);
   const search = Route.useSearch();
   const navigate = useNavigate({ from: "/events/" });
-  const [events, setEvents] = useState<ManagementEventSummary[]>([]);
-  const [fetching, setFetching] = useState(true);
   const [query, setQuery] = useState(search.query);
   const [tab, setTab] = useState<Tab>(search.status === "upcoming" ? "upcoming" : search.status === "active" ? "live" : search.status === "past" ? "past" : "upcoming");
 
-  const handleDelete = async (eventId: string) => {
-    await deleteEventMutation({ data: { eventId } });
-    toast.success("Event deleted");
-    const next = await getEvents({ data: { clubId: "", status: "all", query: "" } });
-    setEvents(next);
-  };
+  // Reuses Home/Notifications cache key — instant on cross-navigation.
+  const eventsQuery = useAuthorizedQuery(
+    queryKeys.events.list({ clubId: "", status: "all", query: "" }),
+    getHostEvents,
+    { clubId: "", status: "all" as const, query: "" },
+    { staleTime: 30_000 },
+  );
 
-  useEffect(() => {
-    if (loading || !user) return;
-    let cancelled = false;
-    setFetching(true);
-    void getEvents({ data: { clubId: "", status: "all", query: "" } })
-      .then((next) => { if (!cancelled) setEvents(next); })
-      .finally(() => { if (!cancelled) setFetching(false); });
-    return () => { cancelled = true; };
-  }, [getEvents, loading, user]);
+  const deleteEventMutation = useAuthorizedMutation(deleteEvent, {
+    invalidate: [queryKeys.events.all, queryKeys.clubs.all],
+  });
+
+  const events = eventsQuery.data ?? [];
+  const fetching = eventsQuery.isLoading;
+
+  const handleDelete = async (eventId: string) => {
+    await deleteEventMutation.mutateAsync({ eventId } as never);
+    toast.success("Event deleted");
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();

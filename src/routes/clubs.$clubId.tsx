@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useMemo, useState } from "react";
+import { Link, createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { CalendarDays, History, Pencil, Plus, Trash2, Users, WandSparkles } from "lucide-react";
-import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
+import { useAuthorizedMutation, useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -34,13 +34,34 @@ import {
 } from "@/lib/attendance-hq.functions";
 import { useSignedLogoUrl } from "@/hooks/use-signed-logo";
 import type { EventTemplateWithClub, ManagementEventSummary } from "@/lib/attendance-hq";
+import { queryKeys } from "@/lib/query-keys";
 
 function ClubDetailNotFound() {
-  return <ManagementPageShell><div className="py-16 text-center text-sm text-muted-foreground">Club not found.</div></ManagementPageShell>;
+  return (
+    <ManagementPageShell>
+      <div className="mx-auto flex max-w-md flex-col items-center gap-4 py-16 text-center">
+        <div className="space-y-1">
+          <h2 className="text-lg font-semibold text-foreground">Club not found</h2>
+          <p className="text-sm text-muted-foreground">It may have been deleted, or you don't have access.</p>
+        </div>
+        <Button asChild variant="hero">
+          <Link to="/clubs">Back to clubs</Link>
+        </Button>
+      </div>
+    </ManagementPageShell>
+  );
 }
 
-function ClubDetailError({ error }: { error: Error }) {
-  return <ManagementPageShell><div className="py-16 text-center text-sm text-muted-foreground">{error.message}</div></ManagementPageShell>;
+function ClubDetailError({ error, reset }: { error: Error; reset: () => void }) {
+  const router = useRouter();
+  return (
+    <ManagementPageShell>
+      <div className="ios-card mx-auto mt-12 max-w-md rounded-3xl p-6 text-center">
+        <p className="text-sm text-destructive">{getManagementErrorMessage(error, "Unable to load club.")}</p>
+        <Button className="mt-4" variant="hero" onClick={() => { router.invalidate(); reset(); }}>Try again</Button>
+      </div>
+    </ManagementPageShell>
+  );
 }
 
 export const Route = createFileRoute("/clubs/$clubId")({
@@ -59,61 +80,60 @@ function ClubDetailRoute() {
   const { loading, user } = useRequireHostRedirect();
   const { clubId } = Route.useParams();
   const navigate = useNavigate();
-  const getClub = useAuthorizedServerFn(getClubDetail);
-  const updateClubMutation = useAuthorizedServerFn(updateClub);
-  const deleteClubMutation = useAuthorizedServerFn(deleteClub);
-  const deleteEventMutation = useAuthorizedServerFn(deleteEvent);
-  const createTemplateMutation = useAuthorizedServerFn(createEventTemplate);
-  const updateTemplateMutation = useAuthorizedServerFn(updateEventTemplate);
-  const duplicateTemplateMutation = useAuthorizedServerFn(duplicateEventTemplate);
   const [clubDialogOpen, setClubDialogOpen] = useState(false);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<EventTemplateWithClub | null>(null);
-  const [data, setData] = useState<Awaited<ReturnType<typeof getClubDetail>> | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [fetching, setFetching] = useState(true);
+
+  const clubDetailQuery = useAuthorizedQuery(
+    queryKeys.clubs.detail(clubId),
+    getClubDetail,
+    { clubId },
+    { staleTime: 15_000 },
+  );
+
+  // Mutations — invalidate by prefix so list + detail + events all stay in sync.
+  const updateClubMutation = useAuthorizedMutation(updateClub, {
+    invalidate: [queryKeys.clubs.all, queryKeys.events.all],
+  });
+  const deleteClubMutation = useAuthorizedMutation(deleteClub, {
+    invalidate: [queryKeys.clubs.all, queryKeys.events.all],
+  });
+  const deleteEventMutation = useAuthorizedMutation(deleteEvent, {
+    invalidate: [queryKeys.clubs.all, queryKeys.events.all],
+  });
+  const createTemplateMutation = useAuthorizedMutation(createEventTemplate, {
+    invalidate: [queryKeys.clubs.detail(clubId)],
+  });
+  const updateTemplateMutation = useAuthorizedMutation(updateEventTemplate, {
+    invalidate: [queryKeys.clubs.detail(clubId)],
+  });
+  const duplicateTemplateMutation = useAuthorizedMutation(duplicateEventTemplate, {
+    invalidate: [queryKeys.clubs.detail(clubId)],
+  });
+
+  const data = clubDetailQuery.data ?? null;
+  const fetching = clubDetailQuery.isLoading;
+  const error = clubDetailQuery.error;
 
   const handleDeleteClub = async () => {
-    await deleteClubMutation({ data: { clubId } });
+    await deleteClubMutation.mutateAsync({ clubId } as never);
     toast.success("Club deleted");
     navigate({ to: "/clubs" });
   };
 
   const handleDeleteEvent = async (eventId: string) => {
-    await deleteEventMutation({ data: { eventId } });
+    await deleteEventMutation.mutateAsync({ eventId } as never);
     toast.success("Event deleted");
-    setData(await getClub({ data: { clubId } }));
   };
 
-  useEffect(() => {
-    if (loading || !user) return;
-    let cancelled = false;
-
-    const load = async () => {
-      setFetching(true);
-      setError(null);
-      try {
-        const nextData = await getClub({ data: { clubId } });
-        if (!cancelled) setData(nextData);
-      } catch (loadError) {
-        if (!cancelled) setError(getManagementErrorMessage(loadError, "Unable to load club."));
-      } finally {
-        if (!cancelled) setFetching(false);
-      }
-    };
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [clubId, getClub, loading, user]);
-
-  const title = useMemo(() => data?.club.club_name ?? "Club", [data?.club.club_name]);
-  void title;
-
   if (loading || !user) return <ManagementPageShell><div className="py-16 text-center text-sm text-muted-foreground">Loading club…</div></ManagementPageShell>;
-  if (fetching) return <ManagementPageShell><div className="py-16 text-center text-sm text-muted-foreground">Loading club…</div></ManagementPageShell>;
-  if (error) return <ClubDetailError error={new Error(error)} />;
+  if (fetching && !data) return <ManagementPageShell><div className="py-16 text-center text-sm text-muted-foreground">Loading club…</div></ManagementPageShell>;
+  if (error && !data) {
+    // Defensive: if the query throws but TanStack didn't already forward to
+    // the boundary (rare with notFound() — but possible for raw errors),
+    // surface it inline.
+    return <ClubDetailError error={error} reset={() => clubDetailQuery.refetch()} />;
+  }
   if (!data) return <ClubDetailNotFound />;
 
   const universityLabel = data.club.universities?.name ?? "University needed";
@@ -296,8 +316,7 @@ function ClubDetailRoute() {
                   onUse={(templateId) => navigate({ to: "/events/new", search: { clubId: data.club.id, templateId, duplicateFrom: "" } })}
                   onEdit={(template) => { setEditingTemplate(template); setTemplateDialogOpen(true); }}
                   onDuplicate={async (templateId) => {
-                    await duplicateTemplateMutation({ data: { templateId } });
-                    setData(await getClub({ data: { clubId } }));
+                    await duplicateTemplateMutation.mutateAsync({ templateId } as never);
                   }}
                 />
               ))}
@@ -318,8 +337,7 @@ function ClubDetailRoute() {
           universities={data.universities}
           initialValues={{ clubId: data.club.id, universityId: data.club.university_id ?? "", clubName: data.club.club_name, description: data.club.description ?? "", isActive: data.club.is_active, logoPath: data.club.logo_url ?? null }}
           onSubmit={async (values) => {
-            await updateClubMutation({ data: values as never });
-            setData(await getClub({ data: { clubId } }));
+            await updateClubMutation.mutateAsync(values as never);
           }}
           onDelete={handleDeleteClub}
         />
@@ -342,9 +360,8 @@ function ClubDetailRoute() {
             defaultCheckInCloseOffsetMinutes: editingTemplate.default_check_in_close_offset_minutes,
           } : undefined}
           onSubmit={async (values) => {
-            if (editingTemplate) await updateTemplateMutation({ data: values as never });
-            else await createTemplateMutation({ data: values as never });
-            setData(await getClub({ data: { clubId } }));
+            if (editingTemplate) await updateTemplateMutation.mutateAsync(values as never);
+            else await createTemplateMutation.mutateAsync(values as never);
           }}
         />
       </div>
