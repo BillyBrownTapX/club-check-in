@@ -1,14 +1,27 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { Plus, Search } from "lucide-react";
-import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
+import { useMemo, useState } from "react";
+import { Link, createFileRoute, useRouter } from "@tanstack/react-router";
+import { Plus } from "lucide-react";
+import { useAuthorizedMutation, useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
 import { HostAppShell } from "@/components/attendance-hq/host-shell";
 import { ClubDialog, useRequireHostRedirect, getManagementErrorMessage } from "@/components/attendance-hq/host-management";
 import { Chip, IosSearchField, LargeTitleHeader, SectionLabel } from "@/components/attendance-hq/ios";
 import { Button } from "@/components/ui/button";
 import { getHostClubSummaries, createClubManagement, getUniversitiesForHost } from "@/lib/attendance-hq.functions";
 import { useSignedLogoUrl } from "@/hooks/use-signed-logo";
-import type { ClubSummary, University } from "@/lib/attendance-hq";
+import type { ClubSummary } from "@/lib/attendance-hq";
+import { queryKeys } from "@/lib/query-keys";
+
+function ClubsError({ error, reset }: { error: Error; reset: () => void }) {
+  const router = useRouter();
+  return (
+    <HostAppShell>
+      <div className="ios-card mt-6 rounded-3xl p-6 text-center">
+        <p className="text-sm text-destructive">{getManagementErrorMessage(error, "Unable to load clubs.")}</p>
+        <Button className="mt-4" variant="hero" onClick={() => { router.invalidate(); reset(); }}>Try again</Button>
+      </div>
+    </HostAppShell>
+  );
+}
 
 export const Route = createFileRoute("/clubs/")({
   head: () => ({
@@ -18,35 +31,34 @@ export const Route = createFileRoute("/clubs/")({
     ],
   }),
   component: ClubsRoute,
+  errorComponent: ClubsError,
 });
 
 function ClubsRoute() {
   const { loading, user } = useRequireHostRedirect();
-  const getClubs = useAuthorizedServerFn(getHostClubSummaries);
-  const getUniversities = useAuthorizedServerFn(getUniversitiesForHost);
-  const createClub = useAuthorizedServerFn(createClubManagement);
   const [open, setOpen] = useState(false);
-  const [clubs, setClubs] = useState<ClubSummary[]>([]);
-  const [universities, setUniversities] = useState<University[]>([]);
-  const [fetching, setFetching] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
 
-  useEffect(() => {
-    if (loading || !user) return;
-    let cancelled = false;
-    setFetching(true);
-    setError(null);
-    void Promise.all([getClubs(), getUniversities()])
-      .then(([nextClubs, nextUniversities]) => {
-        if (cancelled) return;
-        setClubs(nextClubs);
-        setUniversities(nextUniversities);
-      })
-      .catch((e) => { if (!cancelled) setError(getManagementErrorMessage(e, "Unable to load clubs.")); })
-      .finally(() => { if (!cancelled) setFetching(false); });
-    return () => { cancelled = true; };
-  }, [getClubs, getUniversities, loading, user]);
+  const clubsQuery = useAuthorizedQuery(
+    queryKeys.clubs.summaries(),
+    getHostClubSummaries,
+    undefined,
+    { staleTime: 30_000 },
+  );
+  const universitiesQuery = useAuthorizedQuery(
+    queryKeys.universities.forHost(),
+    getUniversitiesForHost,
+    undefined,
+    { staleTime: 5 * 60_000 },
+  );
+  const createClub = useAuthorizedMutation(createClubManagement, {
+    invalidate: [queryKeys.clubs.all],
+  });
+
+  const clubs = clubsQuery.data ?? [];
+  const universities = universitiesQuery.data ?? [];
+  const fetching = clubsQuery.isLoading || universitiesQuery.isLoading;
+  const error = clubsQuery.error ?? universitiesQuery.error;
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -76,7 +88,7 @@ function ClubsRoute() {
         {fetching ? (
           <div className="ios-card rounded-3xl p-6 text-center text-sm text-muted-foreground">Loading…</div>
         ) : error ? (
-          <div className="ios-card rounded-3xl p-6 text-center text-sm text-muted-foreground">{error}</div>
+          <div className="ios-card rounded-3xl p-6 text-center text-sm text-muted-foreground">{getManagementErrorMessage(error, "Unable to load clubs.")}</div>
         ) : filtered.length === 0 ? (
           <div className="ios-card rounded-3xl p-8 text-center">
             <p className="font-display text-[18px] font-bold text-foreground">No clubs yet</p>
@@ -100,8 +112,7 @@ function ClubsRoute() {
         title="Create Club"
         description="Add a new club to your workspace."
         onSubmit={async (values) => {
-          await createClub({ data: values as never });
-          setClubs(await getClubs());
+          await createClub.mutateAsync(values as never);
         }}
       />
     </HostAppShell>

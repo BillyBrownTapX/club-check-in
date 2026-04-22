@@ -1,9 +1,10 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Link, createFileRoute } from "@tanstack/react-router";
+import { useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Maximize2, Users } from "lucide-react";
 import QRCode from "react-qr-code";
 import { Button } from "@/components/ui/button";
-import { useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
+import { useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
 import { useRequireHostRedirect } from "@/components/attendance-hq/host-management";
 import { Chip } from "@/components/attendance-hq/ios";
 import { getEventDisplayPayload } from "@/lib/attendance-hq.functions";
@@ -12,11 +13,10 @@ import {
   formatEventTime,
   formatTimestamp,
   getCheckInStatus,
-  type EventDisplayPayload,
-  type EventAttendanceSummary,
   type EventWithClub,
 } from "@/lib/attendance-hq";
 import { useEventRealtime } from "@/hooks/use-event-realtime";
+import { queryKeys } from "@/lib/query-keys";
 
 const DISPLAY_FALLBACK_POLL_INTERVAL_MS = 30_000;
 
@@ -51,44 +51,28 @@ export const Route = createFileRoute("/events/$eventId/display")({
 function EventDisplayRoute() {
   const { loading, user } = useRequireHostRedirect();
   const { eventId } = Route.useParams();
-  const loadDisplayPayload = useAuthorizedServerFn(getEventDisplayPayload);
+  const queryClient = useQueryClient();
 
-  const [event, setEvent] = useState<EventWithClub | null>(null);
-  const [attendanceCount, setAttendanceCount] = useState(0);
-  const [summary, setSummary] = useState<EventAttendanceSummary | null>(null);
-  const [initialLoaded, setInitialLoaded] = useState(false);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
+  const displayQuery = useAuthorizedQuery(
+    queryKeys.events.display(eventId),
+    getEventDisplayPayload,
+    { eventId },
+    { staleTime: 0 }, // realtime-driven; never serve stale
+  );
 
-  const refresh = useCallback(async () => {
-    try {
-      const next = (await loadDisplayPayload({ data: { eventId } })) as EventDisplayPayload;
-      setEvent(next.event as EventWithClub);
-      setAttendanceCount(next.attendanceCount);
-      setSummary(next.summary);
-      setLastUpdatedAt(new Date().toISOString());
-      setLoadError(null);
-    } catch (error) {
-      setLoadError(error instanceof Error ? error.message : "Unable to load event.");
-    }
-  }, [eventId, loadDisplayPayload]);
-
-  useEffect(() => {
-    if (loading || !user) return;
-    let cancelled = false;
-    void (async () => {
-      await refresh();
-      if (!cancelled) setInitialLoaded(true);
-    })();
-    return () => { cancelled = true; };
-  }, [loading, refresh, user]);
-
+  // Realtime → invalidate the cache. Query dedupes parallel invalidations,
+  // so a burst of inserts coalesces into one network request.
   useEventRealtime({
     eventId,
-    enabled: initialLoaded,
-    onChange: () => { void refresh(); },
+    enabled: !!displayQuery.data,
+    onChange: () => { void queryClient.invalidateQueries({ queryKey: queryKeys.events.display(eventId) }); },
     fallbackPollMs: DISPLAY_FALLBACK_POLL_INTERVAL_MS,
   });
+
+  const event = (displayQuery.data?.event ?? null) as EventWithClub | null;
+  const attendanceCount = displayQuery.data?.attendanceCount ?? 0;
+  const summary = displayQuery.data?.summary ?? null;
+  const lastUpdatedAt = displayQuery.dataUpdatedAt ? new Date(displayQuery.dataUpdatedAt).toISOString() : null;
 
   const checkInUrl = useMemo(() => {
     if (!event) return "";
@@ -107,7 +91,7 @@ function EventDisplayRoute() {
     }
   };
 
-  if (loading || !user || !initialLoaded) {
+  if (loading || !user || (displayQuery.isLoading && !event)) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-hero text-sm text-white/80">
         Loading…
@@ -115,7 +99,7 @@ function EventDisplayRoute() {
     );
   }
 
-  if (loadError && !event) return <DisplayError error={new Error(loadError)} />;
+  if (displayQuery.error && !event) return <DisplayError error={displayQuery.error} />;
   if (!event) return <DisplayNotFound />;
 
   const status = getCheckInStatus(event);
