@@ -906,17 +906,37 @@ export function TemplateDialog({ open, onOpenChange, clubId, initialValues, onSu
         });
   }, [clubId, form, initialValues, isEdit, open]);
 
-  const submit = form.handleSubmit(async (values) => {
-    if (form.formState.isSubmitting) return;
-    setError("");
-    try {
-      await onSubmit(values);
-      onOpenChange(false);
-    } catch (submitError) {
-      setError(getManagementErrorMessage(submitError, "Unable to save template."));
-    }
-  });
+  const submit = form.handleSubmit(
+    async (values) => {
+      if (form.formState.isSubmitting) return;
+      setError("");
+      try {
+        await onSubmit(values);
+        onOpenChange(false);
+      } catch (submitError) {
+        const message = getManagementErrorMessage(submitError, "Unable to save template.");
+        setError(message);
+        toast.error(message);
+      }
+    },
+    () => {
+      setError("Please fix the highlighted fields before saving.");
+    },
+  );
   const isSubmitting = form.formState.isSubmitting;
+  const templateFieldLabels: Record<string, string> = {
+    templateName: "Template name",
+    defaultEventName: "Default event name",
+    defaultLocation: "Default location",
+    defaultStartTime: "Default start time",
+    defaultEndTime: "Default end time",
+    defaultCheckInOpenOffsetMinutes: "Open offset minutes",
+    defaultCheckInCloseOffsetMinutes: "Close offset minutes",
+    clubId: "Club",
+  };
+  const missingTemplateFields = Object.keys(form.formState.errors)
+    .map((key) => templateFieldLabels[key] ?? key)
+    .filter((label, index, all) => all.indexOf(label) === index);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
