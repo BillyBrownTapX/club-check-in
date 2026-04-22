@@ -2,6 +2,14 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { Session, User } from "@supabase/supabase-js";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryKey,
+  type UseMutationOptions,
+  type UseQueryOptions,
+} from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
 type AuthContextValue = {
