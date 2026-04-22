@@ -250,7 +250,7 @@ export function useAuthorizedMutation<TData, TVariables = void>(
       if (variables === undefined) {
         return (await (invoke as () => Promise<TData>)()) as TData;
       }
-      return (await invoke({ data: variables } as { data: TVariables })) as TData;
+      return (await (invoke as (opts: { data: TVariables }) => Promise<TData>)({ data: variables })) as TData;
     },
     onSuccess: (data, variables, onMutateResult, context) => {
       if (invalidate?.length) {
