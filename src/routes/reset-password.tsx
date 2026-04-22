@@ -17,6 +17,11 @@ export const Route = createFileRoute("/reset-password")({
   head: () => ({
     meta: [
       { title: "Choose a new password — Attendance HQ" },
+      { property: "og:title", content: "Choose a new password — Attendance HQ" },
+      { property: "og:description", content: "Set a new password for your Attendance HQ account." },
+      { name: "twitter:title", content: "Choose a new password — Attendance HQ" },
+      { name: "twitter:description", content: "Set a new password for your Attendance HQ account." },
+      { name: "robots", content: "noindex, nofollow" },
       { name: "description", content: "Set a new password for your Attendance HQ account." },
     ],
   }),
