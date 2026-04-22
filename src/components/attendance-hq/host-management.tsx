@@ -960,6 +960,14 @@ export function TemplateDialog({ open, onOpenChange, clubId, initialValues, onSu
             <TextInput type="number" label="Open offset minutes" error={form.formState.errors.defaultCheckInOpenOffsetMinutes?.message} {...form.register("defaultCheckInOpenOffsetMinutes", { valueAsNumber: true })} />
             <TextInput type="number" label="Close offset minutes" error={form.formState.errors.defaultCheckInCloseOffsetMinutes?.message} {...form.register("defaultCheckInCloseOffsetMinutes", { valueAsNumber: true })} />
           </div>
+          {missingTemplateFields.length > 0 ? (
+            <div className="rounded-2xl bg-destructive/10 p-4 text-sm text-destructive" role="alert">
+              <p className="font-semibold">Please fix the following before saving:</p>
+              <ul className="mt-1 list-disc pl-5">
+                {missingTemplateFields.map((label) => <li key={label}>{label}</li>)}
+              </ul>
+            </div>
+          ) : null}
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
           <PrimaryButton type="submit" className="w-full" disabled={isSubmitting}>{isSubmitting ? (isEdit ? "Saving…" : "Creating…") : (isEdit ? "Save Template" : "Create Template")}</PrimaryButton>
         </form>
