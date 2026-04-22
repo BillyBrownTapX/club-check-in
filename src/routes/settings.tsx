@@ -11,6 +11,11 @@ export const Route = createFileRoute("/settings")({
     meta: [
       { title: "Settings — Attendance HQ" },
       { name: "description", content: "Profile, organization, and preferences." },
+      { property: "og:title", content: "Settings — Attendance HQ" },
+      { property: "og:description", content: "Profile, organization, and preferences." },
+      { name: "twitter:title", content: "Settings — Attendance HQ" },
+      { name: "twitter:description", content: "Profile, organization, and preferences." },
+      { name: "robots", content: "noindex, nofollow" },
     ],
   }),
   component: SettingsRoute,

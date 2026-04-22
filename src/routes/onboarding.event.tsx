@@ -36,6 +36,11 @@ export const Route = createFileRoute("/onboarding/event")({
     meta: [
       { title: "Create your first event — Attendance HQ" },
       { name: "description", content: "Create your first event and open the QR-ready attendance flow." },
+      { property: "og:title", content: "Create your first event — Attendance HQ" },
+      { property: "og:description", content: "Create your first event and open the QR-ready attendance flow." },
+      { name: "twitter:title", content: "Create your first event — Attendance HQ" },
+      { name: "twitter:description", content: "Create your first event and open the QR-ready attendance flow." },
+      { name: "robots", content: "noindex, nofollow" },
     ],
   }),
   component: OnboardingEventRoute,

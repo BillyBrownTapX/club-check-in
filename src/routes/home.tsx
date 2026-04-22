@@ -28,6 +28,11 @@ export const Route = createFileRoute("/home")({
     meta: [
       { title: "Home — Attendance HQ" },
       { name: "description", content: "Your live event command center." },
+      { property: "og:title", content: "Home — Attendance HQ" },
+      { property: "og:description", content: "Your live event command center." },
+      { name: "twitter:title", content: "Home — Attendance HQ" },
+      { name: "twitter:description", content: "Your live event command center." },
+      { name: "robots", content: "noindex, nofollow" },
     ],
   }),
   component: HomeRoute,

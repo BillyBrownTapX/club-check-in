@@ -14,6 +14,11 @@ export const Route = createFileRoute("/live")({
     meta: [
       { title: "Live — Attendance HQ" },
       { name: "description", content: "Live event operations." },
+      { property: "og:title", content: "Live — Attendance HQ" },
+      { property: "og:description", content: "Live event operations." },
+      { name: "twitter:title", content: "Live — Attendance HQ" },
+      { name: "twitter:description", content: "Live event operations." },
+      { name: "robots", content: "noindex, nofollow" },
     ],
   }),
   component: LiveRoute,

@@ -26,6 +26,11 @@ export const Route = createFileRoute("/notifications")({
     meta: [
       { title: "Notifications — Attendance HQ" },
       { name: "description", content: "Recent activity and event milestones." },
+      { property: "og:title", content: "Notifications — Attendance HQ" },
+      { property: "og:description", content: "Recent activity and event milestones." },
+      { name: "twitter:title", content: "Notifications — Attendance HQ" },
+      { name: "twitter:description", content: "Recent activity and event milestones." },
+      { name: "robots", content: "noindex, nofollow" },
     ],
   }),
   component: NotificationsRoute,

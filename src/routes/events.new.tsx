@@ -25,6 +25,11 @@ export const Route = createFileRoute("/events/new")({
     meta: [
       { title: "Create Event — Attendance HQ" },
       { name: "description", content: "Create a new event from scratch, a template, or a duplicate." },
+      { property: "og:title", content: "Create Event — Attendance HQ" },
+      { property: "og:description", content: "Create a new event from scratch, a template, or a duplicate." },
+      { name: "twitter:title", content: "Create Event — Attendance HQ" },
+      { name: "twitter:description", content: "Create a new event from scratch, a template, or a duplicate." },
+      { name: "robots", content: "noindex, nofollow" },
     ],
   }),
   component: EventCreateRoute,

@@ -28,6 +28,11 @@ export const Route = createFileRoute("/clubs/")({
     meta: [
       { title: "Clubs — Attendance HQ" },
       { name: "description", content: "Manage your clubs and organizations." },
+      { property: "og:title", content: "Clubs — Attendance HQ" },
+      { property: "og:description", content: "Manage your clubs and organizations." },
+      { name: "twitter:title", content: "Clubs — Attendance HQ" },
+      { name: "twitter:description", content: "Manage your clubs and organizations." },
+      { name: "robots", content: "noindex, nofollow" },
     ],
   }),
   component: ClubsRoute,

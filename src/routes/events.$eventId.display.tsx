@@ -43,6 +43,11 @@ export const Route = createFileRoute("/events/$eventId/display")({
     meta: [
       { title: "QR display — Attendance HQ" },
       { name: "description", content: "Wallet-style QR display for an Attendance HQ event." },
+      { property: "og:title", content: "QR display — Attendance HQ" },
+      { property: "og:description", content: "Wallet-style QR display for an Attendance HQ event." },
+      { name: "twitter:title", content: "QR display — Attendance HQ" },
+      { name: "twitter:description", content: "Wallet-style QR display for an Attendance HQ event." },
+      { name: "robots", content: "noindex, nofollow" },
     ],
   }),
   component: EventDisplayRoute,

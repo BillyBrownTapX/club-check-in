@@ -18,6 +18,11 @@ export const Route = createFileRoute("/onboarding/club")({
     meta: [
       { title: "Create your first club — Attendance HQ" },
       { name: "description", content: "Create your club to start setting up QR attendance events." },
+      { property: "og:title", content: "Create your first club — Attendance HQ" },
+      { property: "og:description", content: "Create your club to start setting up QR attendance events." },
+      { name: "twitter:title", content: "Create your first club — Attendance HQ" },
+      { name: "twitter:description", content: "Create your club to start setting up QR attendance events." },
+      { name: "robots", content: "noindex, nofollow" },
     ],
   }),
   component: OnboardingClubRoute,

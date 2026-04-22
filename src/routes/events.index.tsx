@@ -33,6 +33,11 @@ export const Route = createFileRoute("/events/")({
     meta: [
       { title: "Events — Attendance HQ" },
       { name: "description", content: "Browse upcoming, live, and past events." },
+      { property: "og:title", content: "Events — Attendance HQ" },
+      { property: "og:description", content: "Browse upcoming, live, and past events." },
+      { name: "twitter:title", content: "Events — Attendance HQ" },
+      { name: "twitter:description", content: "Browse upcoming, live, and past events." },
+      { name: "robots", content: "noindex, nofollow" },
     ],
   }),
   component: EventsRoute,
