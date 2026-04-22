@@ -23,6 +23,8 @@ export const queryKeys = {
       ["events", "list", filter] as const,
     detail: (eventId: string) => ["events", "detail", eventId] as const,
     display: (eventId: string) => ["events", "display", eventId] as const,
+    formPayload: (input: { eventId: string; clubId: string; templateId: string; duplicateFrom: string }) =>
+      ["events", "form-payload", input] as const,
   },
   universities: {
     all: ["universities"] as const,
