@@ -738,7 +738,7 @@ export const getEventFormPayload = createServerFn({ method: "GET" })
     let initialValues: EventFormValues = {
       clubId: data.clubId,
       eventTemplateId: "",
-      eventName: "",
+      eventName: "New event",
       eventDate: buildEventDefaults().eventDate,
       startTime: buildEventDefaults().startTime,
       endTime: buildEventDefaults().endTime,
