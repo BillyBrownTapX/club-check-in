@@ -750,17 +750,35 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, onDele
       : { universityId: "", clubName: "", description: "", logoPath: null });
   }, [form, initialValues, isEdit, open]);
 
-  const submit = form.handleSubmit(async (values) => {
-    if (form.formState.isSubmitting) return;
-    setError("");
-    try {
-      await onSubmit(values);
-      onOpenChange(false);
-    } catch (submitError) {
-      setError(getManagementErrorMessage(submitError, "Unable to save club."));
-    }
-  });
+  const submit = form.handleSubmit(
+    async (values) => {
+      if (form.formState.isSubmitting) return;
+      setError("");
+      try {
+        await onSubmit(values);
+        onOpenChange(false);
+      } catch (submitError) {
+        const message = getManagementErrorMessage(submitError, "Unable to save club.");
+        setError(message);
+        toast.error(message);
+      }
+    },
+    () => {
+      setError("Please fix the highlighted fields before saving.");
+    },
+  );
   const isSubmitting = form.formState.isSubmitting;
+  const hasUniversities = universities.length > 0;
+  const clubFieldLabels: Record<string, string> = {
+    universityId: "University",
+    clubName: "Club name",
+    description: "Description",
+    logoPath: "Logo",
+    isActive: "Active status",
+  };
+  const missingClubFields = Object.keys(form.formState.errors)
+    .map((key) => clubFieldLabels[key] ?? key)
+    .filter((label, index, all) => all.indexOf(label) === index);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
