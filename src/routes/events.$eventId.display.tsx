@@ -16,8 +16,9 @@ import {
   type EventAttendanceSummary,
   type EventWithClub,
 } from "@/lib/attendance-hq";
+import { useEventRealtime } from "@/hooks/use-event-realtime";
 
-const DISPLAY_POLL_INTERVAL_MS = 3000;
+const DISPLAY_FALLBACK_POLL_INTERVAL_MS = 30_000;
 
 function DisplayError({ error }: { error: Error }) {
   return (
@@ -82,14 +83,12 @@ function EventDisplayRoute() {
     return () => { cancelled = true; };
   }, [loading, refresh, user]);
 
-  useEffect(() => {
-    if (!initialLoaded) return;
-    const id = window.setInterval(() => {
-      if (typeof document !== "undefined" && document.visibilityState === "hidden") return;
-      void refresh();
-    }, DISPLAY_POLL_INTERVAL_MS);
-    return () => window.clearInterval(id);
-  }, [initialLoaded, refresh]);
+  useEventRealtime({
+    eventId,
+    enabled: initialLoaded,
+    onChange: () => { void refresh(); },
+    fallbackPollMs: DISPLAY_FALLBACK_POLL_INTERVAL_MS,
+  });
 
   const checkInUrl = useMemo(() => {
     if (!event) return "";
