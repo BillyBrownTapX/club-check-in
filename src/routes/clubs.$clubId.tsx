@@ -365,8 +365,13 @@ function ClubDetailRoute() {
             defaultCheckInCloseOffsetMinutes: editingTemplate.default_check_in_close_offset_minutes,
           } : undefined}
           onSubmit={async (values) => {
-            if (editingTemplate) await updateTemplateMutation.mutateAsync(values as never);
-            else await createTemplateMutation.mutateAsync(values as never);
+            if (editingTemplate) {
+              const saved = await updateTemplateMutation.mutateAsync(values as never);
+              toast.success("Template saved", { description: saved.template_name });
+            } else {
+              const created = await createTemplateMutation.mutateAsync(values as never);
+              toast.success("Template created", { description: created.template_name });
+            }
           }}
         />
       </div>
