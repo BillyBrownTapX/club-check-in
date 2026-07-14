@@ -1308,6 +1308,8 @@ export const studentCheckIn = createServerFn({ method: "POST" })
       };
     }
 
+    await assertUniversityEmailAllowed(universityId, data.studentEmail);
+
     const { data: student, error: studentError } = await (await getSupabaseAdmin())
       .from("students")
       .insert({
