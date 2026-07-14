@@ -217,8 +217,8 @@ function CheckInRouteComponent() {
       }
       setSuccessAt(result.attendance.checked_in_at);
       setScreen("success");
-    } catch {
-      setGlobalError(PUBLIC_TRANSIENT_ERROR);
+    } catch (err) {
+      setGlobalError(getPublicCheckInErrorMessage(err));
     }
   });
 
@@ -235,8 +235,8 @@ function CheckInRouteComponent() {
       setPendingNineHundredNumber(values.nineHundredNumber);
       setConfirmMode("returning");
       setScreen("confirm");
-    } catch {
-      setGlobalError(PUBLIC_TRANSIENT_ERROR);
+    } catch (err) {
+      setGlobalError(getPublicCheckInErrorMessage(err));
     }
   });
 
@@ -267,8 +267,8 @@ function CheckInRouteComponent() {
       }
       setSuccessAt(result.attendance.checked_in_at);
       setScreen("success");
-    } catch {
-      setGlobalError(PUBLIC_TRANSIENT_ERROR);
+    } catch (err) {
+      setGlobalError(getPublicCheckInErrorMessage(err));
     }
   }
 
