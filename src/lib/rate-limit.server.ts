@@ -95,6 +95,12 @@ async function runCheck(key: string, config: RateLimitConfig): Promise<boolean> 
   return data !== false;
 }
 
+// Short, PII-free identifier for a qrToken used in log lines. Never log
+// the raw token: it grants public check-in access for its event.
+function hashQrTokenForLog(qrToken: string): string {
+  return createHash("sha256").update(qrToken).digest("hex").slice(0, 12);
+}
+
 // Throws RateLimitedError when the caller exceeds either the per-IP or
 // per-QR global budget. Both buckets are always hit so the two counters
 // stay in sync with real traffic.
@@ -111,5 +117,17 @@ export async function assertRateLimit(
     runCheck(globalBucketKey(scope, qrToken), globalConfig),
   ]);
 
-  if (!primaryOk || !globalOk) throw new RateLimitedError();
+  if (!primaryOk || !globalOk) {
+    if (typeof console !== "undefined") {
+      // Log the bucket that tripped (both if both) with a hashed qrToken
+      // only — no raw token, no IP, no student fields. Searchable via the
+      // `[rate-limit] tripped` tag.
+      console.error("[rate-limit] tripped", {
+        scope,
+        bucket: !primaryOk && !globalOk ? "both" : !primaryOk ? "primary" : "global",
+        qrHash: hashQrTokenForLog(qrToken),
+      });
+    }
+    throw new RateLimitedError();
+  }
 }
