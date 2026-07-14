@@ -776,7 +776,6 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, onDele
 
   const submit = form.handleSubmit(
     async (values) => {
-      if (form.formState.isSubmitting) return;
       setError("");
       try {
         await onSubmit(values);
@@ -961,7 +960,6 @@ export function TemplateDialog({ open, onOpenChange, clubId, initialValues, onSu
 
   const submit = form.handleSubmit(
     async (values) => {
-      if (form.formState.isSubmitting) return;
       setError("");
       try {
         await onSubmit(values);
@@ -1135,7 +1133,6 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
 
   const submit = form.handleSubmit(
     async (values) => {
-      if (form.formState.isSubmitting) return;
       setError("");
       try {
         await onSubmit(values);
