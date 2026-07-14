@@ -18,6 +18,7 @@ import {
   QrCode,
   RefreshCw,
   RotateCcw,
+  ShieldAlert,
   Trash2,
   UserPlus,
   X,
@@ -73,6 +74,7 @@ import {
   deleteEvent,
   duplicateEvent,
   getEventOperations,
+  regenerateEventQrToken,
   manualCheckIn,
   removeAttendance,
   restoreAttendance,
@@ -186,6 +188,7 @@ function EventDetailRoute() {
   const duplicateEventMutation = useAuthorizedServerFn(duplicateEvent);
   const deleteEventMutation = useAuthorizedServerFn(deleteEvent);
   const toggleArchiveMutation = useAuthorizedServerFn(toggleEventArchive);
+  const regenerateQrTokenMutation = useAuthorizedServerFn(regenerateEventQrToken);
 
   // Single source of truth: the events.detail query. Realtime invalidates
   // it, manual refresh invalidates it, mutations invalidate it.
@@ -534,6 +537,21 @@ function EventDetailRoute() {
     }
   };
 
+  const [regeneratingQr, setRegeneratingQr] = useState(false);
+  const handleRegenerateQrToken = async () => {
+    if (regeneratingQr) return;
+    setRegeneratingQr(true);
+    try {
+      await regenerateQrTokenMutation({ data: { eventId } });
+      toast.success("QR token regenerated. Re-share the new link.");
+      await refresh();
+    } catch (error) {
+      toast.error(getManagementErrorMessage(error, "Unable to regenerate QR token."));
+    } finally {
+      setRegeneratingQr(false);
+    }
+  };
+
   const handleManualRefresh = async () => {
     await refresh();
   };
@@ -689,6 +707,30 @@ function EventDetailRoute() {
               detail={event.is_archived ? "Bring this event back to active" : "Hide from active operations"}
               onClick={() => setArchiveDialogOpen(true)}
             />
+            <ActionSheet
+              trigger={
+                <button type="button" className="ios-list-row w-full text-left">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-destructive/10">
+                    <ShieldAlert className="h-[18px] w-[18px] text-destructive" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[15px] font-medium leading-tight text-foreground">
+                      {regeneratingQr ? "Regenerating…" : "Regenerate QR token"}
+                    </div>
+                    <div className="mt-0.5 text-[13px] text-muted-foreground">Invalidates old check-in and display links</div>
+                  </div>
+                </button>
+              }
+              title="Regenerate QR token?"
+              description="Old /check-in and /display links will stop working. Re-share the new link and re-open the Display view."
+            >
+              <ActionSheetItem
+                icon={ShieldAlert}
+                label="Yes, regenerate token"
+                destructive
+                onClick={() => void handleRegenerateQrToken()}
+              />
+            </ActionSheet>
             <ListRow
               icon={RefreshCw}
               label={refreshing ? "Refreshing…" : "Refresh now"}
@@ -1107,6 +1149,7 @@ function actionLabel(action: AttendanceActionLog) {
   if (action.action_type === "removed") return "Removed attendance";
   if (action.action_type === "restored") return "Restored attendance";
   if (action.kind === "profile_corrected") return "Corrected profile";
+  if (action.kind === "qr_token_regenerated") return "QR token regenerated";
   return "Manual check-in";
 }
 

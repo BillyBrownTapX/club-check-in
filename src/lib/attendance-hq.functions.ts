@@ -53,6 +53,7 @@ import {
   clubSchema,
   clubUpdateSchema,
   closeCheckInEarlySchema,
+  regenerateEventQrTokenSchema,
   confirmReturningInputSchema,
   correctStudentProfileSchema,
   deleteClubSchema,
@@ -316,12 +317,12 @@ const EVENT_STATUS_ORDER: Record<ManagementEventSummary["checkInStatus"], number
 };
 
 type AttendanceActionNotePayload = {
-  kind: "manual_check_in" | "removed" | "restored" | "profile_corrected";
-  studentId: string;
-  firstName: string;
-  lastName: string;
-  studentEmail: string;
-  nineHundredNumber: string;
+  kind: "manual_check_in" | "removed" | "restored" | "profile_corrected" | "qr_token_regenerated";
+  studentId?: string;
+  firstName?: string;
+  lastName?: string;
+  studentEmail?: string;
+  nineHundredNumber?: string;
   checkedInAt?: string | null;
   attendanceRecordId?: string | null;
 };
@@ -334,6 +335,17 @@ function parseAttendanceActionLog(action: Database["public"]["Tables"]["attendan
   if (!action.notes) return null;
   try {
     const parsed = JSON.parse(action.notes) as Partial<AttendanceActionNotePayload>;
+    // Event-scoped notes without a student (e.g. QR token regenerated) still
+    // belong in the action log — no PII, just the kind.
+    if (parsed.kind === "qr_token_regenerated") {
+      return {
+        ...action,
+        student: null,
+        checkedInAt: null,
+        attendanceRecordId: null,
+        kind: parsed.kind,
+      };
+    }
     if (!parsed.studentId || !parsed.firstName || !parsed.lastName || !parsed.studentEmail || !parsed.nineHundredNumber) {
       return null;
     }
@@ -2137,6 +2149,49 @@ export const closeCheckInEarly = createServerFn({ method: "POST" })
       .eq("id", data.eventId);
     if (error) throw new Error(safeMessage(error));
     return { ok: true };
+  });
+
+export const regenerateEventQrToken = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(regenerateEventQrTokenSchema)
+  .handler(async ({ data, context }) => {
+    await requireOwnedEvent(context.supabase, context.userId, data.eventId);
+
+    const admin = await getSupabaseAdmin();
+
+    // qr_token has a UNIQUE constraint. Retry once on the rare collision.
+    let lastError: { message?: string; code?: string; details?: string; status?: number } | null = null;
+    let newToken: string | null = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const candidate = createQrToken();
+      const { data: updated, error } = await admin
+        .from("events")
+        .update({ qr_token: candidate, updated_at: new Date().toISOString() })
+        .eq("id", data.eventId)
+        .select("qr_token")
+        .single();
+      if (!error && updated) {
+        newToken = updated.qr_token;
+        break;
+      }
+      lastError = error;
+      // 23505 = unique violation. Any other error, stop.
+      if (!error || error.code !== "23505") break;
+    }
+    if (!newToken) {
+      throw new Error(safeMessage(lastError, "Unable to regenerate QR token."));
+    }
+
+    // Best-effort audit note. Failure here shouldn't roll back the rotation.
+    await admin.from("attendance_actions").insert({
+      event_id: data.eventId,
+      host_id: context.userId,
+      attendance_record_id: null,
+      action_type: "note",
+      notes: buildAttendanceActionNotes({ kind: "qr_token_regenerated" }),
+    });
+
+    return { ok: true, qrToken: newToken };
   });
 
 // Cascade-delete a single event. Because the schema has no FK cascade
