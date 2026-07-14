@@ -74,6 +74,7 @@ import {
   deleteEvent,
   duplicateEvent,
   getEventOperations,
+  regenerateEventQrToken,
   manualCheckIn,
   removeAttendance,
   restoreAttendance,
