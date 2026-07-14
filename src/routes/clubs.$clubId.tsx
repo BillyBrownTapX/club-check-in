@@ -472,7 +472,9 @@ function ClubDetailRoute() {
           </div>
           {isOwner ? (
             <p className="px-1 text-[12px] text-muted-foreground">
-              Officers must already have an Attendance HQ account.
+              {data.members.some((m) => m.role === "officer")
+                ? "Officers must already have an Attendance HQ account."
+                : "Add an officer before transferring ownership."}
             </p>
           ) : null}
         </section>
