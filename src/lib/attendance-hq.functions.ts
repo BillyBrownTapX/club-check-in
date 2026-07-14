@@ -2160,7 +2160,7 @@ export const regenerateEventQrToken = createServerFn({ method: "POST" })
     const admin = await getSupabaseAdmin();
 
     // qr_token has a UNIQUE constraint. Retry once on the rare collision.
-    let lastError: unknown = null;
+    let lastError: { message?: string; code?: string; details?: string; status?: number } | null = null;
     let newToken: string | null = null;
     for (let attempt = 0; attempt < 2; attempt++) {
       const candidate = createQrToken();
