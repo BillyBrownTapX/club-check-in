@@ -258,26 +258,29 @@ function ClubDetailRoute() {
             hint="Update club details"
             onClick={() => setClubDialogOpen(true)}
           />
-          <ActionSheet
-            trigger={
-              <button
-                type="button"
-                className="ios-press flex h-full flex-col items-start justify-between gap-3 rounded-2xl bg-destructive/8 p-4 text-left"
-              >
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-destructive/15 text-destructive">
-                  <Trash2 className="h-5 w-5" />
-                </span>
-                <span>
-                  <span className="block font-display text-[15px] font-bold leading-tight text-destructive">Delete Club</span>
-                  <span className="mt-1 block text-[12px] text-muted-foreground">Remove permanently</span>
-                </span>
-              </button>
-            }
-            title="Delete this club?"
-            description="Deletes the club permanently. Clubs with events or check-in history can't be deleted — archive their events first."
-          >
-            <ActionSheetItem icon={Trash2} label="Delete club permanently" destructive onClick={handleDeleteClub} />
-          </ActionSheet>
+          {isOwner ? (
+            <ActionSheet
+              trigger={
+                <button
+                  type="button"
+                  className="ios-press flex h-full flex-col items-start justify-between gap-3 rounded-2xl bg-destructive/8 p-4 text-left"
+                >
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-destructive/15 text-destructive">
+                    <Trash2 className="h-5 w-5" />
+                  </span>
+                  <span>
+                    <span className="block font-display text-[15px] font-bold leading-tight text-destructive">Delete Club</span>
+                    <span className="mt-1 block text-[12px] text-muted-foreground">Remove permanently</span>
+                  </span>
+                </button>
+              }
+              title="Delete this club?"
+              description="Deletes the club permanently. Clubs with events or check-in history can't be deleted — archive their events first."
+            >
+              <ActionSheetItem icon={Trash2} label="Delete club permanently" destructive onClick={handleDeleteClub} />
+            </ActionSheet>
+          ) : null}
+
         </div>
 
         {/* Upcoming events */}
