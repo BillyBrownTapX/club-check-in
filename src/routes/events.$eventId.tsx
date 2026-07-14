@@ -1149,6 +1149,7 @@ function actionLabel(action: AttendanceActionLog) {
   if (action.action_type === "removed") return "Removed attendance";
   if (action.action_type === "restored") return "Restored attendance";
   if (action.kind === "profile_corrected") return "Corrected profile";
+  if (action.kind === "qr_token_regenerated") return "QR token regenerated";
   return "Manual check-in";
 }
 
