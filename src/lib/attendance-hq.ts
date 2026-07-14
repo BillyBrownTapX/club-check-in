@@ -69,6 +69,7 @@ export type AttendanceActionLog = AttendanceAction & {
   student: AttendanceActionStudentSnapshot | null;
   checkedInAt: string | null;
   attendanceRecordId: string | null;
+  kind: string | null;
 };
 
 export type EventAttendanceSummary = {

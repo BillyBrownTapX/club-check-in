@@ -69,6 +69,7 @@ import {
 import { cn } from "@/lib/utils";
 import {
   closeCheckInEarly,
+  correctStudentProfile,
   deleteEvent,
   duplicateEvent,
   getEventOperations,
@@ -180,6 +181,7 @@ function EventDetailRoute() {
   const removeAttendanceMutation = useAuthorizedServerFn(removeAttendance);
   const restoreAttendanceMutation = useAuthorizedServerFn(restoreAttendance);
   const manualCheckInMutation = useAuthorizedServerFn(manualCheckIn);
+  const correctStudentProfileMutation = useAuthorizedServerFn(correctStudentProfile);
   const closeEarlyMutation = useAuthorizedServerFn(closeCheckInEarly);
   const duplicateEventMutation = useAuthorizedServerFn(duplicateEvent);
   const deleteEventMutation = useAuthorizedServerFn(deleteEvent);
@@ -241,6 +243,10 @@ function EventDetailRoute() {
   const [manualError, setManualError] = useState<string | null>(null);
   const [manualForm, setManualForm] = useState<ManualFormState>(EMPTY_MANUAL_FORM);
   const [restoringStudentId, setRestoringStudentId] = useState<string | null>(null);
+  const [editRow, setEditRow] = useState<AttendanceRow | null>(null);
+  const [editForm, setEditForm] = useState<{ firstName: string; lastName: string; studentEmail: string }>({ firstName: "", lastName: "", studentEmail: "" });
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
   const [rosterQuery, setRosterQuery] = useState("");
   const [methodFilter, setMethodFilter] = useState<RosterMethodFilter>("all");
   const [sortMode, setSortMode] = useState<RosterSort>("newest");
@@ -434,6 +440,43 @@ function EventDetailRoute() {
       toast.error(message);
     } finally {
       setManualSubmitting(false);
+    }
+  };
+
+  const openEditDialog = (row: AttendanceRow) => {
+    if (!row.students) return;
+    setEditRow(row);
+    setEditForm({
+      firstName: row.students.first_name,
+      lastName: row.students.last_name,
+      studentEmail: row.students.student_email,
+    });
+    setEditError(null);
+  };
+
+  const handleCorrectProfile = async () => {
+    if (!editRow?.students) return;
+    setEditSubmitting(true);
+    setEditError(null);
+    try {
+      await correctStudentProfileMutation({
+        data: {
+          eventId,
+          studentId: editRow.students.id,
+          firstName: editForm.firstName,
+          lastName: editForm.lastName,
+          studentEmail: editForm.studentEmail,
+        },
+      });
+      toast.success("Student profile updated");
+      setEditRow(null);
+      await refresh();
+    } catch (error) {
+      const message = getManagementErrorMessage(error, "Unable to update student.");
+      setEditError(message);
+      toast.error(message);
+    } finally {
+      setEditSubmitting(false);
     }
   };
 
@@ -766,6 +809,17 @@ function EventDetailRoute() {
                         type="button"
                         variant="ghost"
                         size="icon"
+                        className="h-8 w-8 rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary"
+                        onClick={() => openEditDialog(row)}
+                        disabled={!row.students}
+                        aria-label={`Edit ${row.students?.first_name} ${row.students?.last_name}`}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
                         className="h-8 w-8 rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                         onClick={() => setPendingRemoveRow(row)}
                         disabled={removingId === row.id}
@@ -958,6 +1012,34 @@ function EventDetailRoute() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={editRow !== null} onOpenChange={(open) => !open && setEditRow(null)}>
+        <DialogContent className="max-h-[92vh] overflow-y-auto rounded-[2rem] border-border/90 bg-card/98 p-0 sm:max-w-lg">
+          <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-muted" />
+          <DialogHeader>
+            <div className="px-6 pt-3">
+              <DialogTitle className="text-left text-[22px] font-semibold text-foreground">Correct student profile</DialogTitle>
+              <DialogDescription className="mt-2 text-left text-sm leading-6 text-muted-foreground">Edits update this student's campus record for other club events too.</DialogDescription>
+            </div>
+          </DialogHeader>
+          <div className="space-y-4 px-6 pb-6 pt-2">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="First name"><Input className="h-11 rounded-xl" value={editForm.firstName} onChange={(e) => setEditForm((prev) => ({ ...prev, firstName: e.target.value }))} /></Field>
+              <Field label="Last name"><Input className="h-11 rounded-xl" value={editForm.lastName} onChange={(e) => setEditForm((prev) => ({ ...prev, lastName: e.target.value }))} /></Field>
+            </div>
+            <Field label="Student email"><Input className="h-11 rounded-xl" type="email" value={editForm.studentEmail} onChange={(e) => setEditForm((prev) => ({ ...prev, studentEmail: e.target.value }))} /></Field>
+            <Field label="900 number">
+              <p className="h-11 rounded-xl bg-muted/60 px-3 flex items-center text-sm text-muted-foreground">{editRow?.students?.nine_hundred_number ?? "—"}</p>
+            </Field>
+            {editError ? <p className="text-sm text-destructive">{editError}</p> : null}
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+              <SecondaryButton type="button" onClick={() => setEditRow(null)}>Cancel</SecondaryButton>
+              <PrimaryButton type="button" onClick={() => void handleCorrectProfile()} disabled={editSubmitting}>{editSubmitting ? "Saving…" : "Save changes"}</PrimaryButton>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+
       <AlertDialog open={pendingRemoveRow !== null} onOpenChange={(open) => !open && setPendingRemoveRow(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -1024,6 +1106,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function actionLabel(action: AttendanceActionLog) {
   if (action.action_type === "removed") return "Removed attendance";
   if (action.action_type === "restored") return "Restored attendance";
+  if (action.kind === "profile_corrected") return "Corrected profile";
   return "Manual check-in";
 }
 

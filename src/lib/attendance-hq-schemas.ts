@@ -164,6 +164,14 @@ export const manualAttendanceSchema = z.object({
   nineHundredNumber: z.string().trim().refine(isValidNineHundredNumber, "Enter a valid 9-digit 900 number"),
 });
 
+export const correctStudentProfileSchema = z.object({
+  eventId: z.string().uuid(),
+  studentId: z.string().uuid(),
+  firstName: z.string().trim().min(1, "Enter first name").max(80, "Too long"),
+  lastName: z.string().trim().min(1, "Enter last name").max(80, "Too long"),
+  studentEmail: emailSchema,
+});
+
 export const closeCheckInEarlySchema = z.object({
   eventId: z.string().uuid(),
 });
