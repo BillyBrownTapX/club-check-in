@@ -30,6 +30,7 @@ import {
   type HostProfile,
   type ManagementEventSummary,
   maskEmail,
+  normalizeEmail,
   type PublicStudentPreview,
   type University,
   shiftTimeString,
