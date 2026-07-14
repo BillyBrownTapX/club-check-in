@@ -1,25 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, createFileRoute } from "@tanstack/react-router";
-import { useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Maximize2, Users } from "lucide-react";
+import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { Maximize2, Users } from "lucide-react";
 import QRCode from "react-qr-code";
 import { Button } from "@/components/ui/button";
-import { useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
-import { useRequireHostRedirect } from "@/components/attendance-hq/host-management";
-import { getEventDisplayPayload } from "@/lib/attendance-hq.functions";
+import { getPublicEventDisplay } from "@/lib/attendance-hq.functions";
 import {
   formatEventDate,
   formatEventTime,
   formatTimestamp,
   getCheckInStatus,
-  type EventWithClub,
 } from "@/lib/attendance-hq";
-import { useEventRealtime } from "@/hooks/use-event-realtime";
-import { queryKeys } from "@/lib/query-keys";
 
-const DISPLAY_FALLBACK_POLL_INTERVAL_MS = 30_000;
+const POLL_INTERVAL_MS = 15_000;
 
-function PresentError({ error }: { error: Error }) {
+function DisplayError({ error }: { error: Error }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-hero px-6 text-white">
       <div className="rounded-3xl bg-white/10 p-6 text-center text-sm">{error.message}</div>
@@ -27,67 +22,58 @@ function PresentError({ error }: { error: Error }) {
   );
 }
 
-function PresentNotFound() {
+function EventUnavailable({ reason }: { reason: "not_found" | "archived" }) {
+  const message = reason === "archived"
+    ? "This event has ended and is no longer accepting check-ins."
+    : "This event could not be found. Ask the host for an updated link.";
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-hero px-6 text-white">
-      <div className="rounded-3xl bg-white/10 p-6 text-center text-sm">Event not found.</div>
+      <div className="max-w-md rounded-3xl bg-white/10 p-8 text-center backdrop-blur-md ring-1 ring-white/15">
+        <p className="font-display text-[24px] font-black">Event unavailable</p>
+        <p className="mt-2 text-[14px] text-white/80">{message}</p>
+      </div>
     </div>
   );
 }
 
-export const Route = createFileRoute("/events/$eventId/present")({
-  errorComponent: PresentError,
-  notFoundComponent: PresentNotFound,
+export const Route = createFileRoute("/display/$qrToken")({
+  errorComponent: DisplayError,
   head: () => ({
     meta: [
-      { title: "Present QR — Attendance HQ" },
-      { name: "description", content: "Large-screen QR display for event check-in." },
-      { property: "og:title", content: "Present QR — Attendance HQ" },
-      { property: "og:description", content: "Large-screen QR display for event check-in." },
-      { name: "twitter:title", content: "Present QR — Attendance HQ" },
-      { name: "twitter:description", content: "Large-screen QR display for event check-in." },
+      { title: "Event check-in — Attendance HQ" },
+      { name: "description", content: "Scan the QR to check in to this event." },
+      { property: "og:title", content: "Event check-in — Attendance HQ" },
+      { property: "og:description", content: "Scan the QR to check in to this event." },
+      { name: "twitter:title", content: "Event check-in — Attendance HQ" },
+      { name: "twitter:description", content: "Scan the QR to check in to this event." },
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),
-  component: EventPresentRoute,
+  component: PublicDisplayRoute,
 });
 
-function EventPresentRoute() {
-  const { loading, user } = useRequireHostRedirect();
-  const { eventId } = Route.useParams();
-  const queryClient = useQueryClient();
+function PublicDisplayRoute() {
+  const { qrToken } = Route.useParams();
   const [now, setNow] = useState(() => new Date());
 
-  const displayQuery = useAuthorizedQuery(
-    queryKeys.events.display(eventId),
-    getEventDisplayPayload,
-    { eventId },
-    { staleTime: 0 },
-  );
-
-  const { status: realtimeStatus, hasEverConnected: realtimeEverConnected } = useEventRealtime({
-    eventId,
-    enabled: !!displayQuery.data,
-    onChange: () => { void queryClient.invalidateQueries({ queryKey: queryKeys.events.display(eventId) }); },
-    fallbackPollMs: DISPLAY_FALLBACK_POLL_INTERVAL_MS,
+  const displayQuery = useQuery({
+    queryKey: ["public-display", qrToken] as const,
+    queryFn: () => getPublicEventDisplay({ data: { qrToken } }),
+    refetchInterval: POLL_INTERVAL_MS,
+    refetchIntervalInBackground: true,
+    staleTime: 0,
   });
-  const realtimeReconnecting = realtimeEverConnected && realtimeStatus !== "connected" && realtimeStatus !== "idle";
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 30_000);
     return () => clearInterval(t);
   }, []);
 
-  const event = (displayQuery.data?.event ?? null) as EventWithClub | null;
-  const attendanceCount = displayQuery.data?.attendanceCount ?? 0;
-  const summary = displayQuery.data?.summary ?? null;
-
   const checkInUrl = useMemo(() => {
-    if (!event) return "";
     return typeof window === "undefined"
-      ? `/check-in/${event.qr_token}`
-      : `${window.location.origin}/check-in/${event.qr_token}`;
-  }, [event]);
+      ? `/check-in/${qrToken}`
+      : `${window.location.origin}/check-in/${qrToken}`;
+  }, [qrToken]);
 
   const handleFullscreen = async () => {
     if (typeof document === "undefined") return;
@@ -99,7 +85,7 @@ function EventPresentRoute() {
     }
   };
 
-  if (loading || !user || (displayQuery.isLoading && !event)) {
+  if (displayQuery.isLoading && !displayQuery.data) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-gradient-hero text-white/80">
         Loading…
@@ -107,10 +93,19 @@ function EventPresentRoute() {
     );
   }
 
-  if (displayQuery.error && !event) return <PresentError error={displayQuery.error} />;
-  if (!event) return <PresentNotFound />;
+  if (displayQuery.error && !displayQuery.data) return <DisplayError error={displayQuery.error as Error} />;
+  const payload = displayQuery.data;
+  if (!payload) return null;
+  if (!payload.ok) return <EventUnavailable reason={payload.reason} />;
 
-  const status = getCheckInStatus(event);
+  const { event, attendanceCount, recent15m } = payload;
+  const status = getCheckInStatus({
+    check_in_opens_at: event.check_in_opens_at,
+    check_in_closes_at: event.check_in_closes_at,
+    is_active: event.is_active,
+    is_archived: event.is_archived,
+  } as never);
+
   const statusCopy = status === "open"
     ? `Check-in open until ${formatTimestamp(event.check_in_closes_at)}`
     : status === "upcoming"
@@ -128,18 +123,10 @@ function EventPresentRoute() {
       <div className="blur-orb-white -left-24 -top-24 h-[36rem] w-[36rem] opacity-25" />
       <div className="blur-orb-gold -bottom-32 -right-24 h-[40rem] w-[40rem] opacity-35" />
 
-      {/* Top bar (subtle, hides visual chrome for a projected screen) */}
       <div className="relative z-10 flex items-center justify-between px-8 pt-6">
-        <Button asChild variant="ghost" size="sm" className="rounded-full text-white/85 hover:bg-white/10 hover:text-white">
-          <Link to="/events/$eventId" params={{ eventId }} search={{ created: "" }}>
-            <ArrowLeft className="h-4 w-4" /> Back
-          </Link>
-        </Button>
         <div className="flex items-center gap-3 text-[13px] font-medium text-white/85">
-          <span className={`inline-flex h-2 w-2 rounded-full ${realtimeReconnecting ? "bg-warning animate-pulse" : status === "open" ? "bg-success" : "bg-white/60"}`} />
-          <span className="uppercase tracking-[0.18em]">
-            {realtimeReconnecting ? "Reconnecting" : status === "open" ? "Live" : status}
-          </span>
+          <span className={`inline-flex h-2 w-2 rounded-full ${status === "open" ? "bg-success" : "bg-white/60"}`} />
+          <span className="uppercase tracking-[0.18em]">{status === "open" ? "Live" : status}</span>
           <span className="text-white/50">·</span>
           <span>{timeString}</span>
         </div>
@@ -148,13 +135,11 @@ function EventPresentRoute() {
         </Button>
       </div>
 
-      {/* Main stage */}
       <div className="relative z-10 mx-auto flex min-h-[calc(100vh-6rem)] w-full max-w-[1600px] flex-col items-center justify-center px-8 py-6">
         <div className="grid w-full grid-cols-1 items-center gap-10 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-16">
-          {/* Left: event info */}
           <div className="text-center lg:text-left">
             <p className="font-display text-[clamp(14px,1.4vw,20px)] font-semibold uppercase tracking-[0.28em] text-white/70">
-              {event.clubs?.club_name ?? "Club event"}
+              {event.club_name}
             </p>
             <h1 className="mt-4 font-display text-[clamp(44px,7vw,120px)] font-black leading-[0.95] tracking-tight">
               {event.event_name}
@@ -164,7 +149,6 @@ function EventPresentRoute() {
             </p>
             <p className="mt-3 text-[clamp(14px,1.3vw,20px)] text-white/70">{statusCopy}</p>
 
-            {/* Big attendance counter */}
             <div className="mt-10 inline-flex items-end gap-6 rounded-3xl bg-white/10 px-8 py-6 backdrop-blur-md ring-1 ring-white/15">
               <div>
                 <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70">
@@ -177,23 +161,15 @@ function EventPresentRoute() {
               <div className="pb-3 text-left">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70">Last 15 min</p>
                 <p className="mt-1 font-display text-[clamp(24px,3vw,44px)] font-black leading-none tabular-nums text-accent">
-                  +{summary?.recent ?? 0}
+                  +{recent15m}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* Right: giant QR */}
           <div className="mx-auto w-full max-w-[min(46vw,42rem)] lg:mx-0">
             <div className="rounded-[2.5rem] bg-white p-[clamp(16px,2vw,32px)] shadow-[0_50px_120px_-30px_rgba(0,0,0,0.55)]">
-              {checkInUrl ? (
-                <QRCode
-                  value={checkInUrl}
-                  size={1024}
-                  className="h-auto w-full"
-                  level="H"
-                />
-              ) : null}
+              <QRCode value={checkInUrl} size={1024} className="h-auto w-full" level="H" />
             </div>
             <p className="mt-6 text-center font-display text-[clamp(20px,2.2vw,36px)] font-extrabold tracking-tight">
               Scan to check in

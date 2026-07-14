@@ -940,6 +940,76 @@ export const getEventDisplayPayload = createServerFn({ method: "GET" })
     } as EventDisplayPayload;
   });
 
+export type PublicEventDisplayPayload =
+  | {
+      ok: true;
+      event: {
+        event_name: string;
+        event_date: string;
+        start_time: string;
+        end_time: string;
+        check_in_opens_at: string;
+        check_in_closes_at: string;
+        is_active: boolean;
+        is_archived: boolean;
+        qr_token: string;
+        club_name: string;
+      };
+      attendanceCount: number;
+      recent15m: number;
+    }
+  | { ok: false; reason: "not_found" | "archived" };
+
+// Public, unauthenticated endpoint powering the /display/$qrToken TV page.
+// Returns only aggregate counts + non-PII event metadata, keyed by qr_token
+// (same capability the public check-in flow uses). No student rows, no ids.
+export const getPublicEventDisplay = createServerFn({ method: "GET" })
+  .inputValidator((input) => z.object({ qrToken: qrTokenSchema }).parse(input))
+  .handler(async ({ data }): Promise<PublicEventDisplayPayload> => {
+    await rateLimit("lookup", data.qrToken);
+    const admin = await getSupabaseAdmin();
+    const { data: event, error } = await admin
+      .from("events")
+      .select("id, event_name, event_date, start_time, end_time, check_in_opens_at, check_in_closes_at, is_active, is_archived, qr_token, clubs:club_id ( club_name )")
+      .eq("qr_token", data.qrToken)
+      .maybeSingle();
+    if (error) throw new Error(safeMessage(error));
+    if (!event) return { ok: false, reason: "not_found" };
+    if (event.is_archived) return { ok: false, reason: "archived" };
+
+    const fifteenMinAgo = new Date(Date.now() - 15 * 60_000).toISOString();
+    const [{ count: attendanceCount, error: countErr }, { count: recentCount, error: recentErr }] = await Promise.all([
+      admin.from("attendance_records").select("id", { count: "exact", head: true }).eq("event_id", event.id),
+      admin.from("attendance_records").select("id", { count: "exact", head: true }).eq("event_id", event.id).gte("checked_in_at", fifteenMinAgo),
+    ]);
+    if (countErr) throw new Error(safeMessage(countErr));
+    if (recentErr) throw new Error(safeMessage(recentErr));
+
+    const clubName = Array.isArray(event.clubs)
+      ? (event.clubs[0]?.club_name ?? "Club event")
+      : ((event.clubs as { club_name?: string } | null)?.club_name ?? "Club event");
+
+    return {
+      ok: true,
+      event: {
+        event_name: event.event_name,
+        event_date: event.event_date,
+        start_time: event.start_time,
+        end_time: event.end_time,
+        check_in_opens_at: event.check_in_opens_at,
+        check_in_closes_at: event.check_in_closes_at,
+        is_active: event.is_active,
+        is_archived: event.is_archived,
+        qr_token: event.qr_token,
+        club_name: clubName,
+      },
+      attendanceCount: attendanceCount ?? 0,
+      recent15m: recentCount ?? 0,
+    };
+  });
+
+
+
 // Attendance CSV export lives in a dedicated streaming server route at
 // src/routes/api.host.events.$eventId.attendance[.]csv.ts. Building the
 // CSV in a server fn forced us to JSON-encode the entire payload and ship

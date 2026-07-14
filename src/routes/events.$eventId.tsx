@@ -607,9 +607,10 @@ function EventDetailRoute() {
             icon={Maximize2}
             label="Display"
             hint="Project to TV"
-            to="/events/$eventId/present"
-            params={{ eventId }}
-            search={{ created: "" }}
+            onClick={() => {
+              if (typeof window === "undefined") return;
+              window.open(`/display/${event.qr_token}`, "_blank", "noopener,noreferrer");
+            }}
           />
           <ActionTile
             icon={Download}
@@ -922,9 +923,9 @@ function EventDetailRoute() {
                   <Copy className="h-4 w-4" />Copy URL
                 </Button>
                 <Button asChild type="button" variant="hero" size="sm" className="flex-1 rounded-xl">
-                  <Link to="/events/$eventId/display" params={{ eventId }} search={{ created: "" }}>
+                  <a href={`/display/${event.qr_token}`} target="_blank" rel="noopener noreferrer">
                     <Maximize2 className="h-4 w-4" />Full screen
-                  </Link>
+                  </a>
                 </Button>
               </div>
             </div>

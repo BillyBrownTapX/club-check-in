@@ -24,9 +24,9 @@ import { Route as OnboardingEventRouteImport } from './routes/onboarding.event'
 import { Route as OnboardingClubRouteImport } from './routes/onboarding.club'
 import { Route as EventsNewRouteImport } from './routes/events.new'
 import { Route as EventsEventIdRouteImport } from './routes/events.$eventId'
+import { Route as DisplayQrTokenRouteImport } from './routes/display.$qrToken'
 import { Route as ClubsClubIdRouteImport } from './routes/clubs.$clubId'
 import { Route as CheckInQrTokenRouteImport } from './routes/check-in.$qrToken'
-import { Route as EventsEventIdPresentRouteImport } from './routes/events.$eventId.present'
 import { Route as EventsEventIdEditRouteImport } from './routes/events.$eventId.edit'
 import { Route as EventsEventIdDisplayRouteImport } from './routes/events.$eventId.display'
 import { Route as ApiHostEventsEventIdAttendanceDotcsvRouteImport } from './routes/api.host.events.$eventId.attendance[.]csv'
@@ -106,6 +106,11 @@ const EventsEventIdRoute = EventsEventIdRouteImport.update({
   path: '/events/$eventId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DisplayQrTokenRoute = DisplayQrTokenRouteImport.update({
+  id: '/display/$qrToken',
+  path: '/display/$qrToken',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ClubsClubIdRoute = ClubsClubIdRouteImport.update({
   id: '/clubs/$clubId',
   path: '/clubs/$clubId',
@@ -115,11 +120,6 @@ const CheckInQrTokenRoute = CheckInQrTokenRouteImport.update({
   id: '/check-in/$qrToken',
   path: '/check-in/$qrToken',
   getParentRoute: () => rootRouteImport,
-} as any)
-const EventsEventIdPresentRoute = EventsEventIdPresentRouteImport.update({
-  id: '/present',
-  path: '/present',
-  getParentRoute: () => EventsEventIdRoute,
 } as any)
 const EventsEventIdEditRoute = EventsEventIdEditRouteImport.update({
   id: '/edit',
@@ -150,6 +150,7 @@ export interface FileRoutesByFullPath {
   '/sign-up': typeof SignUpRoute
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
+  '/display/$qrToken': typeof DisplayQrTokenRoute
   '/events/$eventId': typeof EventsEventIdRouteWithChildren
   '/events/new': typeof EventsNewRoute
   '/onboarding/club': typeof OnboardingClubRoute
@@ -158,7 +159,6 @@ export interface FileRoutesByFullPath {
   '/events/': typeof EventsIndexRoute
   '/events/$eventId/display': typeof EventsEventIdDisplayRoute
   '/events/$eventId/edit': typeof EventsEventIdEditRoute
-  '/events/$eventId/present': typeof EventsEventIdPresentRoute
   '/api/host/events/$eventId/attendance.csv': typeof ApiHostEventsEventIdAttendanceDotcsvRoute
 }
 export interface FileRoutesByTo {
@@ -173,6 +173,7 @@ export interface FileRoutesByTo {
   '/sign-up': typeof SignUpRoute
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
+  '/display/$qrToken': typeof DisplayQrTokenRoute
   '/events/$eventId': typeof EventsEventIdRouteWithChildren
   '/events/new': typeof EventsNewRoute
   '/onboarding/club': typeof OnboardingClubRoute
@@ -181,7 +182,6 @@ export interface FileRoutesByTo {
   '/events': typeof EventsIndexRoute
   '/events/$eventId/display': typeof EventsEventIdDisplayRoute
   '/events/$eventId/edit': typeof EventsEventIdEditRoute
-  '/events/$eventId/present': typeof EventsEventIdPresentRoute
   '/api/host/events/$eventId/attendance.csv': typeof ApiHostEventsEventIdAttendanceDotcsvRoute
 }
 export interface FileRoutesById {
@@ -197,6 +197,7 @@ export interface FileRoutesById {
   '/sign-up': typeof SignUpRoute
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
+  '/display/$qrToken': typeof DisplayQrTokenRoute
   '/events/$eventId': typeof EventsEventIdRouteWithChildren
   '/events/new': typeof EventsNewRoute
   '/onboarding/club': typeof OnboardingClubRoute
@@ -205,7 +206,6 @@ export interface FileRoutesById {
   '/events/': typeof EventsIndexRoute
   '/events/$eventId/display': typeof EventsEventIdDisplayRoute
   '/events/$eventId/edit': typeof EventsEventIdEditRoute
-  '/events/$eventId/present': typeof EventsEventIdPresentRoute
   '/api/host/events/$eventId/attendance.csv': typeof ApiHostEventsEventIdAttendanceDotcsvRoute
 }
 export interface FileRouteTypes {
@@ -222,6 +222,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/check-in/$qrToken'
     | '/clubs/$clubId'
+    | '/display/$qrToken'
     | '/events/$eventId'
     | '/events/new'
     | '/onboarding/club'
@@ -230,7 +231,6 @@ export interface FileRouteTypes {
     | '/events/'
     | '/events/$eventId/display'
     | '/events/$eventId/edit'
-    | '/events/$eventId/present'
     | '/api/host/events/$eventId/attendance.csv'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -245,6 +245,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/check-in/$qrToken'
     | '/clubs/$clubId'
+    | '/display/$qrToken'
     | '/events/$eventId'
     | '/events/new'
     | '/onboarding/club'
@@ -253,7 +254,6 @@ export interface FileRouteTypes {
     | '/events'
     | '/events/$eventId/display'
     | '/events/$eventId/edit'
-    | '/events/$eventId/present'
     | '/api/host/events/$eventId/attendance.csv'
   id:
     | '__root__'
@@ -268,6 +268,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/check-in/$qrToken'
     | '/clubs/$clubId'
+    | '/display/$qrToken'
     | '/events/$eventId'
     | '/events/new'
     | '/onboarding/club'
@@ -276,7 +277,6 @@ export interface FileRouteTypes {
     | '/events/'
     | '/events/$eventId/display'
     | '/events/$eventId/edit'
-    | '/events/$eventId/present'
     | '/api/host/events/$eventId/attendance.csv'
   fileRoutesById: FileRoutesById
 }
@@ -292,6 +292,7 @@ export interface RootRouteChildren {
   SignUpRoute: typeof SignUpRoute
   CheckInQrTokenRoute: typeof CheckInQrTokenRoute
   ClubsClubIdRoute: typeof ClubsClubIdRoute
+  DisplayQrTokenRoute: typeof DisplayQrTokenRoute
   EventsEventIdRoute: typeof EventsEventIdRouteWithChildren
   EventsNewRoute: typeof EventsNewRoute
   OnboardingClubRoute: typeof OnboardingClubRoute
@@ -408,6 +409,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EventsEventIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/display/$qrToken': {
+      id: '/display/$qrToken'
+      path: '/display/$qrToken'
+      fullPath: '/display/$qrToken'
+      preLoaderRoute: typeof DisplayQrTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/clubs/$clubId': {
       id: '/clubs/$clubId'
       path: '/clubs/$clubId'
@@ -421,13 +429,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/check-in/$qrToken'
       preLoaderRoute: typeof CheckInQrTokenRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/events/$eventId/present': {
-      id: '/events/$eventId/present'
-      path: '/present'
-      fullPath: '/events/$eventId/present'
-      preLoaderRoute: typeof EventsEventIdPresentRouteImport
-      parentRoute: typeof EventsEventIdRoute
     }
     '/events/$eventId/edit': {
       id: '/events/$eventId/edit'
@@ -456,13 +457,11 @@ declare module '@tanstack/react-router' {
 interface EventsEventIdRouteChildren {
   EventsEventIdDisplayRoute: typeof EventsEventIdDisplayRoute
   EventsEventIdEditRoute: typeof EventsEventIdEditRoute
-  EventsEventIdPresentRoute: typeof EventsEventIdPresentRoute
 }
 
 const EventsEventIdRouteChildren: EventsEventIdRouteChildren = {
   EventsEventIdDisplayRoute: EventsEventIdDisplayRoute,
   EventsEventIdEditRoute: EventsEventIdEditRoute,
-  EventsEventIdPresentRoute: EventsEventIdPresentRoute,
 }
 
 const EventsEventIdRouteWithChildren = EventsEventIdRoute._addFileChildren(
@@ -481,6 +480,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignUpRoute: SignUpRoute,
   CheckInQrTokenRoute: CheckInQrTokenRoute,
   ClubsClubIdRoute: ClubsClubIdRoute,
+  DisplayQrTokenRoute: DisplayQrTokenRoute,
   EventsEventIdRoute: EventsEventIdRouteWithChildren,
   EventsNewRoute: EventsNewRoute,
   OnboardingClubRoute: OnboardingClubRoute,
