@@ -809,6 +809,17 @@ function EventDetailRoute() {
                         type="button"
                         variant="ghost"
                         size="icon"
+                        className="h-8 w-8 rounded-full text-muted-foreground hover:bg-primary/10 hover:text-primary"
+                        onClick={() => openEditDialog(row)}
+                        disabled={!row.students}
+                        aria-label={`Edit ${row.students?.first_name} ${row.students?.last_name}`}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
                         className="h-8 w-8 rounded-full text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                         onClick={() => setPendingRemoveRow(row)}
                         disabled={removingId === row.id}
