@@ -1,5 +1,5 @@
 import { useNavigate, createFileRoute, Link } from "@tanstack/react-router";
-import { Bell, ChevronRight, Lock, LogOut, Mail, ShieldCheck, User as UserIcon } from "lucide-react";
+import { Bell, ChevronRight, LifeBuoy, Lock, LogOut, Mail, ShieldCheck, User as UserIcon } from "lucide-react";
 import { useAttendanceAuth } from "@/components/attendance-hq/auth-provider";
 import { HostAppShell } from "@/components/attendance-hq/host-shell";
 import { useRequireHostRedirect } from "@/components/attendance-hq/host-management";
