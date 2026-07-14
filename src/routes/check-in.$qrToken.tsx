@@ -128,14 +128,16 @@ function CheckInRouteComponent() {
     resolveRememberedStudent({ data: { qrToken, deviceToken: storedDeviceToken } })
       .then((result) => {
         if (!result.ok) {
-          // The remembered device peek already proved this student exists
-          // for this event. The most common non-ok state is
-          // already_checked_in — pre-fix we silently dropped that and the
-          // student was offered the entry buttons again, then bounced
-          // when they tried to check in. Surface it directly so they know
-          // they are already in.
           if (result.state === "already_checked_in") {
             openBlockedState(result.state);
+            return;
+          }
+          // student_not_found here means the session row is gone (server
+          // deleted it because it was expired/idle, or it never existed).
+          // Clear the stale token so we don't keep offering the fast path,
+          // and let the user proceed as first-time / returning.
+          if (result.state === "student_not_found" && typeof window !== "undefined") {
+            window.localStorage.removeItem(DEVICE_TOKEN_KEY);
           }
           return;
         }
