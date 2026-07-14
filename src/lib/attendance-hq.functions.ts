@@ -1149,6 +1149,54 @@ async function requireEventUniversityId(event: {
   return universityId;
 }
 
+// Thrown when a student email's domain is not in the university's allowlist.
+// The `code` mirrors the RateLimitedError pattern so the public UI can
+// surface the friendly message instead of the generic transient copy.
+class InvalidEmailDomainError extends Error {
+  code = "invalid_email_domain" as const;
+  constructor(message: string) {
+    super(message);
+    this.name = "InvalidEmailDomainError";
+  }
+}
+
+function formatAllowedDomains(domains: string[]): string {
+  const withAt = domains.map((d) => `@${d}`);
+  if (withAt.length === 1) return withAt[0];
+  if (withAt.length === 2) return `${withAt[0]} or ${withAt[1]}`;
+  return `${withAt.slice(0, -1).join(", ")}, or ${withAt[withAt.length - 1]}`;
+}
+
+async function assertUniversityEmailAllowed(
+  universityId: string,
+  email: string,
+): Promise<void> {
+  const normalized = normalizeEmail(email);
+  const atIndex = normalized.lastIndexOf("@");
+  const domain = atIndex >= 0 ? normalized.slice(atIndex + 1) : "";
+
+  const { data, error } = await (await getSupabaseAdmin())
+    .from("universities")
+    .select("allowed_email_domains")
+    .eq("id", universityId)
+    .maybeSingle();
+
+  if (error) throw new Error(safeMessage(error, "Unable to validate email."));
+
+  const allowed = (data?.allowed_email_domains ?? []).map((d) => d.toLowerCase());
+  if (allowed.length === 0) {
+    throw new Error(
+      "This university has no allowed email domains configured. Contact support.",
+    );
+  }
+
+  if (!domain || !allowed.includes(domain)) {
+    throw new InvalidEmailDomainError(
+      `Use your university email ending in ${formatAllowedDomains(allowed)}.`,
+    );
+  }
+}
+
 // Matches either the new per-university unique constraint or the legacy
 // global one during the deploy window.
 function isStudentNineHundredUniqueViolation(error: unknown): boolean {
