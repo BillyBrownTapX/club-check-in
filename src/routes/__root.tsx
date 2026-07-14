@@ -86,6 +86,9 @@ export const Route = createRootRouteWithContext<AppRouterContext>()({
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/939531dd-86f5-4198-8d93-569cf0bcab93" },
     ],
     links: [
+      { rel: "preconnect", href: "https://fonts.googleapis.com" },
+      { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
+      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@600;700;800;900&display=swap" },
       { rel: "stylesheet", href: appCss },
       { rel: "canonical", href: "https://attendance-hq.com" },
       { rel: "manifest", href: "/manifest.webmanifest" },
