@@ -128,6 +128,15 @@ function ClubDetailRoute() {
   const duplicateTemplateMutation = useAuthorizedMutation(duplicateEventTemplate, {
     invalidate: [queryKeys.clubs.detail(clubId)],
   });
+  const addOfficerMutation = useAuthorizedMutation(addClubOfficer, {
+    invalidate: [queryKeys.clubs.detail(clubId)],
+  });
+  const removeOfficerMutation = useAuthorizedMutation(removeClubOfficer, {
+    invalidate: [queryKeys.clubs.detail(clubId)],
+  });
+
+  const [officerDialogOpen, setOfficerDialogOpen] = useState(false);
+  const [officerEmail, setOfficerEmail] = useState("");
 
   const data = clubDetailQuery.data ?? null;
   const fetching = clubDetailQuery.isLoading;
