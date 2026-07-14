@@ -167,6 +167,29 @@ export const PRODUCT_DOMAIN = "attendance-hq.com";
 export const HOST_REDIRECT_KEY = "attendance-hq-auth-redirect";
 export const DEVICE_TOKEN_KEY = "attendance-hq-device-token";
 
+// Remembered-device tokens expire so a leaked or long-idle device stops
+// getting the welcome-back fast path. Either threshold trips the client
+// back to first-time / returning check-in.
+export const DEVICE_SESSION_MAX_AGE_DAYS = 180;
+export const DEVICE_SESSION_IDLE_DAYS = 90;
+
+export function isDeviceSessionExpired(session: {
+  created_at?: string | null;
+  last_used_at?: string | null;
+}): boolean {
+  const now = Date.now();
+  const dayMs = 24 * 60 * 60 * 1000;
+  const created = session.created_at ? new Date(session.created_at).getTime() : NaN;
+  if (Number.isFinite(created) && now - created > DEVICE_SESSION_MAX_AGE_DAYS * dayMs) {
+    return true;
+  }
+  const lastUsed = session.last_used_at ? new Date(session.last_used_at).getTime() : NaN;
+  if (Number.isFinite(lastUsed) && now - lastUsed > DEVICE_SESSION_IDLE_DAYS * dayMs) {
+    return true;
+  }
+  return false;
+}
+
 export function slugifyClubName(name: string) {
   return name
     .trim()
