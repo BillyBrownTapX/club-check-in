@@ -38,6 +38,11 @@ async function getSupabaseAdmin() {
   const mod = await import("@/integrations/supabase/client.server");
   return mod.supabaseAdmin;
 }
+async function rateLimit(scope: "lookup" | "register" | "fast", qrToken: string) {
+  const mod = await import("@/lib/rate-limit.server");
+  await mod.assertRateLimit(scope, qrToken);
+}
+
 
 import {
   clubIdInputSchema,
@@ -1028,8 +1033,11 @@ async function createAttendanceRecord(input: {
 export const studentCheckIn = createServerFn({ method: "POST" })
   .inputValidator(studentCheckInInputSchema)
   .handler(async ({ data }) => {
+    await rateLimit("register", data.qrToken);
     const eventCheck = await getEventForPublicCheckInByQr(data.qrToken);
     if (!eventCheck.ok) return eventCheck;
+
+
 
     const { data: existingStudent, error: existingStudentError } = await (await getSupabaseAdmin())
       .from("students")
@@ -1103,8 +1111,11 @@ export const studentCheckIn = createServerFn({ method: "POST" })
 export const getRememberedStudent = createServerFn({ method: "POST" })
   .inputValidator(rememberedDeviceInputSchema)
   .handler(async ({ data }) => {
+    await rateLimit("fast", data.qrToken);
     const eventCheck = await getEventForPublicCheckInByQr(data.qrToken);
     if (!eventCheck.ok) return eventCheck;
+
+
 
     const { data: session, error } = await (await getSupabaseAdmin())
       .from("student_device_sessions")
@@ -1151,8 +1162,10 @@ export const getRememberedStudent = createServerFn({ method: "POST" })
 export const fastCheckIn = createServerFn({ method: "POST" })
   .inputValidator(fastCheckInSchema)
   .handler(async ({ data }) => {
+    await rateLimit("fast", data.qrToken);
     const eventCheck = await getEventForPublicCheckInByQr(data.qrToken);
     if (!eventCheck.ok) return eventCheck;
+
 
     const { data: session, error: sessionError } = await (await getSupabaseAdmin())
       .from("student_device_sessions")
@@ -1189,8 +1202,10 @@ export const fastCheckIn = createServerFn({ method: "POST" })
 export const confirmReturningStudent = createServerFn({ method: "POST" })
   .inputValidator(confirmReturningInputSchema)
   .handler(async ({ data }) => {
+    await rateLimit("register", data.qrToken);
     const eventCheck = await getEventForPublicCheckInByQr(data.qrToken);
     if (!eventCheck.ok) return eventCheck;
+
 
     const { data: student, error } = await (await getSupabaseAdmin())
       .from("students")
@@ -1221,8 +1236,10 @@ export const confirmReturningStudent = createServerFn({ method: "POST" })
 export const lookupStudent = createServerFn({ method: "POST" })
   .inputValidator(returningLookupInputSchema)
   .handler(async ({ data }) => {
+    await rateLimit("lookup", data.qrToken);
     const eventCheck = await getEventForPublicCheckInByQr(data.qrToken);
     if (!eventCheck.ok) return eventCheck;
+
 
     const { data: student, error } = await (await getSupabaseAdmin())
       .from("students")

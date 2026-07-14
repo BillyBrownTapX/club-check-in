@@ -114,6 +114,24 @@ export type Database = {
           },
         ]
       }
+      check_in_rate_limits: {
+        Row: {
+          bucket_key: string
+          hits: number
+          window_started_at: string
+        }
+        Insert: {
+          bucket_key: string
+          hits?: number
+          window_started_at?: string
+        }
+        Update: {
+          bucket_key?: string
+          hits?: number
+          window_started_at?: string
+        }
+        Relationships: []
+      }
       clubs: {
         Row: {
           club_name: string
@@ -450,6 +468,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_rate_limit: {
+        Args: {
+          _bucket_key: string
+          _max_hits: number
+          _window_seconds: number
+        }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
