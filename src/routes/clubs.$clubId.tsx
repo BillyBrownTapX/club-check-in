@@ -383,6 +383,68 @@ function ClubDetailRoute() {
           )}
         </section>
 
+        {/* Officers */}
+        <section className="space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <SectionLabel className="mb-0 px-0">Officers</SectionLabel>
+            {isOwner ? (
+              <button
+                type="button"
+                onClick={() => { setOfficerEmail(""); setOfficerDialogOpen(true); }}
+                className="inline-flex items-center gap-1 text-[13px] font-semibold text-primary"
+                aria-label="Add officer"
+              >
+                <UserPlus className="h-4 w-4" />
+                Add
+              </button>
+            ) : null}
+          </div>
+          <div className="ios-card divide-y divide-border/60 rounded-2xl">
+            {data.members.map((member) => (
+              <div key={member.id} className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="truncate font-display text-[15px] font-semibold text-foreground">
+                      {member.fullName || member.email || "Unknown"}
+                    </span>
+                    <Chip tone={member.role === "owner" ? "success" : "muted"}>
+                      {member.role === "owner" ? "Owner" : "Officer"}
+                    </Chip>
+                  </div>
+                  {member.email ? (
+                    <div className="truncate text-[12px] text-muted-foreground">{member.email}</div>
+                  ) : null}
+                </div>
+                {isOwner && member.role === "officer" ? (
+                  <ActionSheet
+                    trigger={
+                      <button
+                        type="button"
+                        aria-label={`Remove ${member.fullName || member.email}`}
+                        className="ios-press inline-flex h-9 w-9 items-center justify-center rounded-full bg-destructive/10 text-destructive"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    }
+                    title="Remove officer?"
+                    description="They will lose access to this club."
+                  >
+                    <ActionSheetItem icon={Trash2} label="Remove officer" destructive onClick={() => handleRemoveOfficer(member)} />
+                  </ActionSheet>
+                ) : null}
+              </div>
+            ))}
+            {!data.members.length ? (
+              <div className="px-4 py-6 text-center text-[13px] text-muted-foreground">No members yet.</div>
+            ) : null}
+          </div>
+          {isOwner ? (
+            <p className="px-1 text-[12px] text-muted-foreground">
+              Officers must already have an Attendance HQ account.
+            </p>
+          ) : null}
+        </section>
+
         <ClubDialog
           open={clubDialogOpen}
           onOpenChange={setClubDialogOpen}
@@ -394,9 +456,46 @@ function ClubDetailRoute() {
             const saved = await updateClubMutation.mutateAsync(values as never);
             toast.success("Club saved", { description: saved.club_name });
           }}
-
-          onDelete={handleDeleteClub}
+          onDelete={isOwner ? handleDeleteClub : undefined}
         />
+
+        <Dialog open={officerDialogOpen} onOpenChange={setOfficerDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add officer</DialogTitle>
+              <DialogDescription>
+                Enter the email of an existing Attendance HQ host to give them officer access.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-2">
+              <Label htmlFor="officer-email">Email</Label>
+              <Input
+                id="officer-email"
+                type="email"
+                autoComplete="off"
+                placeholder="officer@ung.edu"
+                value={officerEmail}
+                onChange={(e) => setOfficerEmail(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); void handleAddOfficer(); } }}
+              />
+              <p className="text-[12px] text-muted-foreground">
+                They must already have an Attendance HQ account.
+              </p>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="ghost" onClick={() => setOfficerDialogOpen(false)}>Cancel</Button>
+              <Button
+                type="button"
+                variant="hero"
+                onClick={handleAddOfficer}
+                disabled={addOfficerMutation.isPending || !officerEmail.trim()}
+              >
+                {addOfficerMutation.isPending ? "Adding…" : "Add officer"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
 
         <TemplateDialog
           open={templateDialogOpen}
