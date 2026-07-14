@@ -238,20 +238,22 @@ export function SecondaryButton(props: React.ComponentProps<typeof Button>) {
 }
 
 export function TextInput({ label, error, className, ...props }: React.ComponentProps<typeof Input> & { label: string; error?: string }) {
+  const fieldId = props.id ?? props.name ?? label.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
     <div className="space-y-2">
-      <Label className="text-sm font-semibold text-foreground">{label}</Label>
-      <Input {...props} className={cn("h-12 rounded-xl border-primary/10 bg-background/90 px-4 text-base", className)} />
+      <Label htmlFor={fieldId} className="text-sm font-semibold text-foreground">{label}</Label>
+      <Input id={fieldId} {...props} className={cn("h-12 rounded-xl border-primary/10 bg-background/90 px-4 text-base", className)} />
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </div>
   );
 }
 
 export function TextAreaInput({ label, error, className, ...props }: React.ComponentProps<typeof Textarea> & { label: string; error?: string }) {
+  const fieldId = props.id ?? props.name ?? label.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   return (
     <div className="space-y-2">
-      <Label className="text-sm font-semibold text-foreground">{label}</Label>
-      <Textarea {...props} className={cn("min-h-28 rounded-xl border-primary/10 bg-background/90 px-4 py-3 text-base", className)} />
+      <Label htmlFor={fieldId} className="text-sm font-semibold text-foreground">{label}</Label>
+      <Textarea id={fieldId} {...props} className={cn("min-h-28 rounded-xl border-primary/10 bg-background/90 px-4 py-3 text-base", className)} />
       {error ? <p className="text-sm text-destructive">{error}</p> : null}
     </div>
   );
