@@ -426,7 +426,7 @@ export function EventCard({ event, showClub = true, onDuplicate, onDelete }: { e
             <AlertDialogHeader>
               <AlertDialogTitle>Delete this event?</AlertDialogTitle>
               <AlertDialogDescription>
-                This permanently removes the event, its attendance records, and action history. This cannot be undone.
+                Deletes the event permanently. Events with check-in history can't be deleted — archive them instead.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -890,7 +890,7 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, onDele
                 </Button>
               }
               title="Delete this club?"
-              description="This permanently removes the club, all of its events, attendance records, and templates. This cannot be undone."
+              description="Deletes the club permanently. Clubs with events or check-in history can't be deleted — archive their events first."
               onConfirm={async () => {
                 await onDelete();
                 onOpenChange(false);

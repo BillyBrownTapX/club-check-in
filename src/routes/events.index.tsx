@@ -194,7 +194,7 @@ function EventCard({ event, onDelete }: { event: ManagementEventSummary; onDelet
             </Button>
           }
           title="Delete this event?"
-          description="This permanently removes the event, its attendance records, and action history. This cannot be undone."
+          description="Deletes the event permanently. Events with check-in history can't be deleted — archive them instead."
           onConfirm={() => onDelete(event.id)}
         />
       </div>

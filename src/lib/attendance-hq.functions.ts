@@ -1684,6 +1684,19 @@ export const deleteEvent = createServerFn({ method: "POST" })
   .inputValidator(deleteEventSchema)
   .handler(async ({ data, context }) => {
     await requireOwnedEvent(context.supabase, context.userId, data.eventId);
+
+    // Guard: preserve semester evidence. Events with any check-in history
+    // can't be hard-deleted — hosts must archive them via toggleEventArchive.
+    const admin = await getSupabaseAdmin();
+    const { count, error: countError } = await admin
+      .from("attendance_records")
+      .select("id", { count: "exact", head: true })
+      .eq("event_id", data.eventId);
+    if (countError) throw new Error(safeMessage(countError, "Unable to check event history."));
+    if ((count ?? 0) > 0) {
+      throw new Error("This event has check-in records and can't be deleted. Archive it instead.");
+    }
+
     await cascadeDeleteEvent(context.supabase, data.eventId);
     return { ok: true };
   });
@@ -1696,17 +1709,32 @@ export const deleteClub = createServerFn({ method: "POST" })
 
     const admin = await getSupabaseAdmin();
 
-    // 1. Find all events in this club, cascade-delete each (attendance
-    //    actions + records first, then the event row).
+    // Guard: block hard-delete when the club still has events. Any events
+    // with attendance would destroy semester evidence; empty events must
+    // also be removed/archived first so the host makes an explicit choice.
     const { data: events, error: eventsError } = await admin
       .from("events")
       .select("id")
       .eq("club_id", data.clubId);
     if (eventsError) throw new Error(safeMessage(eventsError, "Unable to load club events."));
 
-    for (const event of events ?? []) {
-      await cascadeDeleteEvent(context.supabase, event.id);
+    if ((events?.length ?? 0) > 0) {
+      const eventIds = events!.map((e) => e.id);
+      const { count: attendanceCount, error: attendanceCountError } = await admin
+        .from("attendance_records")
+        .select("id", { count: "exact", head: true })
+        .in("event_id", eventIds);
+      if (attendanceCountError) {
+        throw new Error(safeMessage(attendanceCountError, "Unable to check club history."));
+      }
+      if ((attendanceCount ?? 0) > 0) {
+        throw new Error(
+          "This club has check-in history and can't be deleted. Archive its events instead.",
+        );
+      }
+      throw new Error("Remove or archive all events in this club before deleting it.");
     }
+
 
     // 2. Remove event templates attached to this club.
     const { error: templatesError } = await admin
