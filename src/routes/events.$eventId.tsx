@@ -537,6 +537,21 @@ function EventDetailRoute() {
     }
   };
 
+  const [regeneratingQr, setRegeneratingQr] = useState(false);
+  const handleRegenerateQrToken = async () => {
+    if (regeneratingQr) return;
+    setRegeneratingQr(true);
+    try {
+      await regenerateQrTokenMutation({ data: { eventId } });
+      toast.success("QR token regenerated. Re-share the new link.");
+      await refresh();
+    } catch (error) {
+      toast.error(getManagementErrorMessage(error, "Unable to regenerate QR token."));
+    } finally {
+      setRegeneratingQr(false);
+    }
+  };
+
   const handleManualRefresh = async () => {
     await refresh();
   };
