@@ -1527,14 +1527,22 @@ export const manualCheckIn = createServerFn({ method: "POST" })
     const event = await requireOwnedEvent(context.supabase, context.userId, data.eventId);
     const admin = await getSupabaseAdmin();
 
+    const universityId = await resolveEventUniversityId(event);
+
     let student: AttendanceActionStudentSnapshot | null = null;
     const { data: existingStudent, error: existingStudentError } = await admin
       .from("students")
-      .select("id, first_name, last_name, student_email, nine_hundred_number")
+      .select("id, first_name, last_name, student_email, nine_hundred_number, university_id")
       .eq("nine_hundred_number", data.nineHundredNumber)
       .maybeSingle();
 
     if (existingStudentError) throw new Error(safeMessage(existingStudentError, "Unable to look up student."));
+
+    // Backfill university_id when the row is missing one and this event
+    // resolves to a university. Never overwrite an existing non-null value —
+    // cross-university reassignment is out of scope for P1.1.
+    const backfillUniversity = (current: string | null) =>
+      current == null && universityId ? { university_id: universityId } : {};
 
     if (existingStudent) {
       const { data: updatedStudent, error: updatedStudentError } = await admin
@@ -1543,6 +1551,7 @@ export const manualCheckIn = createServerFn({ method: "POST" })
           first_name: data.firstName.trim(),
           last_name: data.lastName.trim(),
           student_email: data.studentEmail,
+          ...backfillUniversity(existingStudent.university_id),
         })
         .eq("id", existingStudent.id)
         .select("id, first_name, last_name, student_email, nine_hundred_number")
@@ -1557,6 +1566,7 @@ export const manualCheckIn = createServerFn({ method: "POST" })
           last_name: data.lastName.trim(),
           student_email: data.studentEmail,
           nine_hundred_number: data.nineHundredNumber,
+          university_id: universityId,
         })
         .select("id, first_name, last_name, student_email, nine_hundred_number")
         .single();
@@ -1567,7 +1577,7 @@ export const manualCheckIn = createServerFn({ method: "POST" })
         if (isUniqueViolation(createdStudentError, "students_nine_hundred_number_key")) {
           const { data: raced, error: racedError } = await admin
             .from("students")
-            .select("id, first_name, last_name, student_email, nine_hundred_number")
+            .select("id, first_name, last_name, student_email, nine_hundred_number, university_id")
             .eq("nine_hundred_number", data.nineHundredNumber)
             .maybeSingle();
           if (racedError) throw new Error(safeMessage(racedError, "Unable to look up student."));
@@ -1578,6 +1588,7 @@ export const manualCheckIn = createServerFn({ method: "POST" })
                 first_name: data.firstName.trim(),
                 last_name: data.lastName.trim(),
                 student_email: data.studentEmail,
+                ...backfillUniversity(raced.university_id),
               })
               .eq("id", raced.id)
               .select("id, first_name, last_name, student_email, nine_hundred_number")
