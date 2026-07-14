@@ -316,12 +316,12 @@ const EVENT_STATUS_ORDER: Record<ManagementEventSummary["checkInStatus"], number
 };
 
 type AttendanceActionNotePayload = {
-  kind: "manual_check_in" | "removed" | "restored" | "profile_corrected";
-  studentId: string;
-  firstName: string;
-  lastName: string;
-  studentEmail: string;
-  nineHundredNumber: string;
+  kind: "manual_check_in" | "removed" | "restored" | "profile_corrected" | "qr_token_regenerated";
+  studentId?: string;
+  firstName?: string;
+  lastName?: string;
+  studentEmail?: string;
+  nineHundredNumber?: string;
   checkedInAt?: string | null;
   attendanceRecordId?: string | null;
 };
@@ -334,6 +334,17 @@ function parseAttendanceActionLog(action: Database["public"]["Tables"]["attendan
   if (!action.notes) return null;
   try {
     const parsed = JSON.parse(action.notes) as Partial<AttendanceActionNotePayload>;
+    // Event-scoped notes without a student (e.g. QR token regenerated) still
+    // belong in the action log — no PII, just the kind.
+    if (parsed.kind === "qr_token_regenerated") {
+      return {
+        ...action,
+        student: null,
+        checkedInAt: null,
+        attendanceRecordId: null,
+        kind: parsed.kind,
+      };
+    }
     if (!parsed.studentId || !parsed.firstName || !parsed.lastName || !parsed.studentEmail || !parsed.nineHundredNumber) {
       return null;
     }
