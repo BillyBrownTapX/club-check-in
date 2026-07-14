@@ -1106,6 +1106,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 function actionLabel(action: AttendanceActionLog) {
   if (action.action_type === "removed") return "Removed attendance";
   if (action.action_type === "restored") return "Restored attendance";
+  if (action.kind === "profile_corrected") return "Corrected profile";
   return "Manual check-in";
 }
 
