@@ -959,8 +959,8 @@ export function TemplateDialog({ open, onOpenChange, clubId, initialValues, onSu
             <TimeInput label="Default end time" error={form.formState.errors.defaultEndTime?.message} {...form.register("defaultEndTime")} />
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <TextInput type="number" label="Open offset minutes" error={form.formState.errors.defaultCheckInOpenOffsetMinutes?.message} {...form.register("defaultCheckInOpenOffsetMinutes", { valueAsNumber: true })} />
-            <TextInput type="number" label="Close offset minutes" error={form.formState.errors.defaultCheckInCloseOffsetMinutes?.message} {...form.register("defaultCheckInCloseOffsetMinutes", { valueAsNumber: true })} />
+            <TextInput type="number" label="Open offset minutes" error={form.formState.errors.defaultCheckInOpenOffsetMinutes?.message} {...form.register("defaultCheckInOpenOffsetMinutes", { setValueAs: (v) => (v === "" || v === null || v === undefined ? undefined : Number(v)) })} />
+            <TextInput type="number" label="Close offset minutes" error={form.formState.errors.defaultCheckInCloseOffsetMinutes?.message} {...form.register("defaultCheckInCloseOffsetMinutes", { setValueAs: (v) => (v === "" || v === null || v === undefined ? undefined : Number(v)) })} />
           </div>
           {missingTemplateFields.length > 0 ? (
             <div className="rounded-2xl bg-destructive/10 p-4 text-sm text-destructive" role="alert">
