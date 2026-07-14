@@ -236,6 +236,7 @@ function EventDetailRoute() {
   const [duplicating, setDuplicating] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [manualDialogOpen, setManualDialogOpen] = useState(false);
+  const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [manualSubmitting, setManualSubmitting] = useState(false);
   const [manualError, setManualError] = useState<string | null>(null);
   const [manualForm, setManualForm] = useState<ManualFormState>(EMPTY_MANUAL_FORM);
@@ -591,11 +592,9 @@ function EventDetailRoute() {
           <ActionTile
             icon={QrCode}
             label="Show QR"
-            hint="Full screen"
+            hint="Quick view & copy link"
             tone="gold"
-            to="/events/$eventId/display"
-            params={{ eventId }}
-            search={{ created: "" }}
+            onClick={() => setQrDialogOpen(true)}
           />
           <ActionTile
             icon={UserPlus}
@@ -901,6 +900,37 @@ function EventDetailRoute() {
           </div>
         </details>
       </div>
+
+      <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
+        <DialogContent className="rounded-[2rem] border-border/90 bg-card/98 p-0 sm:max-w-md">
+          <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-muted" />
+          <DialogHeader>
+            <div className="px-6 pt-3">
+              <DialogTitle className="text-left text-[22px] font-semibold text-foreground">Check-in QR</DialogTitle>
+              <DialogDescription className="mt-2 text-left text-sm leading-6 text-muted-foreground">Scan to check in, or copy the URL to share.</DialogDescription>
+            </div>
+          </DialogHeader>
+          <div className="space-y-4 px-6 pb-6 pt-2">
+            <div className="mx-auto w-full max-w-[16rem] rounded-2xl bg-white p-4 shadow-sm">
+              {checkInUrl ? <QRCode value={checkInUrl} size={240} className="h-auto w-full" /> : null}
+            </div>
+            <div className="space-y-2 rounded-2xl bg-secondary/60 p-3">
+              <p className="text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground">Check-in URL</p>
+              <p className="break-all text-[12px] text-foreground">{checkInUrl}</p>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" size="sm" className="flex-1 rounded-xl" onClick={() => void handleCopyLink()}>
+                  <Copy className="h-4 w-4" />Copy URL
+                </Button>
+                <Button asChild type="button" variant="hero" size="sm" className="flex-1 rounded-xl">
+                  <Link to="/events/$eventId/display" params={{ eventId }} search={{ created: "" }}>
+                    <Maximize2 className="h-4 w-4" />Full screen
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={manualDialogOpen} onOpenChange={setManualDialogOpen}>
         <DialogContent className="max-h-[92vh] overflow-y-auto rounded-[2rem] border-border/90 bg-card/98 p-0 sm:max-w-lg">
