@@ -101,7 +101,7 @@ function EventEditRoute() {
               </Button>
             }
             title="Delete this event?"
-            description="This permanently removes the event, its attendance records, and action history. This cannot be undone."
+            description="Deletes the event permanently. Events with check-in history can't be deleted — archive them instead."
             onConfirm={async () => {
               await deleteEventMutation.mutateAsync({ eventId } as never);
               toast.success("Event deleted");

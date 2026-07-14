@@ -665,7 +665,7 @@ function EventDetailRoute() {
                 </button>
               }
               title="Delete this event?"
-              description="This permanently removes the event, attendance records, and history."
+              description="Deletes the event permanently. Events with check-in history can't be deleted — archive them instead."
             >
               <ActionSheetItem
                 icon={Trash2}
