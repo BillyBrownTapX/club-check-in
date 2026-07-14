@@ -164,6 +164,30 @@ function ClubDetailRoute() {
   if (!data) return <ClubDetailNotFound />;
 
   const universityLabel = data.club.universities?.name ?? "University needed";
+  const isOwner = data.viewerRole === "owner";
+
+  const handleAddOfficer = async () => {
+    const email = officerEmail.trim();
+    if (!email) return;
+    try {
+      await addOfficerMutation.mutateAsync({ clubId, email } as never);
+      toast.success("Officer added");
+      setOfficerEmail("");
+      setOfficerDialogOpen(false);
+    } catch (e) {
+      toast.error(getManagementErrorMessage(e, "Unable to add officer."));
+    }
+  };
+
+  const handleRemoveOfficer = async (membership: ClubMemberEntry) => {
+    try {
+      await removeOfficerMutation.mutateAsync({ clubId, membershipId: membership.id } as never);
+      toast.success("Officer removed");
+    } catch (e) {
+      toast.error(getManagementErrorMessage(e, "Unable to remove officer."));
+    }
+  };
+
 
   return (
     <ManagementPageShell>
