@@ -188,6 +188,7 @@ function EventDetailRoute() {
   const duplicateEventMutation = useAuthorizedServerFn(duplicateEvent);
   const deleteEventMutation = useAuthorizedServerFn(deleteEvent);
   const toggleArchiveMutation = useAuthorizedServerFn(toggleEventArchive);
+  const regenerateQrTokenMutation = useAuthorizedServerFn(regenerateEventQrToken);
 
   // Single source of truth: the events.detail query. Realtime invalidates
   // it, manual refresh invalidates it, mutations invalidate it.
