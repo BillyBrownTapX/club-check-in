@@ -1236,8 +1236,10 @@ export const confirmReturningStudent = createServerFn({ method: "POST" })
 export const lookupStudent = createServerFn({ method: "POST" })
   .inputValidator(returningLookupInputSchema)
   .handler(async ({ data }) => {
+    await rateLimit("lookup", data.qrToken);
     const eventCheck = await getEventForPublicCheckInByQr(data.qrToken);
     if (!eventCheck.ok) return eventCheck;
+
 
     const { data: student, error } = await (await getSupabaseAdmin())
       .from("students")
