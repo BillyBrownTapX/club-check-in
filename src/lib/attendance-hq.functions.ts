@@ -1120,8 +1120,11 @@ async function getExistingAttendance(eventId: string, studentId: string) {
 
 // Resolve the university a student should be bound to for this event.
 // Prefer the event's own university_id (kept in sync by a DB trigger), then
-// fall back to the owning club's university_id. Returns null when neither is
-// set so callers can safely no-op instead of failing check-in.
+// fall back to the owning club's university_id. As of P1.2, students.900
+// uniqueness is scoped per-university, so every check-in path REQUIRES a
+// university. Callers must handle the null return by refusing the check-in
+// with a clear operator-facing error rather than falling back to a global
+// lookup that would silently cross university boundaries.
 async function resolveEventUniversityId(event: {
   university_id: string | null;
   club_id: string;
@@ -1133,6 +1136,26 @@ async function resolveEventUniversityId(event: {
     .eq("id", event.club_id)
     .maybeSingle();
   return data?.university_id ?? null;
+}
+
+async function requireEventUniversityId(event: {
+  university_id: string | null;
+  club_id: string;
+}): Promise<string> {
+  const universityId = await resolveEventUniversityId(event);
+  if (!universityId) {
+    throw new Error("Event is missing a university. Contact support.");
+  }
+  return universityId;
+}
+
+// Matches either the new per-university unique constraint or the legacy
+// global one during the deploy window.
+function isStudentNineHundredUniqueViolation(error: unknown): boolean {
+  return (
+    isUniqueViolation(error, "students_university_id_nine_hundred_number_key") ||
+    isUniqueViolation(error, "students_nine_hundred_number_key")
+  );
 }
 
 // Detects a Postgres unique_violation (23505). Optionally narrows to a
