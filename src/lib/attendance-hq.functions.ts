@@ -1489,8 +1489,39 @@ export const manualCheckIn = createServerFn({ method: "POST" })
         })
         .select("id, first_name, last_name, student_email, nine_hundred_number")
         .single();
-      if (createdStudentError || !createdStudent) throw new Error(safeMessage(createdStudentError, "Unable to save student."));
-      student = createdStudent as AttendanceActionStudentSnapshot;
+      if (createdStudentError || !createdStudent) {
+        // Race: parallel manual/public submit inserted the same 900 number
+        // between the lookup and this insert. Re-read and continue through
+        // the update path used when the student was found initially.
+        if (isUniqueViolation(createdStudentError, "students_nine_hundred_number_key")) {
+          const { data: raced, error: racedError } = await admin
+            .from("students")
+            .select("id, first_name, last_name, student_email, nine_hundred_number")
+            .eq("nine_hundred_number", data.nineHundredNumber)
+            .maybeSingle();
+          if (racedError) throw new Error(safeMessage(racedError, "Unable to look up student."));
+          if (raced) {
+            const { data: updatedStudent, error: updatedStudentError } = await admin
+              .from("students")
+              .update({
+                first_name: data.firstName.trim(),
+                last_name: data.lastName.trim(),
+                student_email: data.studentEmail,
+              })
+              .eq("id", raced.id)
+              .select("id, first_name, last_name, student_email, nine_hundred_number")
+              .single();
+            if (updatedStudentError || !updatedStudent) throw new Error(safeMessage(updatedStudentError, "Unable to update student."));
+            student = updatedStudent as AttendanceActionStudentSnapshot;
+          } else {
+            throw new Error(safeMessage(createdStudentError, "Unable to save student."));
+          }
+        } else {
+          throw new Error(safeMessage(createdStudentError, "Unable to save student."));
+        }
+      } else {
+        student = createdStudent as AttendanceActionStudentSnapshot;
+      }
     }
 
     const existingAttendance = await getExistingAttendance(event.id, student.id);
@@ -1506,7 +1537,15 @@ export const manualCheckIn = createServerFn({ method: "POST" })
       })
       .select("id, checked_in_at")
       .single();
-    if (attendanceError || !attendance) throw new Error(safeMessage(attendanceError, "Unable to save attendance."));
+    if (attendanceError || !attendance) {
+      // Race: another check-in landed for (event_id, student_id) between the
+      // pre-check and this insert. Surface the same friendly message the
+      // pre-check uses instead of a raw Postgres error.
+      if (isUniqueViolation(attendanceError, "attendance_records_event_id_student_id_key")) {
+        throw new Error("This student is already checked in.");
+      }
+      throw new Error(safeMessage(attendanceError, "Unable to save attendance."));
+    }
 
     const { error: actionError } = await admin.from("attendance_actions").insert({
       event_id: event.id,
