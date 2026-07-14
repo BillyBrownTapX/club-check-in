@@ -199,6 +199,11 @@ export const removeClubOfficerSchema = z.object({
   membershipId: z.string().uuid(),
 });
 
+export const transferClubOwnershipSchema = z.object({
+  clubId: z.string().uuid(),
+  membershipId: z.string().uuid(),
+});
+
 export const deleteEventSchema = z.object({
   eventId: z.string().uuid(),
 });
