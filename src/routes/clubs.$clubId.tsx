@@ -431,21 +431,38 @@ function ClubDetailRoute() {
                   ) : null}
                 </div>
                 {isOwner && member.role === "officer" ? (
-                  <ActionSheet
-                    trigger={
-                      <button
-                        type="button"
-                        aria-label={`Remove ${member.fullName || member.email}`}
-                        className="ios-press inline-flex h-9 w-9 items-center justify-center rounded-full bg-destructive/10 text-destructive"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    }
-                    title="Remove officer?"
-                    description="They will lose access to this club."
-                  >
-                    <ActionSheetItem icon={Trash2} label="Remove officer" destructive onClick={() => handleRemoveOfficer(member)} />
-                  </ActionSheet>
+                  <div className="flex items-center gap-2">
+                    <ActionSheet
+                      trigger={
+                        <button
+                          type="button"
+                          aria-label={`Transfer ownership to ${member.fullName || member.email}`}
+                          className="ios-press inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary"
+                        >
+                          <ArrowRightLeft className="h-4 w-4" />
+                        </button>
+                      }
+                      title="Transfer ownership?"
+                      description={`You will become an officer. ${member.fullName || member.email || "This officer"} will own this club and can delete it or manage officers.`}
+                    >
+                      <ActionSheetItem icon={ArrowRightLeft} label="Transfer ownership" destructive onClick={() => handleTransferOwnership(member)} />
+                    </ActionSheet>
+                    <ActionSheet
+                      trigger={
+                        <button
+                          type="button"
+                          aria-label={`Remove ${member.fullName || member.email}`}
+                          className="ios-press inline-flex h-9 w-9 items-center justify-center rounded-full bg-destructive/10 text-destructive"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      }
+                      title="Remove officer?"
+                      description="They will lose access to this club."
+                    >
+                      <ActionSheetItem icon={Trash2} label="Remove officer" destructive onClick={() => handleRemoveOfficer(member)} />
+                    </ActionSheet>
+                  </div>
                 ) : null}
               </div>
             ))}
