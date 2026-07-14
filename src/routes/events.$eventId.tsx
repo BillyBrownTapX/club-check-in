@@ -181,6 +181,7 @@ function EventDetailRoute() {
   const removeAttendanceMutation = useAuthorizedServerFn(removeAttendance);
   const restoreAttendanceMutation = useAuthorizedServerFn(restoreAttendance);
   const manualCheckInMutation = useAuthorizedServerFn(manualCheckIn);
+  const correctStudentProfileMutation = useAuthorizedServerFn(correctStudentProfile);
   const closeEarlyMutation = useAuthorizedServerFn(closeCheckInEarly);
   const duplicateEventMutation = useAuthorizedServerFn(duplicateEvent);
   const deleteEventMutation = useAuthorizedServerFn(deleteEvent);
