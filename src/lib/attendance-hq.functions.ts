@@ -1779,6 +1779,70 @@ export const restoreAttendance = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+
+export const correctStudentProfile = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(correctStudentProfileSchema)
+  .handler(async ({ data, context }) => {
+    const event = await requireOwnedEvent(context.supabase, context.userId, data.eventId);
+    const admin = await getSupabaseAdmin();
+
+    // Load the student (identity-key fields stay put).
+    const { data: student, error: studentError } = await admin
+      .from("students")
+      .select("id, nine_hundred_number, university_id")
+      .eq("id", data.studentId)
+      .maybeSingle();
+    if (studentError) throw new Error(safeMessage(studentError, "Unable to look up student."));
+    if (!student) throw notFound();
+
+    // Roster gate: student must already be on this event's roster.
+    const { data: rosterRow, error: rosterError } = await admin
+      .from("attendance_records")
+      .select("id")
+      .eq("event_id", event.id)
+      .eq("student_id", student.id)
+      .maybeSingle();
+    if (rosterError) throw new Error(safeMessage(rosterError, "Unable to verify roster."));
+    if (!rosterRow) throw new Error("Student is not on this event's roster.");
+
+    // Domain gate (P1.3) against event's university.
+    const universityId = await requireEventUniversityId(event);
+    await assertUniversityEmailAllowed(universityId, data.studentEmail);
+
+    // Update name/email only. Never touch nine_hundred_number or university_id.
+    const { data: updated, error: updateError } = await admin
+      .from("students")
+      .update({
+        first_name: data.firstName.trim(),
+        last_name: data.lastName.trim(),
+        student_email: data.studentEmail,
+      })
+      .eq("id", student.id)
+      .select("id, first_name, last_name, student_email, nine_hundred_number")
+      .single();
+    if (updateError || !updated) throw new Error(safeMessage(updateError, "Unable to update student."));
+
+    const { error: actionError } = await admin.from("attendance_actions").insert({
+      event_id: event.id,
+      attendance_record_id: rosterRow.id,
+      host_id: context.userId,
+      action_type: "note",
+      notes: buildAttendanceActionNotes({
+        kind: "profile_corrected",
+        studentId: updated.id,
+        firstName: updated.first_name,
+        lastName: updated.last_name,
+        studentEmail: updated.student_email,
+        nineHundredNumber: updated.nine_hundred_number,
+        attendanceRecordId: rosterRow.id,
+      }),
+    });
+    if (actionError) throw new Error(safeMessage(actionError, "Unable to record action."));
+
+    return { ok: true, student: updated as AttendanceActionStudentSnapshot };
+  });
+
 export const toggleEventArchive = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(toggleEventArchiveSchema)
