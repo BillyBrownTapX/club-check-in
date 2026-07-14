@@ -607,9 +607,10 @@ function EventDetailRoute() {
             icon={Maximize2}
             label="Display"
             hint="Project to TV"
-            to="/events/$eventId/present"
-            params={{ eventId }}
-            search={{ created: "" }}
+            onClick={() => {
+              if (typeof window === "undefined") return;
+              window.open(`/display/${event.qr_token}`, "_blank", "noopener,noreferrer");
+            }}
           />
           <ActionTile
             icon={Download}
