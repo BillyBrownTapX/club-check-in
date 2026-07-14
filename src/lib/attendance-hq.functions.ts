@@ -1066,6 +1066,19 @@ async function getExistingAttendance(eventId: string, studentId: string) {
   return data;
 }
 
+// Detects a Postgres unique_violation (23505). Optionally narrows to a
+// specific constraint name so unrelated unique conflicts don't get mistaken
+// for the one the caller is guarding against.
+function isUniqueViolation(error: unknown, constraint?: string): boolean {
+  if (!error || typeof error !== "object") return false;
+  const e = error as { code?: string; message?: string; details?: string };
+  const is23505 = e.code === "23505" || /duplicate key value|unique constraint/i.test(e.message ?? "");
+  if (!is23505) return false;
+  if (!constraint) return true;
+  const haystack = `${e.message ?? ""} ${e.details ?? ""}`;
+  return haystack.includes(constraint);
+}
+
 async function createAttendanceRecord(input: {
   event: { id: string };
   studentId: string;
@@ -1091,7 +1104,23 @@ async function createAttendanceRecord(input: {
     .select("id, checked_in_at")
     .single();
 
-  if (error || !attendance) throw new Error(safeMessage(error, "Unable to record attendance"));
+  if (error) {
+    // Race: another request inserted the same (event_id, student_id) between
+    // the pre-check and this insert. Re-read and surface as already_checked_in
+    // so the public UI can render the friendly state instead of a raw error.
+    if (isUniqueViolation(error, "attendance_records_event_id_student_id_key")) {
+      const raced = await getExistingAttendance(input.event.id, input.studentId);
+      if (raced) {
+        return {
+          ok: false as const,
+          state: "already_checked_in" as const,
+          checkedInAt: raced.checked_in_at,
+        };
+      }
+    }
+    throw new Error(safeMessage(error, "Unable to record attendance"));
+  }
+  if (!attendance) throw new Error(safeMessage(null, "Unable to record attendance"));
   return { ok: true as const, attendance };
 }
 
@@ -1147,7 +1176,34 @@ export const studentCheckIn = createServerFn({ method: "POST" })
       .select("id, first_name, last_name, student_email")
       .single();
 
-    if (studentError || !student) throw new Error(safeMessage(studentError, "Unable to save student"));
+    if (studentError || !student) {
+      // Race: a parallel first-time submission inserted the same 900 number
+      // between our lookup and insert. Re-read and hand off through the
+      // returning-student preview path, matching the pre-check branch above.
+      if (isUniqueViolation(studentError, "students_nine_hundred_number_key")) {
+        const { data: raced } = await (await getSupabaseAdmin())
+          .from("students")
+          .select("id, first_name, last_name, student_email")
+          .eq("nine_hundred_number", data.nineHundredNumber)
+          .maybeSingle();
+        if (raced) {
+          const existingAttendance = await getExistingAttendance(eventCheck.event.id, raced.id);
+          if (existingAttendance) {
+            return {
+              ok: false as const,
+              state: "already_checked_in" as const,
+              checkedInAt: existingAttendance.checked_in_at,
+            };
+          }
+          return {
+            ok: false as const,
+            state: "student_exists" as const,
+            student: buildStudentPreview(raced),
+          };
+        }
+      }
+      throw new Error(safeMessage(studentError, "Unable to save student"));
+    }
 
     const attendanceResult = await createAttendanceRecord({
       event: eventCheck.event,
