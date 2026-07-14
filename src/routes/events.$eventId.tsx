@@ -236,6 +236,7 @@ function EventDetailRoute() {
   const [duplicating, setDuplicating] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [manualDialogOpen, setManualDialogOpen] = useState(false);
+  const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [manualSubmitting, setManualSubmitting] = useState(false);
   const [manualError, setManualError] = useState<string | null>(null);
   const [manualForm, setManualForm] = useState<ManualFormState>(EMPTY_MANUAL_FORM);
