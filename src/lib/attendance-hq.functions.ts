@@ -53,6 +53,7 @@ import {
   clubSchema,
   clubUpdateSchema,
   closeCheckInEarlySchema,
+  regenerateEventQrTokenSchema,
   confirmReturningInputSchema,
   correctStudentProfileSchema,
   deleteClubSchema,
