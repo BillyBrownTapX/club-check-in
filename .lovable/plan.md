@@ -1,41 +1,56 @@
-## Diagnosis
+## Goal
+Make the "Display" action open a **public, no-login page** built for TVs/projectors. Anyone with the URL can see the event's name, times, live check-in count, and a big scannable QR — no host account required.
 
-You are not reaching the backend create-club action when the button is clicked. The network trace shows logo uploads and read requests, but no create-club server request after repeated “Create Club” clicks. That means the form is failing client-side validation first, so the button briefly flips to “Creating…” and then resets.
+## Why the current page doesn't work for this
+The current `/events/$eventId/present` route:
+- Calls `useRequireHostRedirect()` → bounces logged-out visitors to sign-in.
+- Loads data via `getEventDisplayPayload`, a server function protected by `requireSupabaseAuth` that also requires the caller to *own* the event.
 
-The most likely blocker is the required University value. The club schema requires `universityId` to be a valid ID, and the create dialog starts with `universityId: ""`. If the University select is still empty, stale, disabled, or visually unclear on mobile, the form refuses to submit before any database write happens. The current UI can still feel like “nothing happened” because the invalid-submit handler only shows a generic message/toast and does not scroll/focus the user to the exact blocker.
+So a TV signed into nothing, or a laptop plugged into an AV cart, currently can't render it.
 
-## Workorder
+## Changes
 
-### 1. Make the create-club blocker obvious
-- Update `ClubDialog` so create and edit validation errors appear at the top of the visible dialog immediately after submit.
-- On invalid submit, scroll the dialog content to the top and focus/highlight the first invalid field, especially University.
-- Add a direct message for create mode when University is missing: “Choose a university to create this club.”
-- Keep the submit button disabled only when creation truly cannot proceed, and show the reason next to the button.
+### 1. New public server function `getPublicEventDisplay`
+File: `src/lib/attendance-hq.functions.ts`
 
-### 2. Prevent missing University from being a silent failure
-- If the host has exactly one available university, preselect it automatically for create-club and onboarding-club forms.
-- If the host has zero universities, show a blocking state before the rest of the form instead of letting the user fill fields that cannot be submitted.
-- Make the University select placeholder and error state visually stronger on mobile.
+- `createServerFn({ method: "GET" })` with **no auth middleware**.
+- Input: `{ qrToken: string }` (Zod-validated). We key by `qr_token` — same capability model the public check-in flow already uses — instead of the internal event UUID.
+- Uses the admin client (loaded inside the handler) to read only these public fields:
+  - event: `event_name`, `event_date`, `start_time`, `end_time`, `check_in_opens_at`, `check_in_closes_at`, `is_active`, `is_archived`, `qr_token`
+  - club: `club_name`
+  - `attendanceCount` (head count only)
+  - `recent15m` (count of `attendance_records` inserted in the last 15 min)
+- Returns **no PII** — no student names, emails, 900 numbers, or IDs. If the event doesn't exist or is archived, returns a `notFound: true` shape so the page can render a friendly "Event unavailable" state.
 
-### 3. Harden the create submit path
-- Wrap the `clubs.index.tsx` create submit in explicit `try/catch` so backend errors are always shown as a toast and inline dialog error.
-- Ensure a successful create closes the dialog, shows a success toast, invalidates club lists, and navigates or visibly shows the new club.
-- Prevent duplicate click loops while validation or submission is in progress.
+### 2. New public route `src/routes/display.$qrToken.tsx`
+- Path: `/display/$qrToken` (top level, not under `/api/public/*` — that prefix is for HTTP endpoints, not pages).
+- `head()`: `robots: noindex, nofollow`, page-specific title.
+- **No `useRequireHostRedirect`.** Anyone can open it.
+- Uses `useQuery` (not `useAuthorizedQuery`) calling `getPublicEventDisplay` with `{ qrToken }`.
+- Auto-refresh every 15 s via `refetchInterval` for the live counter (realtime channels aren't reliably reachable anonymously, so we use lightweight polling instead).
+- Layout: reuse the large-screen composition from `events.$eventId.present.tsx` — giant event title, date/time, giant QR encoding `${origin}/check-in/${qrToken}`, big "Checked in" counter, "Last 15 min" delta, live/upcoming/closed status pill, fullscreen toggle.
+- Removes the "Back" button and any host-only controls so it's safe to leave on a TV.
 
-### 4. Check backend consistency
-- Confirm the `clubs.university_id` column is now required and that all existing club rows have valid universities.
-- Confirm the create-club server function validates `universityId`, sets `host_id` from the signed-in user, and returns clear errors if a write is rejected.
-- Verify the current user can read available universities and create clubs under the existing access rules.
+### 3. Wire the Display button
+File: `src/routes/events.$eventId.tsx`
 
-### 5. Add regression coverage for production readiness
-- Add a focused browser test for: open New Club, leave University blank, click Create, see visible University error and focus.
-- Add a focused browser test for: create a valid club, see success feedback, and verify the club appears in the list.
-- Add a backend/data check to ensure future migrations cannot reintroduce nullable club universities.
+- "Display / Project to TV" `ActionTile` → link to `/display/$qrToken` using the event's `qr_token`.
+- Open in a new tab (`target="_blank"`) so the host's admin session on the current tab is untouched when the URL is copy-pasted onto a TV browser.
+- Also update the "Full screen" button inside the "Show QR" modal to point at the same public URL.
 
-## Acceptance criteria
+### 4. Retire the private `/present` route
+- Delete `src/routes/events.$eventId.present.tsx` (added in the previous turn) since `/display/$qrToken` fully replaces it.
+- Keep the existing wallet-style `/events/$eventId/display` mobile page — it's a different, host-only surface and still used elsewhere.
 
-- Clicking “Create Club” with missing University visibly explains the issue and moves the user to the University field.
-- Clicking “Create Club” with all valid fields actually sends the create request and creates the club.
-- Hosts with one university do not need to manually select it.
-- Hosts with no universities get a clear blocking message instead of a dead form.
-- The club list updates immediately after creation.
+## Security notes
+- `qr_token` is already the public capability for check-in; exposing it on a display URL doesn't broaden the attack surface. Anyone who could scan the QR already had it.
+- The new server fn returns **only aggregate counts and non-PII event metadata**. It does not accept an event UUID, so it can't be used to enumerate other events' rosters.
+- No writes. Read-only handler.
+- Rate limiting: reuse the existing public rate-limit helper (`src/lib/rate-limit.server.ts`) keyed by IP + qr_token so a leaked URL can't be used to hammer the DB.
+
+## Verification
+1. Sign out completely, open `/display/<qr_token>` in an incognito window → page renders with QR, title, counter. No redirect to `/sign-in`.
+2. Scan the QR from a phone → lands on the existing `/check-in/$qrToken` flow.
+3. Complete a check-in → within ~15 s the counter on the display page increments.
+4. Open a non-existent or archived event's qr_token → friendly "Event unavailable" state, not a crash.
+5. Confirm no student names/emails appear in the Network response for `getPublicEventDisplay`.
