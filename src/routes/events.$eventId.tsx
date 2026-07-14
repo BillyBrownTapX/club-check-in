@@ -443,6 +443,43 @@ function EventDetailRoute() {
     }
   };
 
+  const openEditDialog = (row: AttendanceRow) => {
+    if (!row.students) return;
+    setEditRow(row);
+    setEditForm({
+      firstName: row.students.first_name,
+      lastName: row.students.last_name,
+      studentEmail: row.students.student_email,
+    });
+    setEditError(null);
+  };
+
+  const handleCorrectProfile = async () => {
+    if (!editRow?.students) return;
+    setEditSubmitting(true);
+    setEditError(null);
+    try {
+      await correctStudentProfileMutation({
+        data: {
+          eventId,
+          studentId: editRow.students.id,
+          firstName: editForm.firstName,
+          lastName: editForm.lastName,
+          studentEmail: editForm.studentEmail,
+        },
+      });
+      toast.success("Student profile updated");
+      setEditRow(null);
+      await refresh();
+    } catch (error) {
+      const message = getManagementErrorMessage(error, "Unable to update student.");
+      setEditError(message);
+      toast.error(message);
+    } finally {
+      setEditSubmitting(false);
+    }
+  };
+
   const handleCloseEarly = async () => {
     setClosingEarly(true);
     try {
