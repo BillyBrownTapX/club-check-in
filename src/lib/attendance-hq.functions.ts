@@ -190,7 +190,7 @@ async function requireHostProfile(userId: string) {
 
 export const getPublicEventByQr = createServerFn({ method: "GET" })
   .inputValidator(z.object({ qrToken: qrTokenSchema }))
-  .handler(async ({ data }) => {
+  .handler(withCheckInLog("getPublicEventByQr", async ({ data }) => {
     const { data: event, error } = await (await getSupabaseAdmin())
       .from("events")
       .select("*, clubs(id, club_name, club_slug, description)")
@@ -201,7 +201,7 @@ export const getPublicEventByQr = createServerFn({ method: "GET" })
     if (!event) throw notFound();
 
     return event as EventWithClub;
-  });
+  }));
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Removed in Phase 1 (security): signUpHost / signInHost / sendPasswordReset /
@@ -1017,7 +1017,7 @@ export type PublicEventDisplayPayload =
 // (same capability the public check-in flow uses). No student rows, no ids.
 export const getPublicEventDisplay = createServerFn({ method: "GET" })
   .inputValidator((input) => z.object({ qrToken: qrTokenSchema }).parse(input))
-  .handler(async ({ data }): Promise<PublicEventDisplayPayload> => {
+  .handler(withCheckInLog("getPublicEventDisplay", async ({ data }): Promise<PublicEventDisplayPayload> => {
     await rateLimit("lookup", data.qrToken);
     const admin = await getSupabaseAdmin();
     const { data: event, error } = await admin
@@ -1058,7 +1058,7 @@ export const getPublicEventDisplay = createServerFn({ method: "GET" })
       attendanceCount: attendanceCount ?? 0,
       recent15m: recentCount ?? 0,
     };
-  });
+  }));
 
 
 
@@ -1183,7 +1183,7 @@ async function createAttendanceRecord(input: {
 // the 900 number on the next call (see confirmReturningStudent).
 export const studentCheckIn = createServerFn({ method: "POST" })
   .inputValidator(studentCheckInInputSchema)
-  .handler(async ({ data }) => {
+  .handler(withCheckInLog("studentCheckIn", async ({ data }) => {
     await rateLimit("register", data.qrToken);
     const eventCheck = await getEventForPublicCheckInByQr(data.qrToken);
     if (!eventCheck.ok) return eventCheck;
@@ -1282,13 +1282,13 @@ export const studentCheckIn = createServerFn({ method: "POST" })
       deviceToken,
       student: buildStudentPreview(student),
     };
-  });
+  }));
 
 // Remembered-device peek. Returns ONLY the masked preview; the device token
 // is the only secret the client holds, so we never echo back the student id.
 export const getRememberedStudent = createServerFn({ method: "POST" })
   .inputValidator(rememberedDeviceInputSchema)
-  .handler(async ({ data }) => {
+  .handler(withCheckInLog("getRememberedStudent", async ({ data }) => {
     await rateLimit("fast", data.qrToken);
     const eventCheck = await getEventForPublicCheckInByQr(data.qrToken);
     if (!eventCheck.ok) return eventCheck;
@@ -1330,7 +1330,7 @@ export const getRememberedStudent = createServerFn({ method: "POST" })
       ok: true as const,
       student: buildStudentPreview(student),
     };
-  });
+  }));
 
 // Fast-path remembered-device check-in. The server resolves the student from
 // the device session — clients never tell us who they are. Pre-fix, the
@@ -1339,7 +1339,7 @@ export const getRememberedStudent = createServerFn({ method: "POST" })
 // guessable studentId was enough to check anyone in.
 export const fastCheckIn = createServerFn({ method: "POST" })
   .inputValidator(fastCheckInSchema)
-  .handler(async ({ data }) => {
+  .handler(withCheckInLog("fastCheckIn", async ({ data }) => {
     await rateLimit("fast", data.qrToken);
     const eventCheck = await getEventForPublicCheckInByQr(data.qrToken);
     if (!eventCheck.ok) return eventCheck;
@@ -1367,7 +1367,7 @@ export const fastCheckIn = createServerFn({ method: "POST" })
     await (await getSupabaseAdmin()).from("student_device_sessions").update({ last_used_at: new Date().toISOString() }).eq("id", session.id);
 
     return { ok: true as const, attendance: attendanceResult.attendance };
-  });
+  }));
 
 // Returning-student check-in. Pre-fix, this took (eventId, studentId) with
 // NO identity proof at all — once you knew any student UUID + any event UUID
@@ -1379,7 +1379,7 @@ export const fastCheckIn = createServerFn({ method: "POST" })
 // So the client cannot inject an arbitrary student id at confirm time.
 export const confirmReturningStudent = createServerFn({ method: "POST" })
   .inputValidator(confirmReturningInputSchema)
-  .handler(async ({ data }) => {
+  .handler(withCheckInLog("confirmReturningStudent", async ({ data }) => {
     await rateLimit("register", data.qrToken);
     const eventCheck = await getEventForPublicCheckInByQr(data.qrToken);
     if (!eventCheck.ok) return eventCheck;
@@ -1404,7 +1404,7 @@ export const confirmReturningStudent = createServerFn({ method: "POST" })
 
     if (!attendanceResult.ok) return attendanceResult;
     return { ok: true as const, attendance: attendanceResult.attendance };
-  });
+  }));
 
 // Returning-student lookup. Pre-fix, this returned the raw student UUID and
 // took eventId; the client could then post that UUID to confirmReturningStudent
@@ -1413,7 +1413,7 @@ export const confirmReturningStudent = createServerFn({ method: "POST" })
 // student visually confirm before the next call.
 export const lookupStudent = createServerFn({ method: "POST" })
   .inputValidator(returningLookupInputSchema)
-  .handler(async ({ data }) => {
+  .handler(withCheckInLog("lookupStudent", async ({ data }) => {
     await rateLimit("lookup", data.qrToken);
     const eventCheck = await getEventForPublicCheckInByQr(data.qrToken);
     if (!eventCheck.ok) return eventCheck;
@@ -1443,7 +1443,7 @@ export const lookupStudent = createServerFn({ method: "POST" })
       ok: true as const,
       student: buildStudentPreview(student),
     };
-  });
+  }));
 
 export const removeAttendance = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
