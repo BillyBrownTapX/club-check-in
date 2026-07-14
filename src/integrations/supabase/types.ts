@@ -132,6 +132,48 @@ export type Database = {
         }
         Relationships: []
       }
+      club_members: {
+        Row: {
+          club_id: string
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["club_member_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          club_id: string
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["club_member_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          club_id?: string
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["club_member_role"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_members_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "host_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       clubs: {
         Row: {
           club_name: string
@@ -486,6 +528,8 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_club_member: { Args: { _club_id: string }; Returns: boolean }
+      is_club_owner: { Args: { _club_id: string }; Returns: boolean }
       is_event_host: { Args: { _event_id: string }; Returns: boolean }
       is_student_visible_to_host: {
         Args: { _student_id: string }
@@ -501,6 +545,7 @@ export type Database = {
         | "remembered_device"
         | "host_correction"
       check_in_source: "public_mobile" | "host_dashboard"
+      club_member_role: "owner" | "officer"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -637,6 +682,7 @@ export const Constants = {
         "host_correction",
       ],
       check_in_source: ["public_mobile", "host_dashboard"],
+      club_member_role: ["owner", "officer"],
     },
   },
 } as const
