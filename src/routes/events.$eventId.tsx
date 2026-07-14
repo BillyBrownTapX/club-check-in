@@ -538,7 +538,6 @@ function EventDetailRoute() {
     }
   };
 
-  const [regeneratingQr, setRegeneratingQr] = useState(false);
   const handleRegenerateQrToken = async () => {
     if (regeneratingQr) return;
     setRegeneratingQr(true);
