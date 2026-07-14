@@ -1162,8 +1162,10 @@ export const getRememberedStudent = createServerFn({ method: "POST" })
 export const fastCheckIn = createServerFn({ method: "POST" })
   .inputValidator(fastCheckInSchema)
   .handler(async ({ data }) => {
+    await rateLimit("fast", data.qrToken);
     const eventCheck = await getEventForPublicCheckInByQr(data.qrToken);
     if (!eventCheck.ok) return eventCheck;
+
 
     const { data: session, error: sessionError } = await (await getSupabaseAdmin())
       .from("student_device_sessions")
@@ -1200,8 +1202,10 @@ export const fastCheckIn = createServerFn({ method: "POST" })
 export const confirmReturningStudent = createServerFn({ method: "POST" })
   .inputValidator(confirmReturningInputSchema)
   .handler(async ({ data }) => {
+    await rateLimit("register", data.qrToken);
     const eventCheck = await getEventForPublicCheckInByQr(data.qrToken);
     if (!eventCheck.ok) return eventCheck;
+
 
     const { data: student, error } = await (await getSupabaseAdmin())
       .from("students")
