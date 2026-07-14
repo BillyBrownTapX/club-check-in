@@ -240,6 +240,7 @@ function EventDetailRoute() {
   const [archiving, setArchiving] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [regeneratingQr, setRegeneratingQr] = useState(false);
   const [manualDialogOpen, setManualDialogOpen] = useState(false);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [manualSubmitting, setManualSubmitting] = useState(false);
@@ -537,7 +538,6 @@ function EventDetailRoute() {
     }
   };
 
-  const [regeneratingQr, setRegeneratingQr] = useState(false);
   const handleRegenerateQrToken = async () => {
     if (regeneratingQr) return;
     setRegeneratingQr(true);
