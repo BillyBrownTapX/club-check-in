@@ -782,6 +782,9 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, onDele
     .map((key) => clubFieldLabels[key] ?? key)
     .filter((label, index, all) => all.indexOf(label) === index);
 
+  const currentUniversityId = form.watch("universityId") as string;
+  const universityMissing = isEdit && !currentUniversityId;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[92vh] overflow-y-auto rounded-[2rem] border border-primary/10 bg-card/98 p-0 shadow-[0_28px_72px_-40px_color-mix(in_oklab,var(--color-primary)_24%,transparent)] sm:max-w-lg">
@@ -793,6 +796,22 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, onDele
           </div>
         </DialogHeader>
         <form className="space-y-4 px-6 pb-6 pt-2" onSubmit={(event) => void submit(event)}>
+          {/* Top-of-form banners: keep validation blockers visible without scrolling. */}
+          {missingClubFields.length > 0 ? (
+            <div className="rounded-2xl bg-destructive/10 p-4 text-sm text-destructive" role="alert">
+              <p className="font-semibold">Please fix the following before saving:</p>
+              <ul className="mt-1 list-disc pl-5">
+                {missingClubFields.map((label) => <li key={label}>{label}</li>)}
+              </ul>
+            </div>
+          ) : null}
+          {universityMissing ? (
+            <div className="rounded-2xl border border-primary/20 bg-secondary/45 p-4 text-sm leading-6 text-foreground" role="status">
+              <p className="font-semibold">Pick a university to continue</p>
+              <p className="mt-1 text-muted-foreground">This club doesn't have a university yet. Choose one below before saving your changes.</p>
+            </div>
+          ) : null}
+          {error ? <p className="rounded-2xl bg-destructive/10 p-3 text-sm text-destructive" role="alert">{error}</p> : null}
           <ClubLogoField
             value={(form.watch("logoPath") as string | null | undefined) ?? null}
             onChange={(path) => form.setValue("logoPath", path as never, { shouldDirty: true })}
@@ -804,7 +823,7 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, onDele
               <p className="mt-1">You'll need a university in your workspace before creating a club. Reach out to support to add one if you don't see it listed.</p>
             </div>
           ) : null}
-          <SelectInput label="University" value={form.watch("universityId") as string} onValueChange={(value) => form.setValue("universityId", value as never, { shouldValidate: true })} placeholder={hasUniversities ? "Choose a university" : "No universities available"} options={universities.map((university) => ({ value: university.id, label: university.name }))} error={(form.formState.errors as Record<string, { message?: string } | undefined>).universityId?.message} disabled={!hasUniversities} />
+          <SelectInput label="University" value={currentUniversityId} onValueChange={(value) => form.setValue("universityId", value as never, { shouldValidate: true })} placeholder={hasUniversities ? "Choose a university" : "No universities available"} options={universities.map((university) => ({ value: university.id, label: university.name }))} error={(form.formState.errors as Record<string, { message?: string } | undefined>).universityId?.message} disabled={!hasUniversities} />
           <TextInput label="Club name" error={form.formState.errors.clubName?.message} {...form.register("clubName")} />
           <TextAreaInput label="Description" error={form.formState.errors.description?.message} {...form.register("description")} />
           {isEdit ? (
@@ -816,15 +835,6 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, onDele
               <Switch checked={(form.watch("isActive") as boolean | undefined) ?? true} onCheckedChange={(checked) => form.setValue("isActive", checked as never)} />
             </div>
           ) : null}
-          {missingClubFields.length > 0 ? (
-            <div className="rounded-2xl bg-destructive/10 p-4 text-sm text-destructive" role="alert">
-              <p className="font-semibold">Please fix the following before saving:</p>
-              <ul className="mt-1 list-disc pl-5">
-                {missingClubFields.map((label) => <li key={label}>{label}</li>)}
-              </ul>
-            </div>
-          ) : null}
-          {error ? <p className="text-sm text-destructive">{error}</p> : null}
           <PrimaryButton type="submit" className="w-full" disabled={isSubmitting || (!isEdit && !hasUniversities)}>{isSubmitting ? (isEdit ? "Saving…" : "Creating…") : (isEdit ? "Save Club" : "Create Club")}</PrimaryButton>
           {isEdit && onDelete ? (
             <DeleteConfirmButton
