@@ -2176,7 +2176,7 @@ export const regenerateEventQrToken = createServerFn({ method: "POST" })
       }
       lastError = error;
       // 23505 = unique violation. Any other error, stop.
-      if (!error || (error as { code?: string }).code !== "23505") break;
+      if (!error || error.code !== "23505") break;
     }
     if (!newToken) {
       throw new Error(safeMessage(lastError, "Unable to regenerate QR token."));
