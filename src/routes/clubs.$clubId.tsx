@@ -342,8 +342,10 @@ function ClubDetailRoute() {
           universities={data.universities}
           initialValues={{ clubId: data.club.id, universityId: data.club.university_id ?? "", clubName: data.club.club_name, description: data.club.description ?? "", isActive: data.club.is_active, logoPath: data.club.logo_url ?? null }}
           onSubmit={async (values) => {
-            await updateClubMutation.mutateAsync(values as never);
+            const saved = await updateClubMutation.mutateAsync(values as never);
+            toast.success("Club saved", { description: saved.club_name });
           }}
+
           onDelete={handleDeleteClub}
         />
 
