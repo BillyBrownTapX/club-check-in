@@ -385,7 +385,7 @@ export type Database = {
           last_name: string
           nine_hundred_number: string
           student_email: string
-          university_id: string | null
+          university_id: string
           updated_at: string
         }
         Insert: {
@@ -395,7 +395,7 @@ export type Database = {
           last_name: string
           nine_hundred_number: string
           student_email: string
-          university_id?: string | null
+          university_id: string
           updated_at?: string
         }
         Update: {
@@ -405,7 +405,7 @@ export type Database = {
           last_name?: string
           nine_hundred_number?: string
           student_email?: string
-          university_id?: string | null
+          university_id?: string
           updated_at?: string
         }
         Relationships: [
