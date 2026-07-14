@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { Link, createFileRoute, useRouter } from "@tanstack/react-router";
+import { Link, createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import { useAuthorizedMutation, useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
 import { HostAppShell } from "@/components/attendance-hq/host-shell";
@@ -43,6 +43,7 @@ export const Route = createFileRoute("/clubs/")({
 
 function ClubsRoute() {
   const { loading, user } = useRequireHostRedirect();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -119,8 +120,14 @@ function ClubsRoute() {
         title="Create Club"
         description="Add a new club to your workspace."
         onSubmit={async (values) => {
-          const created = await createClub.mutateAsync(values as never);
-          toast.success("Club created", { description: created.club_name });
+          try {
+            const created = await createClub.mutateAsync(values as never);
+            setQuery("");
+            toast.success("Club created", { description: created.club_name });
+            navigate({ to: "/clubs/$clubId", params: { clubId: created.id } });
+          } catch (error) {
+            throw new Error(getManagementErrorMessage(error, "Unable to create club."));
+          }
         }}
 
       />
