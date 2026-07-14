@@ -163,6 +163,14 @@ function CheckInRouteComponent() {
     setScreen("blocked");
   };
 
+  const clearStoredDeviceToken = () => {
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem(DEVICE_TOKEN_KEY);
+    }
+    setRememberedDeviceToken(null);
+    setRememberedStudent(null);
+  };
+
   const clearTransientState = () => {
     setGlobalError(null);
     setPendingStudent(null);
