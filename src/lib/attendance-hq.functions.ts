@@ -1118,6 +1118,23 @@ async function getExistingAttendance(eventId: string, studentId: string) {
   return data;
 }
 
+// Resolve the university a student should be bound to for this event.
+// Prefer the event's own university_id (kept in sync by a DB trigger), then
+// fall back to the owning club's university_id. Returns null when neither is
+// set so callers can safely no-op instead of failing check-in.
+async function resolveEventUniversityId(event: {
+  university_id: string | null;
+  club_id: string;
+}): Promise<string | null> {
+  if (event.university_id) return event.university_id;
+  const { data } = await (await getSupabaseAdmin())
+    .from("clubs")
+    .select("university_id")
+    .eq("id", event.club_id)
+    .maybeSingle();
+  return data?.university_id ?? null;
+}
+
 // Detects a Postgres unique_violation (23505). Optionally narrows to a
 // specific constraint name so unrelated unique conflicts don't get mistaken
 // for the one the caller is guarding against.
