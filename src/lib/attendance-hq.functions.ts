@@ -1176,7 +1176,34 @@ export const studentCheckIn = createServerFn({ method: "POST" })
       .select("id, first_name, last_name, student_email")
       .single();
 
-    if (studentError || !student) throw new Error(safeMessage(studentError, "Unable to save student"));
+    if (studentError || !student) {
+      // Race: a parallel first-time submission inserted the same 900 number
+      // between our lookup and insert. Re-read and hand off through the
+      // returning-student preview path, matching the pre-check branch above.
+      if (isUniqueViolation(studentError, "students_nine_hundred_number_key")) {
+        const { data: raced } = await (await getSupabaseAdmin())
+          .from("students")
+          .select("id, first_name, last_name, student_email")
+          .eq("nine_hundred_number", data.nineHundredNumber)
+          .maybeSingle();
+        if (raced) {
+          const existingAttendance = await getExistingAttendance(eventCheck.event.id, raced.id);
+          if (existingAttendance) {
+            return {
+              ok: false as const,
+              state: "already_checked_in" as const,
+              checkedInAt: existingAttendance.checked_in_at,
+            };
+          }
+          return {
+            ok: false as const,
+            state: "student_exists" as const,
+            student: buildStudentPreview(raced),
+          };
+        }
+      }
+      throw new Error(safeMessage(studentError, "Unable to save student"));
+    }
 
     const attendanceResult = await createAttendanceRecord({
       event: eventCheck.event,
