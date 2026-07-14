@@ -110,6 +110,24 @@ function logCheckInError(op: PublicCheckInOp, qrToken: string | undefined | null
   });
 }
 
+// Wraps a public check-in server-fn handler so any thrown error is
+// logged (once, tagged, PII-free) before being re-thrown. Business
+// outcomes returned as `{ ok: false, state }` pass through untouched.
+function withCheckInLog<A extends { data: { qrToken?: string } }, R>(
+  op: PublicCheckInOp,
+  fn: (args: A) => Promise<R>,
+): (args: A) => Promise<R> {
+  return async (args) => {
+    try {
+      return await fn(args);
+    } catch (err) {
+      logCheckInError(op, args?.data?.qrToken, err);
+      throw err;
+    }
+  };
+}
+
+
 
 async function ensureHostProfile(userId: string, fallback?: { fullName?: string | null; email?: string | null }) {
   const { data: existingProfile, error: existingError } = await (await getSupabaseAdmin())
