@@ -174,9 +174,6 @@ function PublicDisplayRoute() {
             <p className="mt-6 text-center font-display text-[clamp(20px,2.2vw,36px)] font-extrabold tracking-tight">
               Scan to check in
             </p>
-            <p className="mt-2 break-all text-center text-[clamp(12px,1vw,16px)] text-white/70">
-              {checkInUrl}
-            </p>
           </div>
         </div>
       </div>
