@@ -135,6 +135,9 @@ function ClubDetailRoute() {
   const removeOfficerMutation = useAuthorizedMutation(removeClubOfficer, {
     invalidate: [queryKeys.clubs.detail(clubId)],
   });
+  const transferOwnershipMutation = useAuthorizedMutation(transferClubOwnership, {
+    invalidate: [queryKeys.clubs.all],
+  });
 
   const [officerDialogOpen, setOfficerDialogOpen] = useState(false);
   const [officerEmail, setOfficerEmail] = useState("");
