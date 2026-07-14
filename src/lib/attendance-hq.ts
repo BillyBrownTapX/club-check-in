@@ -46,6 +46,15 @@ export type ManagementEventSummary = Event & {
   checkInStatus: CheckInStatus;
 };
 
+export type ClubMemberEntry = {
+  id: string;
+  userId: string;
+  role: "owner" | "officer";
+  fullName: string;
+  email: string;
+  createdAt: string;
+};
+
 export type ClubDetailPayload = {
   club: ClubWithUniversity;
   universities: University[];
@@ -57,6 +66,8 @@ export type ClubDetailPayload = {
   upcomingEvents: ManagementEventSummary[];
   pastEvents: ManagementEventSummary[];
   templates: EventTemplateWithClub[];
+  members: ClubMemberEntry[];
+  viewerRole: "owner" | "officer" | null;
 };
 
 export type AttendanceRow = AttendanceRecord & {

@@ -189,6 +189,16 @@ export const deleteClubSchema = z.object({
   clubId: z.string().uuid(),
 });
 
+export const addClubOfficerSchema = z.object({
+  clubId: z.string().uuid(),
+  email: emailSchema,
+});
+
+export const removeClubOfficerSchema = z.object({
+  clubId: z.string().uuid(),
+  membershipId: z.string().uuid(),
+});
+
 export const deleteEventSchema = z.object({
   eventId: z.string().uuid(),
 });

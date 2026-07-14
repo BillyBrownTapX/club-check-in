@@ -47,6 +47,7 @@ async function rateLimit(scope: "lookup" | "register" | "fast", qrToken: string)
 
 
 import {
+  addClubOfficerSchema,
   clubIdInputSchema,
   clubIdOptionalInputSchema,
   clubSchema,
@@ -71,6 +72,7 @@ import {
   qrTokenSchema,
   rememberedDeviceInputSchema,
   removeAttendanceSchema,
+  removeClubOfficerSchema,
   restoreAttendanceSchema,
   returningLookupInputSchema,
   studentCheckInInputSchema,
@@ -699,6 +701,50 @@ export const getClubDetail = createServerFn({ method: "GET" })
     if (eventsError) throw new Error(safeMessage(eventsError));
     if (templatesError) throw new Error(safeMessage(templatesError));
 
+    // Members: hosts can only SELECT their own host_profiles under RLS, so
+    // join member rows to profile name/email via the admin client after the
+    // requireClubAccess gate above.
+    const admin = await getSupabaseAdmin();
+    const { data: memberRows, error: memberError } = await admin
+      .from("club_members")
+      .select("id, user_id, role, created_at")
+      .eq("club_id", club.id);
+    if (memberError) throw new Error(safeMessage(memberError, "Unable to load club members."));
+
+    const memberUserIds = (memberRows ?? []).map((row) => row.user_id);
+    const profileMap = new Map<string, { full_name: string | null; email: string | null }>();
+    if (memberUserIds.length) {
+      const { data: profiles, error: profilesError } = await admin
+        .from("host_profiles")
+        .select("id, full_name, email")
+        .in("id", memberUserIds);
+      if (profilesError) throw new Error(safeMessage(profilesError, "Unable to load member profiles."));
+      for (const profile of profiles ?? []) {
+        profileMap.set(profile.id, { full_name: profile.full_name, email: profile.email });
+      }
+    }
+
+    const members = (memberRows ?? []).map((row) => {
+      const profile = profileMap.get(row.user_id);
+      return {
+        id: row.id,
+        userId: row.user_id,
+        role: row.role as "owner" | "officer",
+        fullName: profile?.full_name ?? "",
+        email: profile?.email ?? "",
+        createdAt: row.created_at,
+      };
+    }).sort((a, b) => {
+      if (a.role !== b.role) return a.role === "owner" ? -1 : 1;
+      return a.createdAt.localeCompare(b.createdAt);
+    });
+
+    const viewerMembership = members.find((m) => m.userId === context.userId) ?? null;
+    const isLegacyHost = club.host_id === context.userId;
+    const viewerRole: "owner" | "officer" | null = viewerMembership
+      ? (viewerMembership.role === "owner" || isLegacyHost ? "owner" : "officer")
+      : (isLegacyHost ? "owner" : null);
+
     const today = new Date().toISOString().slice(0, 10);
     const normalizedEvents = ((events ?? []) as EventSummary[]).map(toManagementEventSummary);
     const upcomingEvents = normalizedEvents.filter((event) => event.event_date >= today);
@@ -716,7 +762,78 @@ export const getClubDetail = createServerFn({ method: "GET" })
       upcomingEvents,
       pastEvents,
       templates: (templates ?? []) as EventTemplateWithClub[],
+      members,
+      viewerRole,
     } as ClubDetailPayload;
+  });
+
+export const addClubOfficer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(addClubOfficerSchema)
+  .handler(async ({ data, context }) => {
+    await requireClubOwner(context.supabase, context.userId, data.clubId);
+
+    const admin = await getSupabaseAdmin();
+    const { data: profile, error: profileError } = await admin
+      .from("host_profiles")
+      .select("id")
+      .eq("email", data.email)
+      .maybeSingle();
+    if (profileError) throw new Error(safeMessage(profileError, "Unable to look up host."));
+    if (!profile) {
+      throw new Error("No Attendance HQ host account with that email. Ask them to sign up first.");
+    }
+
+    if (profile.id === context.userId) {
+      throw new Error("You're already on this club.");
+    }
+
+    const { data: existing, error: existingError } = await admin
+      .from("club_members")
+      .select("id")
+      .eq("club_id", data.clubId)
+      .eq("user_id", profile.id)
+      .maybeSingle();
+    if (existingError) throw new Error(safeMessage(existingError, "Unable to check membership."));
+    if (existing) {
+      throw new Error("That host is already a member of this club.");
+    }
+
+    const { error: insertError } = await admin
+      .from("club_members")
+      .insert({ club_id: data.clubId, user_id: profile.id, role: "officer" });
+    if (insertError) throw new Error(safeMessage(insertError, "Unable to add officer."));
+
+    return { ok: true };
+  });
+
+export const removeClubOfficer = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(removeClubOfficerSchema)
+  .handler(async ({ data, context }) => {
+    await requireClubOwner(context.supabase, context.userId, data.clubId);
+
+    const admin = await getSupabaseAdmin();
+    const { data: membership, error: membershipError } = await admin
+      .from("club_members")
+      .select("id, club_id, role")
+      .eq("id", data.membershipId)
+      .maybeSingle();
+    if (membershipError) throw new Error(safeMessage(membershipError, "Unable to load membership."));
+    if (!membership || membership.club_id !== data.clubId) {
+      throw new Error("Officer not found on this club.");
+    }
+    if (membership.role !== "officer") {
+      throw new Error("Only officers can be removed.");
+    }
+
+    const { error: deleteError } = await admin
+      .from("club_members")
+      .delete()
+      .eq("id", membership.id);
+    if (deleteError) throw new Error(safeMessage(deleteError, "Unable to remove officer."));
+
+    return { ok: true };
   });
 
 export const createClubManagement = createServerFn({ method: "POST" })
