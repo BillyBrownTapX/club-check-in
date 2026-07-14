@@ -454,10 +454,13 @@ async function requireOwnedEvent(supabase: AppSupabaseClient, userId: string, ev
 }
 
 async function getHostClubSummariesForUser(supabase: AppSupabaseClient, userId: string): Promise<ClubSummary[]> {
+  const accessibleIds = await getAccessibleClubIds(supabase, userId);
+  if (!accessibleIds.length) return [];
+
   const { data: clubs, error: clubsError } = await supabase
     .from("clubs")
     .select("*, universities(id, name, slug)")
-    .eq("host_id", userId)
+    .in("id", accessibleIds)
     .order("created_at", { ascending: true });
 
   if (clubsError) throw new Error(safeMessage(clubsError));
