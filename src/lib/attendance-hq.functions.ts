@@ -53,6 +53,7 @@ import {
   clubUpdateSchema,
   closeCheckInEarlySchema,
   confirmReturningInputSchema,
+  correctStudentProfileSchema,
   deleteClubSchema,
   deleteEventSchema,
   duplicateEventSchema,
