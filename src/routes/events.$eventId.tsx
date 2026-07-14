@@ -592,11 +592,9 @@ function EventDetailRoute() {
           <ActionTile
             icon={QrCode}
             label="Show QR"
-            hint="Full screen"
+            hint="Quick view & copy link"
             tone="gold"
-            to="/events/$eventId/display"
-            params={{ eventId }}
-            search={{ created: "" }}
+            onClick={() => setQrDialogOpen(true)}
           />
           <ActionTile
             icon={UserPlus}
