@@ -18,6 +18,7 @@ import {
   QrCode,
   RefreshCw,
   RotateCcw,
+  ShieldAlert,
   Trash2,
   UserPlus,
   X,
