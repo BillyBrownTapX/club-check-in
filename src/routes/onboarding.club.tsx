@@ -78,6 +78,11 @@ function OnboardingClubRoute() {
     };
   }, [fetchOnboardingState, loading, navigate, user]);
 
+  useEffect(() => {
+    if (!stateLoaded || universities.length !== 1 || form.getValues("universityId")) return;
+    form.setValue("universityId", universities[0].id, { shouldValidate: true });
+  }, [form, stateLoaded, universities]);
+
   const onSubmit = form.handleSubmit(async (values) => {
     setSubmitError(null);
     try {

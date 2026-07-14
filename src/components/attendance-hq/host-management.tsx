@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type Ref } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { CalendarDays, ChevronRight, Clock3, Copy, ImagePlus, Loader2, MapPin, Plus, Search, Trash2, WandSparkles } from "lucide-react";
 import { toast } from "sonner";
@@ -276,13 +276,13 @@ export function SearchInput({ value, onChange }: { value: string; onChange: (val
 
 const EMPTY_SELECT_VALUE = "__empty__";
 
-export function SelectInput({ label, value, onValueChange, placeholder, options, error, disabled }: { label: string; value: string; onValueChange: (value: string) => void; placeholder: string; options: { value: string; label: string }[]; error?: string; disabled?: boolean }) {
+export function SelectInput({ label, value, onValueChange, placeholder, options, error, disabled, triggerRef, fieldName }: { label: string; value: string; onValueChange: (value: string) => void; placeholder: string; options: { value: string; label: string }[]; error?: string; disabled?: boolean; triggerRef?: Ref<HTMLButtonElement>; fieldName?: string }) {
   const safeOptions = options.filter((option) => Boolean(option.value));
   return (
       <div className="space-y-2 min-w-[10rem]">
       <Label className="text-sm font-semibold text-foreground">{label}</Label>
       <Select value={value || EMPTY_SELECT_VALUE} onValueChange={(nextValue) => onValueChange(nextValue === EMPTY_SELECT_VALUE ? "" : nextValue)} disabled={disabled}>
-        <SelectTrigger disabled={disabled} className={cn("h-12 rounded-2xl border-border/80 bg-background/90", error && "border-destructive ring-1 ring-destructive/40", disabled && "opacity-60")}>
+        <SelectTrigger ref={triggerRef} data-field={fieldName} aria-invalid={Boolean(error)} disabled={disabled} className={cn("h-12 rounded-2xl border-border/80 bg-background/90", error && "border-destructive bg-destructive/5 ring-2 ring-destructive/40", disabled && "opacity-60")}>
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
@@ -736,6 +736,8 @@ export function DeleteConfirmButton({
 
 export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, onDelete, title, description, universities }: DialogBaseProps & { initialValues?: Partial<ClubUpdateValues> & { logoPath?: string | null }; onSubmit: (values: ClubCreateValues | ClubUpdateValues) => Promise<void>; onDelete?: () => Promise<void>; title: string; description: string; universities: University[] }) {
   const isEdit = Boolean(initialValues?.clubId);
+  const dialogContentRef = useRef<HTMLDivElement | null>(null);
+  const universityTriggerRef = useRef<HTMLButtonElement | null>(null);
   const form = useForm<ClubCreateValues | ClubUpdateValues>({
     resolver: zodResolver(isEdit ? clubUpdateSchema : clubSchema),
     defaultValues: isEdit
@@ -750,6 +752,26 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, onDele
       : { universityId: "", clubName: "", description: "", logoPath: null });
   }, [form, initialValues, isEdit, open]);
 
+  useEffect(() => {
+    if (!open || isEdit || universities.length !== 1 || form.getValues("universityId")) return;
+    form.setValue("universityId", universities[0].id as never, { shouldValidate: true });
+  }, [form, isEdit, open, universities]);
+
+  const focusFirstClubError = useCallback((fieldNames: string[]) => {
+    requestAnimationFrame(() => {
+      dialogContentRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+      if (fieldNames.includes("universityId")) {
+        universityTriggerRef.current?.focus();
+        return;
+      }
+      const firstField = fieldNames[0];
+      if (!firstField) return;
+      dialogContentRef.current
+        ?.querySelector<HTMLElement>(`[name="${firstField}"], [data-field="${firstField}"]`)
+        ?.focus();
+    });
+  }, []);
+
   const submit = form.handleSubmit(
     async (values) => {
       if (form.formState.isSubmitting) return;
@@ -763,14 +785,19 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, onDele
         toast.error(message);
       }
     },
-    () => {
-      const message = "Please fix the highlighted fields before saving.";
+    (invalidFields) => {
+      const fieldNames = Object.keys(invalidFields);
+      const message = fieldNames.includes("universityId")
+        ? (isEdit ? "Choose a university to save this club." : "Choose a university to create this club.")
+        : "Please fix the highlighted fields before saving.";
       setError(message);
       toast.error(message);
+      focusFirstClubError(fieldNames);
     },
   );
   const isSubmitting = form.formState.isSubmitting;
   const hasUniversities = universities.length > 0;
+  const createBlockedByMissingUniversities = !isEdit && !hasUniversities;
   const clubFieldLabels: Record<string, string> = {
     universityId: "University",
     clubName: "Club name",
@@ -784,10 +811,11 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, onDele
 
   const currentUniversityId = form.watch("universityId") as string;
   const universityMissing = isEdit && !currentUniversityId;
+  const createUniversityMissing = !isEdit && Boolean((form.formState.errors as Record<string, { message?: string } | undefined>).universityId?.message);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[92vh] overflow-y-auto rounded-[2rem] border border-primary/10 bg-card/98 p-0 shadow-[0_28px_72px_-40px_color-mix(in_oklab,var(--color-primary)_24%,transparent)] sm:max-w-lg">
+      <DialogContent ref={dialogContentRef} className="max-h-[92vh] overflow-y-auto rounded-[2rem] border border-primary/10 bg-card/98 p-0 shadow-[0_28px_72px_-40px_color-mix(in_oklab,var(--color-primary)_24%,transparent)] sm:max-w-lg">
         <div className="mx-auto mt-3 h-1.5 w-12 rounded-full bg-gradient-gold" />
         <DialogHeader>
           <div className="px-6 pt-3">
@@ -811,31 +839,42 @@ export function ClubDialog({ open, onOpenChange, initialValues, onSubmit, onDele
               <p className="mt-1 text-muted-foreground">This club doesn't have a university yet. Choose one below before saving your changes.</p>
             </div>
           ) : null}
+          {createUniversityMissing ? (
+            <div className="rounded-2xl border border-destructive/25 bg-destructive/10 p-4 text-sm leading-6 text-destructive" role="alert">
+              <p className="font-semibold">Choose a university to create this club.</p>
+              <p className="mt-1 text-destructive/80">The club needs a campus assignment before it can be saved.</p>
+            </div>
+          ) : null}
           {error ? <p className="rounded-2xl bg-destructive/10 p-3 text-sm text-destructive" role="alert">{error}</p> : null}
-          <ClubLogoField
-            value={(form.watch("logoPath") as string | null | undefined) ?? null}
-            onChange={(path) => form.setValue("logoPath", path as never, { shouldDirty: true })}
-            clubId={initialValues?.clubId}
-          />
-          {!isEdit && !hasUniversities ? (
+          {createBlockedByMissingUniversities ? (
             <div className="rounded-2xl border border-primary/15 bg-secondary/40 p-4 text-sm leading-6 text-muted-foreground">
               <p className="font-semibold text-foreground">Add a university first</p>
               <p className="mt-1">You'll need a university in your workspace before creating a club. Reach out to support to add one if you don't see it listed.</p>
             </div>
           ) : null}
-          <SelectInput label="University" value={currentUniversityId} onValueChange={(value) => form.setValue("universityId", value as never, { shouldValidate: true })} placeholder={hasUniversities ? "Choose a university" : "No universities available"} options={universities.map((university) => ({ value: university.id, label: university.name }))} error={(form.formState.errors as Record<string, { message?: string } | undefined>).universityId?.message} disabled={!hasUniversities} />
-          <TextInput label="Club name" error={form.formState.errors.clubName?.message} {...form.register("clubName")} />
-          <TextAreaInput label="Description" error={form.formState.errors.description?.message} {...form.register("description")} />
-          {isEdit ? (
-            <div className="flex items-center justify-between rounded-xl border border-primary/10 bg-secondary/45 px-4 py-4">
-              <div>
-                <p className="text-sm font-medium text-foreground">Club active</p>
-                <p className="text-sm text-muted-foreground">Hide inactive clubs from day-to-day management.</p>
-              </div>
-              <Switch checked={(form.watch("isActive") as boolean | undefined) ?? true} onCheckedChange={(checked) => form.setValue("isActive", checked as never)} />
-            </div>
+          {!createBlockedByMissingUniversities ? (
+            <>
+              <ClubLogoField
+                value={(form.watch("logoPath") as string | null | undefined) ?? null}
+                onChange={(path) => form.setValue("logoPath", path as never, { shouldDirty: true })}
+                clubId={initialValues?.clubId}
+              />
+              <SelectInput label="University" value={currentUniversityId} onValueChange={(value) => form.setValue("universityId", value as never, { shouldValidate: true, shouldDirty: true })} placeholder="Choose a university" options={universities.map((university) => ({ value: university.id, label: university.name }))} error={(form.formState.errors as Record<string, { message?: string } | undefined>).universityId?.message} disabled={!hasUniversities} triggerRef={universityTriggerRef} fieldName="universityId" />
+              <TextInput label="Club name" error={form.formState.errors.clubName?.message} {...form.register("clubName")} />
+              <TextAreaInput label="Description" error={form.formState.errors.description?.message} {...form.register("description")} />
+              {isEdit ? (
+                <div className="flex items-center justify-between rounded-xl border border-primary/10 bg-secondary/45 px-4 py-4">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Club active</p>
+                    <p className="text-sm text-muted-foreground">Hide inactive clubs from day-to-day management.</p>
+                  </div>
+                  <Switch checked={(form.watch("isActive") as boolean | undefined) ?? true} onCheckedChange={(checked) => form.setValue("isActive", checked as never)} />
+                </div>
+              ) : null}
+            </>
           ) : null}
-          <PrimaryButton type="submit" className="w-full" disabled={isSubmitting || (!isEdit && !hasUniversities)}>{isSubmitting ? (isEdit ? "Saving…" : "Creating…") : (isEdit ? "Save Club" : "Create Club")}</PrimaryButton>
+          {createBlockedByMissingUniversities ? <p className="text-center text-sm text-destructive">A university must be available before you can create a club.</p> : null}
+          <PrimaryButton type="submit" className="w-full" disabled={isSubmitting || createBlockedByMissingUniversities}>{isSubmitting ? (isEdit ? "Saving…" : "Creating…") : (isEdit ? "Save Club" : "Create Club")}</PrimaryButton>
           {isEdit && onDelete ? (
             <DeleteConfirmButton
               trigger={
