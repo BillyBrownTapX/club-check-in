@@ -920,7 +920,9 @@ export function TemplateDialog({ open, onOpenChange, clubId, initialValues, onSu
       }
     },
     () => {
-      setError("Please fix the highlighted fields before saving.");
+      const message = "Please fix the highlighted fields before saving.";
+      setError(message);
+      toast.error(message);
     },
   );
   const isSubmitting = form.formState.isSubmitting;
