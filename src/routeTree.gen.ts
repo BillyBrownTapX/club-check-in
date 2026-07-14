@@ -24,6 +24,7 @@ import { Route as OnboardingEventRouteImport } from './routes/onboarding.event'
 import { Route as OnboardingClubRouteImport } from './routes/onboarding.club'
 import { Route as EventsNewRouteImport } from './routes/events.new'
 import { Route as EventsEventIdRouteImport } from './routes/events.$eventId'
+import { Route as DisplayQrTokenRouteImport } from './routes/display.$qrToken'
 import { Route as ClubsClubIdRouteImport } from './routes/clubs.$clubId'
 import { Route as CheckInQrTokenRouteImport } from './routes/check-in.$qrToken'
 import { Route as EventsEventIdPresentRouteImport } from './routes/events.$eventId.present'
@@ -106,6 +107,11 @@ const EventsEventIdRoute = EventsEventIdRouteImport.update({
   path: '/events/$eventId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const DisplayQrTokenRoute = DisplayQrTokenRouteImport.update({
+  id: '/display/$qrToken',
+  path: '/display/$qrToken',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ClubsClubIdRoute = ClubsClubIdRouteImport.update({
   id: '/clubs/$clubId',
   path: '/clubs/$clubId',
@@ -150,6 +156,7 @@ export interface FileRoutesByFullPath {
   '/sign-up': typeof SignUpRoute
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
+  '/display/$qrToken': typeof DisplayQrTokenRoute
   '/events/$eventId': typeof EventsEventIdRouteWithChildren
   '/events/new': typeof EventsNewRoute
   '/onboarding/club': typeof OnboardingClubRoute
@@ -173,6 +180,7 @@ export interface FileRoutesByTo {
   '/sign-up': typeof SignUpRoute
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
+  '/display/$qrToken': typeof DisplayQrTokenRoute
   '/events/$eventId': typeof EventsEventIdRouteWithChildren
   '/events/new': typeof EventsNewRoute
   '/onboarding/club': typeof OnboardingClubRoute
@@ -197,6 +205,7 @@ export interface FileRoutesById {
   '/sign-up': typeof SignUpRoute
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
+  '/display/$qrToken': typeof DisplayQrTokenRoute
   '/events/$eventId': typeof EventsEventIdRouteWithChildren
   '/events/new': typeof EventsNewRoute
   '/onboarding/club': typeof OnboardingClubRoute
@@ -222,6 +231,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/check-in/$qrToken'
     | '/clubs/$clubId'
+    | '/display/$qrToken'
     | '/events/$eventId'
     | '/events/new'
     | '/onboarding/club'
@@ -245,6 +255,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/check-in/$qrToken'
     | '/clubs/$clubId'
+    | '/display/$qrToken'
     | '/events/$eventId'
     | '/events/new'
     | '/onboarding/club'
@@ -268,6 +279,7 @@ export interface FileRouteTypes {
     | '/sign-up'
     | '/check-in/$qrToken'
     | '/clubs/$clubId'
+    | '/display/$qrToken'
     | '/events/$eventId'
     | '/events/new'
     | '/onboarding/club'
@@ -292,6 +304,7 @@ export interface RootRouteChildren {
   SignUpRoute: typeof SignUpRoute
   CheckInQrTokenRoute: typeof CheckInQrTokenRoute
   ClubsClubIdRoute: typeof ClubsClubIdRoute
+  DisplayQrTokenRoute: typeof DisplayQrTokenRoute
   EventsEventIdRoute: typeof EventsEventIdRouteWithChildren
   EventsNewRoute: typeof EventsNewRoute
   OnboardingClubRoute: typeof OnboardingClubRoute
@@ -408,6 +421,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EventsEventIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/display/$qrToken': {
+      id: '/display/$qrToken'
+      path: '/display/$qrToken'
+      fullPath: '/display/$qrToken'
+      preLoaderRoute: typeof DisplayQrTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/clubs/$clubId': {
       id: '/clubs/$clubId'
       path: '/clubs/$clubId'
@@ -481,6 +501,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignUpRoute: SignUpRoute,
   CheckInQrTokenRoute: CheckInQrTokenRoute,
   ClubsClubIdRoute: ClubsClubIdRoute,
+  DisplayQrTokenRoute: DisplayQrTokenRoute,
   EventsEventIdRoute: EventsEventIdRouteWithChildren,
   EventsNewRoute: EventsNewRoute,
   OnboardingClubRoute: OnboardingClubRoute,
