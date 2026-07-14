@@ -26,6 +26,7 @@ import {
   type EventWithClub,
   getCheckInMethodLabel,
   getCheckInStatus,
+  isDeviceSessionExpired,
   type HostOnboardingState,
   type HostProfile,
   type ManagementEventSummary,
