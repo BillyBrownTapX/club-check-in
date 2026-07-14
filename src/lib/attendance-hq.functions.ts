@@ -1463,11 +1463,12 @@ export const lookupStudent = createServerFn({ method: "POST" })
     const eventCheck = await getEventForPublicCheckInByQr(data.qrToken);
     if (!eventCheck.ok) return eventCheck;
 
-
+    const universityId = await requireEventUniversityId(eventCheck.event);
     const { data: student, error } = await (await getSupabaseAdmin())
       .from("students")
       .select("id, first_name, last_name, student_email")
       .eq("nine_hundred_number", data.nineHundredNumber)
+      .eq("university_id", universityId)
       .maybeSingle();
 
     if (error) throw new Error(safeMessage(error));
