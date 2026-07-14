@@ -1066,6 +1066,19 @@ async function getExistingAttendance(eventId: string, studentId: string) {
   return data;
 }
 
+// Detects a Postgres unique_violation (23505). Optionally narrows to a
+// specific constraint name so unrelated unique conflicts don't get mistaken
+// for the one the caller is guarding against.
+function isUniqueViolation(error: unknown, constraint?: string): boolean {
+  if (!error || typeof error !== "object") return false;
+  const e = error as { code?: string; message?: string; details?: string };
+  const is23505 = e.code === "23505" || /duplicate key value|unique constraint/i.test(e.message ?? "");
+  if (!is23505) return false;
+  if (!constraint) return true;
+  const haystack = `${e.message ?? ""} ${e.details ?? ""}`;
+  return haystack.includes(constraint);
+}
+
 async function createAttendanceRecord(input: {
   event: { id: string };
   studentId: string;
@@ -1091,7 +1104,23 @@ async function createAttendanceRecord(input: {
     .select("id, checked_in_at")
     .single();
 
-  if (error || !attendance) throw new Error(safeMessage(error, "Unable to record attendance"));
+  if (error) {
+    // Race: another request inserted the same (event_id, student_id) between
+    // the pre-check and this insert. Re-read and surface as already_checked_in
+    // so the public UI can render the friendly state instead of a raw error.
+    if (isUniqueViolation(error, "attendance_records_event_id_student_id_key")) {
+      const raced = await getExistingAttendance(input.event.id, input.studentId);
+      if (raced) {
+        return {
+          ok: false as const,
+          state: "already_checked_in" as const,
+          checkedInAt: raced.checked_in_at,
+        };
+      }
+    }
+    throw new Error(safeMessage(error, "Unable to record attendance"));
+  }
+  if (!attendance) throw new Error(safeMessage(null, "Unable to record attendance"));
   return { ok: true as const, attendance };
 }
 
