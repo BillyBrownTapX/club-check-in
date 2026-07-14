@@ -77,6 +77,7 @@ import {
   returningLookupInputSchema,
   studentCheckInInputSchema,
   toggleEventArchiveSchema,
+  transferClubOwnershipSchema,
   validatedEventSchema,
 } from "@/lib/attendance-hq-schemas";
 import { safeMessage } from "@/lib/server-errors";
@@ -835,6 +836,72 @@ export const removeClubOfficer = createServerFn({ method: "POST" })
 
     return { ok: true };
   });
+
+export const transferClubOwnership = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(transferClubOwnershipSchema)
+  .handler(async ({ data, context }) => {
+    await requireClubOwner(context.supabase, context.userId, data.clubId);
+
+    const admin = await getSupabaseAdmin();
+
+    // Load target officer membership.
+    const { data: target, error: targetError } = await admin
+      .from("club_members")
+      .select("id, club_id, user_id, role")
+      .eq("id", data.membershipId)
+      .maybeSingle();
+    if (targetError) throw new Error(safeMessage(targetError, "Unable to load membership."));
+    if (!target || target.club_id !== data.clubId) {
+      throw new Error("Officer not found on this club.");
+    }
+    if (target.role === "owner") {
+      throw new Error("That member is already the owner.");
+    }
+    if (target.role !== "officer") {
+      throw new Error("Officer not found on this club.");
+    }
+    if (target.user_id === context.userId) {
+      throw new Error("You're already the owner.");
+    }
+
+    // 1. Sync clubs.host_id to new owner.
+    const { error: hostError } = await admin
+      .from("clubs")
+      .update({ host_id: target.user_id })
+      .eq("id", data.clubId);
+    if (hostError) throw new Error(safeMessage(hostError, "Ownership transfer failed."));
+
+    // 2. Demote every existing owner (including acting owner) to officer,
+    //    excluding the target so we don't flip it back.
+    const { error: demoteError } = await admin
+      .from("club_members")
+      .update({ role: "officer", updated_at: new Date().toISOString() })
+      .eq("club_id", data.clubId)
+      .eq("role", "owner")
+      .neq("user_id", target.user_id);
+    if (demoteError) throw new Error(safeMessage(demoteError, "Ownership transfer failed."));
+
+    // 3. Promote target to owner.
+    const { error: promoteError } = await admin
+      .from("club_members")
+      .update({ role: "owner", updated_at: new Date().toISOString() })
+      .eq("id", target.id);
+    if (promoteError) throw new Error(safeMessage(promoteError, "Ownership transfer failed."));
+
+    // Verify exactly one owner and host_id matches.
+    const [{ data: owners, error: ownersError }, { data: clubRow, error: clubError }] = await Promise.all([
+      admin.from("club_members").select("user_id").eq("club_id", data.clubId).eq("role", "owner"),
+      admin.from("clubs").select("host_id").eq("id", data.clubId).maybeSingle(),
+    ]);
+    if (ownersError || clubError) throw new Error("Ownership transfer failed. Contact support.");
+    if (!owners || owners.length !== 1 || !clubRow || clubRow.host_id !== owners[0].user_id) {
+      throw new Error("Ownership transfer failed. Contact support.");
+    }
+
+    return { ok: true };
+  });
+
 
 export const createClubManagement = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])

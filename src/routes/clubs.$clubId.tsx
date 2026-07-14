@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
-import { CalendarDays, History, Pencil, Plus, Trash2, UserPlus, Users, WandSparkles, X } from "lucide-react";
+import { ArrowRightLeft, CalendarDays, History, Pencil, Plus, Trash2, UserPlus, Users, WandSparkles, X } from "lucide-react";
 import { useAuthorizedMutation, useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,7 @@ import {
   duplicateEventTemplate,
   getClubDetail,
   removeClubOfficer,
+  transferClubOwnership,
   updateClub,
   updateEventTemplate,
 } from "@/lib/attendance-hq.functions";
@@ -134,6 +135,9 @@ function ClubDetailRoute() {
   const removeOfficerMutation = useAuthorizedMutation(removeClubOfficer, {
     invalidate: [queryKeys.clubs.detail(clubId)],
   });
+  const transferOwnershipMutation = useAuthorizedMutation(transferClubOwnership, {
+    invalidate: [queryKeys.clubs.all],
+  });
 
   const [officerDialogOpen, setOfficerDialogOpen] = useState(false);
   const [officerEmail, setOfficerEmail] = useState("");
@@ -187,6 +191,17 @@ function ClubDetailRoute() {
       toast.error(getManagementErrorMessage(e, "Unable to remove officer."));
     }
   };
+
+  const handleTransferOwnership = async (membership: ClubMemberEntry) => {
+    try {
+      await transferOwnershipMutation.mutateAsync({ clubId, membershipId: membership.id } as never);
+      toast.success("Ownership transferred");
+    } catch (e) {
+      toast.error(getManagementErrorMessage(e, "Unable to transfer ownership."));
+    }
+  };
+
+
 
 
   return (
@@ -416,21 +431,38 @@ function ClubDetailRoute() {
                   ) : null}
                 </div>
                 {isOwner && member.role === "officer" ? (
-                  <ActionSheet
-                    trigger={
-                      <button
-                        type="button"
-                        aria-label={`Remove ${member.fullName || member.email}`}
-                        className="ios-press inline-flex h-9 w-9 items-center justify-center rounded-full bg-destructive/10 text-destructive"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    }
-                    title="Remove officer?"
-                    description="They will lose access to this club."
-                  >
-                    <ActionSheetItem icon={Trash2} label="Remove officer" destructive onClick={() => handleRemoveOfficer(member)} />
-                  </ActionSheet>
+                  <div className="flex items-center gap-2">
+                    <ActionSheet
+                      trigger={
+                        <button
+                          type="button"
+                          aria-label={`Transfer ownership to ${member.fullName || member.email}`}
+                          className="ios-press inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary"
+                        >
+                          <ArrowRightLeft className="h-4 w-4" />
+                        </button>
+                      }
+                      title="Transfer ownership?"
+                      description={`You will become an officer. ${member.fullName || member.email || "This officer"} will own this club and can delete it or manage officers.`}
+                    >
+                      <ActionSheetItem icon={ArrowRightLeft} label="Transfer ownership" destructive onClick={() => handleTransferOwnership(member)} />
+                    </ActionSheet>
+                    <ActionSheet
+                      trigger={
+                        <button
+                          type="button"
+                          aria-label={`Remove ${member.fullName || member.email}`}
+                          className="ios-press inline-flex h-9 w-9 items-center justify-center rounded-full bg-destructive/10 text-destructive"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      }
+                      title="Remove officer?"
+                      description="They will lose access to this club."
+                    >
+                      <ActionSheetItem icon={Trash2} label="Remove officer" destructive onClick={() => handleRemoveOfficer(member)} />
+                    </ActionSheet>
+                  </div>
                 ) : null}
               </div>
             ))}
@@ -440,7 +472,9 @@ function ClubDetailRoute() {
           </div>
           {isOwner ? (
             <p className="px-1 text-[12px] text-muted-foreground">
-              Officers must already have an Attendance HQ account.
+              {data.members.some((m) => m.role === "officer")
+                ? "Officers must already have an Attendance HQ account."
+                : "Add an officer before transferring ownership."}
             </p>
           ) : null}
         </section>
