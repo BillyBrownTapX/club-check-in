@@ -607,7 +607,7 @@ function EventDetailRoute() {
             icon={Maximize2}
             label="Display"
             hint="Project to TV"
-            to="/events/$eventId/display"
+            to="/events/$eventId/present"
             params={{ eventId }}
             search={{ created: "" }}
           />
