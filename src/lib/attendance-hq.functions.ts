@@ -1229,11 +1229,13 @@ export const studentCheckIn = createServerFn({ method: "POST" })
     if (!eventCheck.ok) return eventCheck;
 
 
+    const universityId = await requireEventUniversityId(eventCheck.event);
 
     const { data: existingStudent, error: existingStudentError } = await (await getSupabaseAdmin())
       .from("students")
       .select("id, first_name, last_name, student_email")
       .eq("nine_hundred_number", data.nineHundredNumber)
+      .eq("university_id", universityId)
       .maybeSingle();
 
     if (existingStudentError) throw new Error(safeMessage(existingStudentError, "Unable to look up student."));
@@ -1257,7 +1259,6 @@ export const studentCheckIn = createServerFn({ method: "POST" })
       };
     }
 
-    const universityId = await resolveEventUniversityId(eventCheck.event);
     const { data: student, error: studentError } = await (await getSupabaseAdmin())
       .from("students")
       .insert({
@@ -1272,13 +1273,14 @@ export const studentCheckIn = createServerFn({ method: "POST" })
 
     if (studentError || !student) {
       // Race: a parallel first-time submission inserted the same 900 number
-      // between our lookup and insert. Re-read and hand off through the
-      // returning-student preview path, matching the pre-check branch above.
-      if (isUniqueViolation(studentError, "students_nine_hundred_number_key")) {
+      // between our lookup and insert. Re-read (scoped to this university)
+      // and hand off through the returning-student preview path.
+      if (isStudentNineHundredUniqueViolation(studentError)) {
         const { data: raced } = await (await getSupabaseAdmin())
           .from("students")
           .select("id, first_name, last_name, student_email")
           .eq("nine_hundred_number", data.nineHundredNumber)
+          .eq("university_id", universityId)
           .maybeSingle();
         if (raced) {
           const existingAttendance = await getExistingAttendance(eventCheck.event.id, raced.id);
