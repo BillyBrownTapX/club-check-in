@@ -57,6 +57,11 @@ function SettingsRoute() {
         <ListRow icon={Mail} label="Email" value={auth.user?.email} chevron={false} />
       </GroupedList>
 
+      <SectionLabel className="mt-6">Support</SectionLabel>
+      <GroupedList>
+        <ListRow icon={LifeBuoy} label="Help" detail="Live check-in runbook" to="/help" />
+      </GroupedList>
+
       <SectionLabel className="mt-6">Security</SectionLabel>
       <GroupedList>
         <ListRow icon={Lock} label="Change password" to="/forgot-password" />
