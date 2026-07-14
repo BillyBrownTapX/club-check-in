@@ -142,7 +142,7 @@ export type Database = {
           id: string
           is_active: boolean
           logo_url: string | null
-          university_id: string | null
+          university_id: string
           updated_at: string
         }
         Insert: {
@@ -154,7 +154,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           logo_url?: string | null
-          university_id?: string | null
+          university_id: string
           updated_at?: string
         }
         Update: {
@@ -166,7 +166,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           logo_url?: string | null
-          university_id?: string | null
+          university_id?: string
           updated_at?: string
         }
         Relationships: [

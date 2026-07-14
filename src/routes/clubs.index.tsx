@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { toast } from "sonner";
+
 import { Link, createFileRoute, useRouter } from "@tanstack/react-router";
 import { Plus } from "lucide-react";
 import { useAuthorizedMutation, useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
@@ -117,8 +119,10 @@ function ClubsRoute() {
         title="Create Club"
         description="Add a new club to your workspace."
         onSubmit={async (values) => {
-          await createClub.mutateAsync(values as never);
+          const created = await createClub.mutateAsync(values as never);
+          toast.success("Club created", { description: created.club_name });
         }}
+
       />
     </HostAppShell>
   );
