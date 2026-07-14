@@ -77,6 +77,7 @@ import {
   returningLookupInputSchema,
   studentCheckInInputSchema,
   toggleEventArchiveSchema,
+  transferClubOwnershipSchema,
   validatedEventSchema,
 } from "@/lib/attendance-hq-schemas";
 import { safeMessage } from "@/lib/server-errors";
