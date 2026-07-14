@@ -38,6 +38,11 @@ async function getSupabaseAdmin() {
   const mod = await import("@/integrations/supabase/client.server");
   return mod.supabaseAdmin;
 }
+async function rateLimit(scope: "lookup" | "register" | "fast", qrToken: string) {
+  const mod = await import("@/lib/rate-limit.server");
+  await mod.assertRateLimit(scope, qrToken);
+}
+
 
 import {
   clubIdInputSchema,
