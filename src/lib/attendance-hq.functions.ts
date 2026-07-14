@@ -1120,8 +1120,11 @@ async function getExistingAttendance(eventId: string, studentId: string) {
 
 // Resolve the university a student should be bound to for this event.
 // Prefer the event's own university_id (kept in sync by a DB trigger), then
-// fall back to the owning club's university_id. Returns null when neither is
-// set so callers can safely no-op instead of failing check-in.
+// fall back to the owning club's university_id. As of P1.2, students.900
+// uniqueness is scoped per-university, so every check-in path REQUIRES a
+// university. Callers must handle the null return by refusing the check-in
+// with a clear operator-facing error rather than falling back to a global
+// lookup that would silently cross university boundaries.
 async function resolveEventUniversityId(event: {
   university_id: string | null;
   club_id: string;
@@ -1133,6 +1136,26 @@ async function resolveEventUniversityId(event: {
     .eq("id", event.club_id)
     .maybeSingle();
   return data?.university_id ?? null;
+}
+
+async function requireEventUniversityId(event: {
+  university_id: string | null;
+  club_id: string;
+}): Promise<string> {
+  const universityId = await resolveEventUniversityId(event);
+  if (!universityId) {
+    throw new Error("Event is missing a university. Contact support.");
+  }
+  return universityId;
+}
+
+// Matches either the new per-university unique constraint or the legacy
+// global one during the deploy window.
+function isStudentNineHundredUniqueViolation(error: unknown): boolean {
+  return (
+    isUniqueViolation(error, "students_university_id_nine_hundred_number_key") ||
+    isUniqueViolation(error, "students_nine_hundred_number_key")
+  );
 }
 
 // Detects a Postgres unique_violation (23505). Optionally narrows to a
@@ -1206,11 +1229,13 @@ export const studentCheckIn = createServerFn({ method: "POST" })
     if (!eventCheck.ok) return eventCheck;
 
 
+    const universityId = await requireEventUniversityId(eventCheck.event);
 
     const { data: existingStudent, error: existingStudentError } = await (await getSupabaseAdmin())
       .from("students")
       .select("id, first_name, last_name, student_email")
       .eq("nine_hundred_number", data.nineHundredNumber)
+      .eq("university_id", universityId)
       .maybeSingle();
 
     if (existingStudentError) throw new Error(safeMessage(existingStudentError, "Unable to look up student."));
@@ -1234,7 +1259,6 @@ export const studentCheckIn = createServerFn({ method: "POST" })
       };
     }
 
-    const universityId = await resolveEventUniversityId(eventCheck.event);
     const { data: student, error: studentError } = await (await getSupabaseAdmin())
       .from("students")
       .insert({
@@ -1249,13 +1273,14 @@ export const studentCheckIn = createServerFn({ method: "POST" })
 
     if (studentError || !student) {
       // Race: a parallel first-time submission inserted the same 900 number
-      // between our lookup and insert. Re-read and hand off through the
-      // returning-student preview path, matching the pre-check branch above.
-      if (isUniqueViolation(studentError, "students_nine_hundred_number_key")) {
+      // between our lookup and insert. Re-read (scoped to this university)
+      // and hand off through the returning-student preview path.
+      if (isStudentNineHundredUniqueViolation(studentError)) {
         const { data: raced } = await (await getSupabaseAdmin())
           .from("students")
           .select("id, first_name, last_name, student_email")
           .eq("nine_hundred_number", data.nineHundredNumber)
+          .eq("university_id", universityId)
           .maybeSingle();
         if (raced) {
           const existingAttendance = await getExistingAttendance(eventCheck.event.id, raced.id);
@@ -1403,11 +1428,12 @@ export const confirmReturningStudent = createServerFn({ method: "POST" })
     const eventCheck = await getEventForPublicCheckInByQr(data.qrToken);
     if (!eventCheck.ok) return eventCheck;
 
-
+    const universityId = await requireEventUniversityId(eventCheck.event);
     const { data: student, error } = await (await getSupabaseAdmin())
       .from("students")
       .select("id")
       .eq("nine_hundred_number", data.nineHundredNumber)
+      .eq("university_id", universityId)
       .maybeSingle();
 
     if (error) throw new Error(safeMessage(error));
@@ -1437,11 +1463,12 @@ export const lookupStudent = createServerFn({ method: "POST" })
     const eventCheck = await getEventForPublicCheckInByQr(data.qrToken);
     if (!eventCheck.ok) return eventCheck;
 
-
+    const universityId = await requireEventUniversityId(eventCheck.event);
     const { data: student, error } = await (await getSupabaseAdmin())
       .from("students")
       .select("id, first_name, last_name, student_email")
       .eq("nine_hundred_number", data.nineHundredNumber)
+      .eq("university_id", universityId)
       .maybeSingle();
 
     if (error) throw new Error(safeMessage(error));
@@ -1527,22 +1554,17 @@ export const manualCheckIn = createServerFn({ method: "POST" })
     const event = await requireOwnedEvent(context.supabase, context.userId, data.eventId);
     const admin = await getSupabaseAdmin();
 
-    const universityId = await resolveEventUniversityId(event);
+    const universityId = await requireEventUniversityId(event);
 
     let student: AttendanceActionStudentSnapshot | null = null;
     const { data: existingStudent, error: existingStudentError } = await admin
       .from("students")
       .select("id, first_name, last_name, student_email, nine_hundred_number, university_id")
       .eq("nine_hundred_number", data.nineHundredNumber)
+      .eq("university_id", universityId)
       .maybeSingle();
 
     if (existingStudentError) throw new Error(safeMessage(existingStudentError, "Unable to look up student."));
-
-    // Backfill university_id when the row is missing one and this event
-    // resolves to a university. Never overwrite an existing non-null value —
-    // cross-university reassignment is out of scope for P1.1.
-    const backfillUniversity = (current: string | null) =>
-      current == null && universityId ? { university_id: universityId } : {};
 
     if (existingStudent) {
       const { data: updatedStudent, error: updatedStudentError } = await admin
@@ -1551,7 +1573,6 @@ export const manualCheckIn = createServerFn({ method: "POST" })
           first_name: data.firstName.trim(),
           last_name: data.lastName.trim(),
           student_email: data.studentEmail,
-          ...backfillUniversity(existingStudent.university_id),
         })
         .eq("id", existingStudent.id)
         .select("id, first_name, last_name, student_email, nine_hundred_number")
@@ -1572,13 +1593,14 @@ export const manualCheckIn = createServerFn({ method: "POST" })
         .single();
       if (createdStudentError || !createdStudent) {
         // Race: parallel manual/public submit inserted the same 900 number
-        // between the lookup and this insert. Re-read and continue through
-        // the update path used when the student was found initially.
-        if (isUniqueViolation(createdStudentError, "students_nine_hundred_number_key")) {
+        // for this university between our lookup and insert. Re-read (scoped
+        // to this university) and continue through the update path.
+        if (isStudentNineHundredUniqueViolation(createdStudentError)) {
           const { data: raced, error: racedError } = await admin
             .from("students")
             .select("id, first_name, last_name, student_email, nine_hundred_number, university_id")
             .eq("nine_hundred_number", data.nineHundredNumber)
+            .eq("university_id", universityId)
             .maybeSingle();
           if (racedError) throw new Error(safeMessage(racedError, "Unable to look up student."));
           if (raced) {
@@ -1588,7 +1610,6 @@ export const manualCheckIn = createServerFn({ method: "POST" })
                 first_name: data.firstName.trim(),
                 last_name: data.lastName.trim(),
                 student_email: data.studentEmail,
-                ...backfillUniversity(raced.university_id),
               })
               .eq("id", raced.id)
               .select("id, first_name, last_name, student_email, nine_hundred_number")
@@ -1605,6 +1626,7 @@ export const manualCheckIn = createServerFn({ method: "POST" })
         student = createdStudent as AttendanceActionStudentSnapshot;
       }
     }
+
 
     const existingAttendance = await getExistingAttendance(event.id, student.id);
     if (existingAttendance) throw new Error("This student is already checked in.");
