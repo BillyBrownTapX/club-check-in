@@ -377,17 +377,55 @@ async function resolveHostOnboardingStateWithClient(supabase: AppSupabaseClient,
   });
 }
 
-async function getOwnedClubIds(supabase: AppSupabaseClient, userId: string) {
-  const { data, error } = await supabase.from("clubs").select("id").eq("host_id", userId);
-  if (error) throw new Error(safeMessage(error));
-  return (data ?? []).map((club) => club.id);
+// Returns every club id the user can access as either an owner or officer
+// via club_members, unioned with any club where they are still the legacy
+// clubs.host_id (fallback so a missing membership row never bricks an owner).
+async function getAccessibleClubIds(supabase: AppSupabaseClient, userId: string) {
+  const [memberships, ownedClubs] = await Promise.all([
+    supabase.from("club_members").select("club_id").eq("user_id", userId),
+    supabase.from("clubs").select("id").eq("host_id", userId),
+  ]);
+  if (memberships.error) throw new Error(safeMessage(memberships.error));
+  if (ownedClubs.error) throw new Error(safeMessage(ownedClubs.error));
+
+  const ids = new Set<string>();
+  for (const row of memberships.data ?? []) ids.add(row.club_id);
+  for (const row of ownedClubs.data ?? []) ids.add(row.id);
+  return Array.from(ids);
 }
 
-async function requireOwnedClub(supabase: AppSupabaseClient, userId: string, clubId: string) {
-  const { data, error } = await supabase.from("clubs").select("*, universities(id, name, slug)").eq("id", clubId).eq("host_id", userId).maybeSingle();
-  if (error) throw new Error(safeMessage(error));
-  if (!data) throw notFound();
-  return data as Club & { universities?: Pick<University, "id" | "name" | "slug"> | null };
+// Member-level access: owner OR officer via club_members, or legacy host_id.
+// notFound() on absence to avoid leaking club existence to non-members.
+async function requireClubAccess(supabase: AppSupabaseClient, userId: string, clubId: string) {
+  const [{ data: club, error: clubError }, { data: membership, error: membershipError }] = await Promise.all([
+    supabase.from("clubs").select("*, universities(id, name, slug)").eq("id", clubId).maybeSingle(),
+    supabase.from("club_members").select("role").eq("club_id", clubId).eq("user_id", userId).maybeSingle(),
+  ]);
+  if (clubError) throw new Error(safeMessage(clubError));
+  if (membershipError) throw new Error(safeMessage(membershipError));
+  if (!club) throw notFound();
+
+  const isHost = club.host_id === userId;
+  if (!membership && !isHost) throw notFound();
+
+  return club as Club & { universities?: Pick<University, "id" | "name" | "slug"> | null };
+}
+
+// Owner-only. Used exclusively for destructive club-level ops (e.g. deleteClub).
+async function requireClubOwner(supabase: AppSupabaseClient, userId: string, clubId: string) {
+  const [{ data: club, error: clubError }, { data: membership, error: membershipError }] = await Promise.all([
+    supabase.from("clubs").select("*, universities(id, name, slug)").eq("id", clubId).maybeSingle(),
+    supabase.from("club_members").select("role").eq("club_id", clubId).eq("user_id", userId).maybeSingle(),
+  ]);
+  if (clubError) throw new Error(safeMessage(clubError));
+  if (membershipError) throw new Error(safeMessage(membershipError));
+  if (!club) throw notFound();
+
+  const isHost = club.host_id === userId;
+  const isOwner = membership?.role === "owner";
+  if (!isOwner && !isHost) throw notFound();
+
+  return club as Club & { universities?: Pick<University, "id" | "name" | "slug"> | null };
 }
 
 async function requireOwnedEvent(supabase: AppSupabaseClient, userId: string, eventId: string) {
@@ -400,7 +438,7 @@ async function requireOwnedEvent(supabase: AppSupabaseClient, userId: string, ev
   if (eventError) throw new Error(safeMessage(eventError, undefined, "read"));
   if (!event) throw notFound();
 
-  const club = await requireOwnedClub(supabase, userId, event.club_id);
+  const club = await requireClubAccess(supabase, userId, event.club_id);
 
   return {
     ...(event as Database["public"]["Tables"]["events"]["Row"]),
