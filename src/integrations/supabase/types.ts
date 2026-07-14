@@ -420,6 +420,7 @@ export type Database = {
       }
       universities: {
         Row: {
+          allowed_email_domains: string[]
           created_at: string
           id: string
           name: string
@@ -427,6 +428,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          allowed_email_domains?: string[]
           created_at?: string
           id?: string
           name: string
@@ -434,6 +436,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          allowed_email_domains?: string[]
           created_at?: string
           id?: string
           name?: string

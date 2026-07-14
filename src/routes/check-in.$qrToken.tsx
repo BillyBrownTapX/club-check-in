@@ -190,6 +190,14 @@ function CheckInRouteComponent() {
       if (typeof e.message === "string" && e.message.includes("Too many attempts")) {
         return PUBLIC_RATE_LIMIT_ERROR;
       }
+      if (e.code === "invalid_email_domain") return e.message as string;
+      if (
+        typeof e.message === "string" &&
+        (e.message.startsWith("Use your university email") ||
+          e.message.includes("university email"))
+      ) {
+        return e.message;
+      }
     }
     return PUBLIC_TRANSIENT_ERROR;
   }
