@@ -101,12 +101,12 @@ function EventsRoute() {
       />
 
       <div className="mt-1 space-y-3">
-        <IosSearchField value={query} onChange={(v) => { setQuery(v); navigate({ to: ".", search: (prev) => ({ ...prev, query: v }) }); }} placeholder="Search events" />
+        <IosSearchField value={query} onChange={(v) => { setQuery(v); navigate({ to: ".", search: { ...search, query: v } }); }} placeholder="Search events" />
         <SegmentedControl<Tab>
           value={tab}
           onChange={(t) => {
             setTab(t);
-            navigate({ to: ".", search: (prev) => ({ ...prev, status: t === "live" ? "active" : t === "upcoming" ? "upcoming" : "past" }) });
+            navigate({ to: ".", search: { ...search, status: t === "live" ? "active" : t === "upcoming" ? "upcoming" : "past" } });
           }}
           options={[
             { value: "upcoming", label: "Upcoming" },
