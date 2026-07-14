@@ -119,8 +119,10 @@ function ClubsRoute() {
         title="Create Club"
         description="Add a new club to your workspace."
         onSubmit={async (values) => {
-          await createClub.mutateAsync(values as never);
+          const created = await createClub.mutateAsync(values as never);
+          toast.success("Club created", { description: created.club_name });
         }}
+
       />
     </HostAppShell>
   );
