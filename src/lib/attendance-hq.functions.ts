@@ -1033,8 +1033,11 @@ async function createAttendanceRecord(input: {
 export const studentCheckIn = createServerFn({ method: "POST" })
   .inputValidator(studentCheckInInputSchema)
   .handler(async ({ data }) => {
+    await rateLimit("register", data.qrToken);
     const eventCheck = await getEventForPublicCheckInByQr(data.qrToken);
     if (!eventCheck.ok) return eventCheck;
+
+
 
     const { data: existingStudent, error: existingStudentError } = await (await getSupabaseAdmin())
       .from("students")
@@ -1108,8 +1111,11 @@ export const studentCheckIn = createServerFn({ method: "POST" })
 export const getRememberedStudent = createServerFn({ method: "POST" })
   .inputValidator(rememberedDeviceInputSchema)
   .handler(async ({ data }) => {
+    await rateLimit("fast", data.qrToken);
     const eventCheck = await getEventForPublicCheckInByQr(data.qrToken);
     if (!eventCheck.ok) return eventCheck;
+
+
 
     const { data: session, error } = await (await getSupabaseAdmin())
       .from("student_device_sessions")
