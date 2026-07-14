@@ -505,7 +505,7 @@ async function getUniversities(supabase: AppSupabaseClient) {
 }
 
 async function getHostTemplatesForUser(supabase: AppSupabaseClient, userId: string, clubId?: string) {
-  const clubIds = clubId ? [clubId] : await getOwnedClubIds(supabase, userId);
+  const clubIds = clubId ? [clubId] : await getAccessibleClubIds(supabase, userId);
   if (!clubIds.length) return [] as EventTemplateWithClub[];
 
   const { data: templates, error } = await supabase
@@ -523,7 +523,7 @@ async function getHostEventsForUser(
   userId: string,
   filters: { clubId?: string; status: "all" | "active" | "upcoming" | "past"; query?: string },
 ) {
-  const clubIds = filters.clubId ? [filters.clubId] : await getOwnedClubIds(supabase, userId);
+  const clubIds = filters.clubId ? [filters.clubId] : await getAccessibleClubIds(supabase, userId);
   if (!clubIds.length) return [] as ManagementEventSummary[];
 
   let query = supabase
@@ -569,7 +569,7 @@ async function createEventForUser(
   userId: string,
   data: z.infer<typeof validatedEventSchema>,
 ) {
-  const club = await requireOwnedClub(supabase, userId, data.clubId);
+  const club = await requireClubAccess(supabase, userId, data.clubId);
 
   const { data: event, error } = await supabase
     .from("events")
@@ -642,7 +642,7 @@ export const getClubDetail = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator(clubIdInputSchema)
   .handler(async ({ data, context }) => {
-    const club = await requireOwnedClub(context.supabase, context.userId, data.clubId);
+    const club = await requireClubAccess(context.supabase, context.userId, data.clubId);
 
     const [universities, { data: events, error: eventsError }, { data: templates, error: templatesError }] = await Promise.all([
       getUniversities(context.supabase),
@@ -710,7 +710,7 @@ export const updateClub = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(clubUpdateSchema)
   .handler(async ({ data, context }) => {
-    await requireOwnedClub(context.supabase, context.userId, data.clubId);
+    await requireClubAccess(context.supabase, context.userId, data.clubId);
 
     // The slug is the public identifier minted at insert time. Rotating it
     // on every name edit would silently break any external links/QR/
@@ -737,7 +737,7 @@ export const createEventTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(eventTemplateSchema)
   .handler(async ({ data, context }) => {
-    await requireOwnedClub(context.supabase, context.userId, data.clubId);
+    await requireClubAccess(context.supabase, context.userId, data.clubId);
 
     const { data: template, error } = await context.supabase
       .from("event_templates")
@@ -762,7 +762,7 @@ export const updateEventTemplate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(eventTemplateUpdateSchema)
   .handler(async ({ data, context }) => {
-    await requireOwnedClub(context.supabase, context.userId, data.clubId);
+    await requireClubAccess(context.supabase, context.userId, data.clubId);
 
     const { data: template, error } = await context.supabase
       .from("event_templates")
@@ -803,7 +803,7 @@ export const duplicateEventTemplate = createServerFn({ method: "POST" })
     // 2. Defense-in-depth: explicitly verify the host owns the destination
     //    club. Without this, any future refactor that swaps the SELECT to an
     //    admin client would silently re-introduce cross-tenant duplication.
-    await requireOwnedClub(context.supabase, context.userId, template.club_id);
+    await requireClubAccess(context.supabase, context.userId, template.club_id);
 
     const { data: duplicated, error: duplicateError } = await context.supabase
       .from("event_templates")
@@ -828,7 +828,7 @@ export const getEventFormPayload = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator(eventFormPayloadInputSchema)
   .handler(async ({ data, context }) => {
-    const [universities, clubIds] = await Promise.all([getUniversities(context.supabase), getOwnedClubIds(context.supabase, context.userId)]);
+    const [universities, clubIds] = await Promise.all([getUniversities(context.supabase), getAccessibleClubIds(context.supabase, context.userId)]);
     const clubs = clubIds.length
       ? ((await context.supabase.from("clubs").select("*, universities(id, name, slug)").in("id", clubIds).order("club_name", { ascending: true })).data ?? [])
       : [];
@@ -915,7 +915,7 @@ export const updateEvent = createServerFn({ method: "POST" })
   .inputValidator(eventUpdateSchema)
   .handler(async ({ data, context }) => {
     const existing = await requireOwnedEvent(context.supabase, context.userId, data.eventId);
-    await requireOwnedClub(context.supabase, context.userId, data.clubId);
+    await requireClubAccess(context.supabase, context.userId, data.clubId);
 
     const { data: event, error } = await context.supabase
       .from("events")
@@ -1970,7 +1970,7 @@ export const deleteClub = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(deleteClubSchema)
   .handler(async ({ data, context }) => {
-    await requireOwnedClub(context.supabase, context.userId, data.clubId);
+    await requireClubAccess(context.supabase, context.userId, data.clubId);
 
     const admin = await getSupabaseAdmin();
 
