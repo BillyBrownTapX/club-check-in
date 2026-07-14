@@ -1607,6 +1607,9 @@ export const manualCheckIn = createServerFn({ method: "POST" })
 
     const universityId = await requireEventUniversityId(event);
 
+    await assertUniversityEmailAllowed(universityId, data.studentEmail);
+
+
     let student: AttendanceActionStudentSnapshot | null = null;
     const { data: existingStudent, error: existingStudentError } = await admin
       .from("students")
