@@ -1730,12 +1730,20 @@ export const fastCheckIn = createServerFn({ method: "POST" })
 
     const { data: session, error: sessionError } = await (await getSupabaseAdmin())
       .from("student_device_sessions")
-      .select("id, student_id")
+      .select("id, student_id, created_at, last_used_at")
       .eq("device_token", data.deviceToken)
       .maybeSingle();
 
     if (sessionError) throw new Error(safeMessage(sessionError));
     if (!session) {
+      return { ok: false as const, state: "student_not_found" as const };
+    }
+
+    if (isDeviceSessionExpired(session)) {
+      await (await getSupabaseAdmin())
+        .from("student_device_sessions")
+        .delete()
+        .eq("id", session.id);
       return { ok: false as const, state: "student_not_found" as const };
     }
 
