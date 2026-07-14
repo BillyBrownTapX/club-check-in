@@ -170,7 +170,7 @@ function RootComponent() {
             <Outlet />
           </main>
         </div>
-        <Toaster position="top-center" richColors closeButton style={{ zIndex: 100 } as React.CSSProperties} />
+        <Toaster position="top-center" richColors closeButton style={{ zIndex: 100 }} />
       </AttendanceAuthProvider>
     </QueryClientProvider>
   );
