@@ -387,7 +387,7 @@ type AppSupabaseClient = SupabaseClient<Database>;
 async function resolveHostOnboardingStateWithClient(supabase: AppSupabaseClient, userId: string): Promise<HostOnboardingState> {
   const [{ data: profile, error: profileError }, { data: club, error: clubError }] = await Promise.all([
     supabase.from("host_profiles").select("*").eq("id", userId).maybeSingle(),
-    supabase.from("clubs").select("*").eq("host_id", userId).order("created_at", { ascending: true }).limit(1).maybeSingle(),
+    resolveFirstAccessibleClub(supabase, userId),
   ]);
 
   if (profileError) throw new Error(safeMessage(profileError));
