@@ -27,7 +27,6 @@ import { Route as EventsEventIdRouteImport } from './routes/events.$eventId'
 import { Route as DisplayQrTokenRouteImport } from './routes/display.$qrToken'
 import { Route as ClubsClubIdRouteImport } from './routes/clubs.$clubId'
 import { Route as CheckInQrTokenRouteImport } from './routes/check-in.$qrToken'
-import { Route as EventsEventIdPresentRouteImport } from './routes/events.$eventId.present'
 import { Route as EventsEventIdEditRouteImport } from './routes/events.$eventId.edit'
 import { Route as EventsEventIdDisplayRouteImport } from './routes/events.$eventId.display'
 import { Route as ApiHostEventsEventIdAttendanceDotcsvRouteImport } from './routes/api.host.events.$eventId.attendance[.]csv'
@@ -122,11 +121,6 @@ const CheckInQrTokenRoute = CheckInQrTokenRouteImport.update({
   path: '/check-in/$qrToken',
   getParentRoute: () => rootRouteImport,
 } as any)
-const EventsEventIdPresentRoute = EventsEventIdPresentRouteImport.update({
-  id: '/present',
-  path: '/present',
-  getParentRoute: () => EventsEventIdRoute,
-} as any)
 const EventsEventIdEditRoute = EventsEventIdEditRouteImport.update({
   id: '/edit',
   path: '/edit',
@@ -165,7 +159,6 @@ export interface FileRoutesByFullPath {
   '/events/': typeof EventsIndexRoute
   '/events/$eventId/display': typeof EventsEventIdDisplayRoute
   '/events/$eventId/edit': typeof EventsEventIdEditRoute
-  '/events/$eventId/present': typeof EventsEventIdPresentRoute
   '/api/host/events/$eventId/attendance.csv': typeof ApiHostEventsEventIdAttendanceDotcsvRoute
 }
 export interface FileRoutesByTo {
@@ -189,7 +182,6 @@ export interface FileRoutesByTo {
   '/events': typeof EventsIndexRoute
   '/events/$eventId/display': typeof EventsEventIdDisplayRoute
   '/events/$eventId/edit': typeof EventsEventIdEditRoute
-  '/events/$eventId/present': typeof EventsEventIdPresentRoute
   '/api/host/events/$eventId/attendance.csv': typeof ApiHostEventsEventIdAttendanceDotcsvRoute
 }
 export interface FileRoutesById {
@@ -214,7 +206,6 @@ export interface FileRoutesById {
   '/events/': typeof EventsIndexRoute
   '/events/$eventId/display': typeof EventsEventIdDisplayRoute
   '/events/$eventId/edit': typeof EventsEventIdEditRoute
-  '/events/$eventId/present': typeof EventsEventIdPresentRoute
   '/api/host/events/$eventId/attendance.csv': typeof ApiHostEventsEventIdAttendanceDotcsvRoute
 }
 export interface FileRouteTypes {
@@ -240,7 +231,6 @@ export interface FileRouteTypes {
     | '/events/'
     | '/events/$eventId/display'
     | '/events/$eventId/edit'
-    | '/events/$eventId/present'
     | '/api/host/events/$eventId/attendance.csv'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -264,7 +254,6 @@ export interface FileRouteTypes {
     | '/events'
     | '/events/$eventId/display'
     | '/events/$eventId/edit'
-    | '/events/$eventId/present'
     | '/api/host/events/$eventId/attendance.csv'
   id:
     | '__root__'
@@ -288,7 +277,6 @@ export interface FileRouteTypes {
     | '/events/'
     | '/events/$eventId/display'
     | '/events/$eventId/edit'
-    | '/events/$eventId/present'
     | '/api/host/events/$eventId/attendance.csv'
   fileRoutesById: FileRoutesById
 }
@@ -442,13 +430,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckInQrTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/events/$eventId/present': {
-      id: '/events/$eventId/present'
-      path: '/present'
-      fullPath: '/events/$eventId/present'
-      preLoaderRoute: typeof EventsEventIdPresentRouteImport
-      parentRoute: typeof EventsEventIdRoute
-    }
     '/events/$eventId/edit': {
       id: '/events/$eventId/edit'
       path: '/edit'
@@ -476,13 +457,11 @@ declare module '@tanstack/react-router' {
 interface EventsEventIdRouteChildren {
   EventsEventIdDisplayRoute: typeof EventsEventIdDisplayRoute
   EventsEventIdEditRoute: typeof EventsEventIdEditRoute
-  EventsEventIdPresentRoute: typeof EventsEventIdPresentRoute
 }
 
 const EventsEventIdRouteChildren: EventsEventIdRouteChildren = {
   EventsEventIdDisplayRoute: EventsEventIdDisplayRoute,
   EventsEventIdEditRoute: EventsEventIdEditRoute,
-  EventsEventIdPresentRoute: EventsEventIdPresentRoute,
 }
 
 const EventsEventIdRouteWithChildren = EventsEventIdRoute._addFileChildren(
