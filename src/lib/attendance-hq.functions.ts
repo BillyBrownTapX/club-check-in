@@ -78,6 +78,39 @@ import {
 import { safeMessage } from "@/lib/server-errors";
 import { z } from "zod";
 
+// PII-safe log helper for public check-in server fns. Logs a tagged line
+// with the operation name, a hashed qrToken, and a sanitized message
+// only — never names, emails, 900 numbers, student ids, device tokens,
+// or the raw qrToken. Business outcomes returned as `{ ok: false, state }`
+// are normal flow and MUST NOT be routed through this helper.
+type PublicCheckInOp =
+  | "studentCheckIn"
+  | "lookupStudent"
+  | "confirmReturningStudent"
+  | "fastCheckIn"
+  | "getRememberedStudent"
+  | "getPublicEventDisplay"
+  | "getPublicEventByQr";
+
+function hashQrTokenForLog(qrToken: string | undefined | null): string {
+  if (!qrToken) return "none";
+  return createHash("sha256").update(qrToken).digest("hex").slice(0, 12);
+}
+
+function logCheckInError(op: PublicCheckInOp, qrToken: string | undefined | null, err: unknown): void {
+  if (typeof console === "undefined") return;
+  const e = err as { code?: string; message?: string } | null;
+  console.error("[check-in] failed", {
+    op,
+    qrHash: hashQrTokenForLog(qrToken),
+    code: e?.code,
+    // Route the message through safeMessage so nothing sensitive lands in
+    // the log line. This mirrors the copy the caller ultimately sees.
+    message: safeMessage(e ?? null, e?.message ?? "unknown error"),
+  });
+}
+
+
 async function ensureHostProfile(userId: string, fallback?: { fullName?: string | null; email?: string | null }) {
   const { data: existingProfile, error: existingError } = await (await getSupabaseAdmin())
     .from("host_profiles")
