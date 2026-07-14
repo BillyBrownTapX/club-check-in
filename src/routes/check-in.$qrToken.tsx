@@ -176,6 +176,23 @@ function CheckInRouteComponent() {
   // already checked in, etc.) is returned as `{ ok: false, state }` and
   // handled separately, so this path only fires on transport / panic.
   const PUBLIC_TRANSIENT_ERROR = "Something went wrong. Please try again.";
+  const PUBLIC_RATE_LIMIT_ERROR = "Too many attempts. Please wait a moment and try again.";
+
+  // Rate-limit errors are thrown by the server (RateLimitedError) and
+  // arrive here through TanStack Start's RPC serialization, which may
+  // preserve `code`, flatten to a plain object, or leave only `message`.
+  // Match any of those shapes; fall back to the generic transient copy
+  // for everything else so backend detail never leaks.
+  function getPublicCheckInErrorMessage(err: unknown): string {
+    if (err && typeof err === "object") {
+      const e = err as { code?: unknown; message?: unknown };
+      if (e.code === "rate_limited") return PUBLIC_RATE_LIMIT_ERROR;
+      if (typeof e.message === "string" && e.message.includes("Too many attempts")) {
+        return PUBLIC_RATE_LIMIT_ERROR;
+      }
+    }
+    return PUBLIC_TRANSIENT_ERROR;
+  }
 
   const handleFirstTimeSubmit = registrationForm.handleSubmit(async (values) => {
     setGlobalError(null);
