@@ -1234,6 +1234,7 @@ export const studentCheckIn = createServerFn({ method: "POST" })
       };
     }
 
+    const universityId = await resolveEventUniversityId(eventCheck.event);
     const { data: student, error: studentError } = await (await getSupabaseAdmin())
       .from("students")
       .insert({
@@ -1241,6 +1242,7 @@ export const studentCheckIn = createServerFn({ method: "POST" })
         last_name: data.lastName.trim(),
         student_email: data.studentEmail,
         nine_hundred_number: data.nineHundredNumber,
+        university_id: universityId,
       })
       .select("id, first_name, last_name, student_email")
       .single();
