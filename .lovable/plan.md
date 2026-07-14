@@ -1,64 +1,112 @@
-## What's happening
+# Why "Save Club" appears to do nothing
 
-Walking the "New Template" flow from `src/routes/clubs.$clubId.tsx` → `TemplateDialog` in `src/components/attendance-hq/host-management.tsx` → `createEventTemplate` server fn, the code path is wired correctly. The mutation fires, the server fn inserts the row, and the dialog is closed on success.
+Reproduced against the live DB. The club you're editing (`Sales Club`,
+`7b6a85c7-…`) has `university_id = NULL`. When the edit dialog opens, the
+form prefills the University select as empty (`""`). The Zod
+`clubUpdateSchema` requires `universityId` to be a UUID, so
+`handleSubmit` fails validation before any network call — no request is
+sent, the button toggles "Saving…" back to "Save Club" almost instantly,
+and the only feedback is a small error list at the bottom of the dialog
+(often below the fold) plus a toast that's easy to miss above the modal.
 
-The reason it *looks* like "nothing happened" is a **missing user-feedback path on the template create/update mutations only** — every other write in this file toasts on success (`toast.success("Event created", …)`, `toast.success("Club deleted")`, etc.) but the template `onSubmit` handler passed into `TemplateDialog` from `clubs.$clubId.tsx` does not:
+DB confirms the state:
 
-```tsx
-onSubmit={async (values) => {
-  if (editingTemplate) await updateTemplateMutation.mutateAsync(values as never);
-  else await createTemplateMutation.mutateAsync(values as never);
-}}
+```text
+clubs.university_id IS NULL for 2 rows:
+  - 7b6a85c7-… "Sales Club" (your club)
+  - 37950483-… "Sales Club" (another host)
+clubs.university_id column: nullable = YES
 ```
 
-Combined with a few smaller UX gaps, from the host's chair this reads as a dead button:
+Legacy rows exist because the column is nullable at the DB level even
+though the app schema forbids it. Any host who lands on one of these
+clubs hits the exact same dead-end.
 
-1. **No success toast.** Dialog just closes with no confirmation.
-2. **The Templates list is far below the fold** on `/clubs/:clubId` (stats → 2×2 tiles → upcoming events → past events → templates). After the dialog closes the viewport is still on the tiles, so the new card is invisible without scrolling.
-3. **Silent validation failures are easy to miss.** If any number field (open/close offset) is cleared, `valueAsNumber` yields `NaN`, Zod rejects it, and the invalid handler only sets an inline banner — no toast, and the banner renders inside the dialog area the user just scrolled past.
-4. **Server errors are caught inside `TemplateDialog` and toasted there**, which is fine — but because there's no success toast, the *absence* of a toast is indistinguishable from success. So a caught error and a real success look identical to the user.
+## Fix (workorder)
 
-The network log window we have ends before the click, so I can't 100% rule out a request that actually failed — but based on the schema (all fields except `templateName` are optional-or-empty-string, `clubId` defaults from props to a valid uuid, offsets default to 15/20) and the RLS/GRANTs already in place for `event_templates`, the create request itself should succeed for the signed-in host on this route. The bug we can prove from the code alone is the feedback gap.
+### 1. Make the blocker visible in the ClubDialog
 
-## Fix
+File: `src/components/attendance-hq/host-management.tsx` (`ClubDialog`).
 
-Scoped, presentation-only — no server fn / schema / DB changes.
+- Move the missing-fields error banner ABOVE the form fields, not below
+  the submit button, so validation errors are always visible.
+- Add a top-of-dialog callout when `isEdit && !form.watch("universityId")`:
+  "This club is missing a university. Pick one to continue." — styled
+  like the existing "Add a university first" block.
+- After the invalid callback fires, scroll the dialog to the top and
+  focus the University select (via a ref on `SelectInput`), so the user
+  is taken straight to the blocker.
+- Keep the existing `toast.error` + inline banner.
 
-**1. Add success + error feedback in `src/routes/clubs.$clubId.tsx`**
+### 2. Backfill and lock down `clubs.university_id`
 
-Rewrite the `TemplateDialog` `onSubmit` prop so both branches surface a toast, mirroring the club/event flows already in the same file:
+New migration.
 
-```tsx
-onSubmit={async (values) => {
-  if (editingTemplate) {
-    const t = await updateTemplateMutation.mutateAsync(values as never);
-    toast.success("Template saved", { description: t.template_name });
-  } else {
-    const t = await createTemplateMutation.mutateAsync(values as never);
-    toast.success("Template created", { description: t.template_name });
-  }
-}}
-```
+- Backfill: for each `clubs` row where `university_id IS NULL`, set it
+  to the host's first available university (via `host_profiles` /
+  existing university → host relationship the app already uses in
+  `getUniversitiesForHost`). If a host has no university, leave the row
+  and log it — do not delete.
+- Add `ALTER TABLE public.clubs ALTER COLUMN university_id SET NOT NULL`
+  after backfill. This matches the Zod contract and prevents recurrence.
+- Verify existing GRANTs and RLS remain intact (no schema-level policy
+  changes needed).
 
-`TemplateDialog` already re-throws on failure (its own catch toasts + keeps the dialog open), so this doesn't double-toast errors.
+### 3. Close the create-time hole in onboarding
 
-**2. Make validation failures loud in `TemplateDialog` (`src/components/attendance-hq/host-management.tsx`)**
+File: `src/routes/onboarding.club.tsx` (verify) and
+`src/lib/attendance-hq.functions.ts` (`createClubManagement` /
+onboarding equivalents).
 
-In the `form.handleSubmit(..., onInvalid)` callback, also fire `toast.error("Please fix the highlighted fields before saving.")` in addition to the inline banner, and scroll the first error field into view. This category-fixes the same silent-failure risk on the Club dialog's invalid handler too, which has the identical pattern.
+- Confirm every server fn that inserts into `clubs` requires
+  `universityId` (Zod uuid). The current `createClubManagement` already
+  does; audit the onboarding fn to match.
+- If onboarding can currently insert without a university, remove that
+  path — with step 2's NOT NULL constraint it would crash at insert.
 
-**3. Harden the number inputs**
+### 4. Small adjacent bugs surfaced during audit
 
-Change the two offset registers from `valueAsNumber: true` to `setValueAs: (v) => v === "" ? undefined : Number(v)` so a cleared field becomes a Zod "Required" error with a clear message instead of a silent `NaN` rejection. Same treatment on the club dialog if it has numeric fields.
+- **Toaster visibility inside dialogs**: `Toaster` is mounted at
+  `top-center` in `__root.tsx`. Radix Dialog uses a z-index that can
+  cover it. Bump `Toaster` z-index (or wrap in a portal above dialog)
+  so error toasts fired from inside a modal are actually seen.
+- **`initialValues` for edit dialog**: when the DB returns `null` for
+  `universityId`, `description`, `logoPath`, the form falls back to
+  `""` / `null`. That's fine EXCEPT for `universityId` where `""` is
+  invalid. Step 1 makes this loud; step 2 removes the possibility.
+- **`toast.success` on club create/update**: `createClub.mutateAsync`
+  in `clubs.index.tsx` has no success toast (edit path in
+  `clubs.$clubId.tsx` also lacks one). Add success toasts consistent
+  with the template flow to reduce future "did it save?" confusion.
+- **Silent 401 during token refresh**: `useAuthorizedServerFn` throws
+  on 401 and triggers sign-out, but `useAuthorizedMutation` swallows
+  the error unless the caller shows one. ClubDialog already surfaces
+  it via `getManagementErrorMessage`; verify create dialog in
+  `clubs.index.tsx` does the same — it currently doesn't (no
+  try/catch in its `onSubmit`). Wrap the create submit in a
+  try/catch/toast like edit does.
 
-## Verification
+### 5. Verification
 
-- Sign in as the current host, open a club, click **New**, fill all fields, submit → expect a green "Template created" toast, the dialog to close, and the new card to appear in Templates.
-- Edit an existing template → "Template saved" toast, updated fields render.
-- Clear the "Open offset minutes" field and submit → red toast + inline banner naming the field, dialog stays open.
-- No new deps, no server-side changes; typecheck + build must stay clean.
+- Reload `/clubs/7b6a85c7-…` after the migration → University field is
+  pre-filled with the host's university, `Save Club` works.
+- New client-side test: open Edit on any club, blank the University
+  field, click Save → visible top banner + focused select + toast.
+- `supabase--linter` after migration to confirm no new warnings.
+- Manual: create a new club without picking a university → blocked with
+  a clear message (already true; keep test).
 
-## Out of scope
+## Technical details
 
-- Restructuring the `/clubs/:clubId` page order so Templates aren't below the fold (larger UX change; not required to fix the reported bug).
-- Adding an animated highlight on the newly-created template card (nice-to-have follow-up).
-- Any change to `createEventTemplate` / `updateEventTemplate` server fns or the `event_templates` schema.
+- Zod schemas live in `src/lib/attendance-hq-schemas.ts`. No schema
+  changes needed — the DB is what needs to catch up to Zod.
+- `ClubDialog` uses `react-hook-form` + `zodResolver`. `isSubmitting`
+  briefly flips true during validation, which is why the button
+  "cycles" even when no network call is made. This is expected RHF
+  behavior; UX fix in step 1 explains it to the user.
+- Migration must run in the required order: `CREATE`/backfill →
+  `ALTER … SET NOT NULL`. Keep the existing GRANT/RLS block untouched
+  (public schema grants for `clubs` are already in place).
+- Out of scope for this workorder: broader production-readiness pass
+  (rate limits, monitoring, email deliverability). Happy to plan those
+  in a follow-up — call it out and I'll scope separately.
