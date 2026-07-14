@@ -154,6 +154,42 @@ async function ensureHostProfile(userId: string, fallback?: { fullName?: string 
   return createdProfile as HostProfile;
 }
 
+// Picks the user's most-stable "primary" club for onboarding: prefer an
+// owner membership, else any membership (including officer-only), else fall
+// back to a legacy clubs.host_id match. Ordered by club.created_at ASC.
+async function resolveFirstAccessibleClub(
+  supabase: AppSupabaseClient,
+  userId: string,
+): Promise<{ data: Club | null; error: unknown }> {
+  const { data: memberships, error: membershipError } = await supabase
+    .from("club_members")
+    .select("club_id, role, clubs!inner(*)")
+    .eq("user_id", userId);
+  if (membershipError) return { data: null, error: membershipError };
+
+  const clubsList = ((memberships ?? []) as Array<{ role: string; clubs: Club }>)
+    .map((row) => ({ role: row.role, club: row.clubs }))
+    .filter((row) => row.club);
+
+  clubsList.sort((a, b) => {
+    if (a.role === "owner" && b.role !== "owner") return -1;
+    if (a.role !== "owner" && b.role === "owner") return 1;
+    return a.club.created_at.localeCompare(b.club.created_at);
+  });
+
+  if (clubsList.length) return { data: clubsList[0].club, error: null };
+
+  const { data: legacy, error: legacyError } = await supabase
+    .from("clubs")
+    .select("*")
+    .eq("host_id", userId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if (legacyError) return { data: null, error: legacyError };
+  return { data: (legacy as Club | null) ?? null, error: null };
+}
+
 async function resolveHostOnboardingState(userId: string): Promise<HostOnboardingState> {
   const admin = await getSupabaseAdmin();
   const [{ data: profile, error: profileError }, { data: club, error: clubError }] = await Promise.all([
