@@ -1,5 +1,5 @@
 import { useNavigate, createFileRoute, Link } from "@tanstack/react-router";
-import { Bell, ChevronRight, Lock, LogOut, Mail, ShieldCheck, User as UserIcon } from "lucide-react";
+import { Bell, ChevronRight, LifeBuoy, Lock, LogOut, Mail, ShieldCheck, User as UserIcon } from "lucide-react";
 import { useAttendanceAuth } from "@/components/attendance-hq/auth-provider";
 import { HostAppShell } from "@/components/attendance-hq/host-shell";
 import { useRequireHostRedirect } from "@/components/attendance-hq/host-management";
@@ -55,6 +55,11 @@ function SettingsRoute() {
       <GroupedList>
         <ListRow icon={Bell} label="Notifications" detail="Activity and milestones" to="/notifications" />
         <ListRow icon={Mail} label="Email" value={auth.user?.email} chevron={false} />
+      </GroupedList>
+
+      <SectionLabel className="mt-6">Support</SectionLabel>
+      <GroupedList>
+        <ListRow icon={LifeBuoy} label="Help" detail="Live check-in runbook" to="/help" />
       </GroupedList>
 
       <SectionLabel className="mt-6">Security</SectionLabel>
