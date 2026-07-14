@@ -69,6 +69,7 @@ import {
 import { cn } from "@/lib/utils";
 import {
   closeCheckInEarly,
+  correctStudentProfile,
   deleteEvent,
   duplicateEvent,
   getEventOperations,
