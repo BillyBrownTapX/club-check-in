@@ -1970,7 +1970,7 @@ export const deleteClub = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator(deleteClubSchema)
   .handler(async ({ data, context }) => {
-    await requireClubAccess(context.supabase, context.userId, data.clubId);
+    await requireClubOwner(context.supabase, context.userId, data.clubId);
 
     const admin = await getSupabaseAdmin();
 
