@@ -192,6 +192,17 @@ function ClubDetailRoute() {
     }
   };
 
+  const handleTransferOwnership = async (membership: ClubMemberEntry) => {
+    try {
+      await transferOwnershipMutation.mutateAsync({ clubId, membershipId: membership.id } as never);
+      toast.success("Ownership transferred");
+    } catch (e) {
+      toast.error(getManagementErrorMessage(e, "Unable to transfer ownership."));
+    }
+  };
+
+
+
 
   return (
     <ManagementPageShell>
