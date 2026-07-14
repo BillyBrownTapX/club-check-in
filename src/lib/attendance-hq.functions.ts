@@ -47,6 +47,7 @@ async function rateLimit(scope: "lookup" | "register" | "fast", qrToken: string)
 
 
 import {
+  addClubOfficerSchema,
   clubIdInputSchema,
   clubIdOptionalInputSchema,
   clubSchema,
