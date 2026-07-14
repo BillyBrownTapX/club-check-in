@@ -267,6 +267,15 @@ function CheckInRouteComponent() {
         if (!rememberedDeviceToken) return;
         const result = await confirmRemembered({ data: { qrToken, deviceToken: rememberedDeviceToken } });
         if (!result.ok) {
+          if (result.state === "student_not_found") {
+            // Session expired or vanished between the welcome-back peek
+            // and confirm. Drop the stale token and send the student
+            // back to first-time / returning instead of stranding them.
+            clearStoredDeviceToken();
+            clearTransientState();
+            setScreen("entry");
+            return;
+          }
           openBlockedState(result.state);
           return;
         }
