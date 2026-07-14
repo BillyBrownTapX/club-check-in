@@ -155,9 +155,10 @@ async function ensureHostProfile(userId: string, fallback?: { fullName?: string 
 }
 
 async function resolveHostOnboardingState(userId: string): Promise<HostOnboardingState> {
+  const admin = await getSupabaseAdmin();
   const [{ data: profile, error: profileError }, { data: club, error: clubError }] = await Promise.all([
-    (await getSupabaseAdmin()).from("host_profiles").select("*").eq("id", userId).maybeSingle(),
-    (await getSupabaseAdmin()).from("clubs").select("*").eq("host_id", userId).order("created_at", { ascending: true }).limit(1).maybeSingle(),
+    admin.from("host_profiles").select("*").eq("id", userId).maybeSingle(),
+    resolveFirstAccessibleClub(admin, userId),
   ]);
 
   if (profileError) throw new Error(safeMessage(profileError));
