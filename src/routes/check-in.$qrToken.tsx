@@ -273,7 +273,7 @@ function CheckInRouteComponent() {
             // back to first-time / returning instead of stranding them.
             clearStoredDeviceToken();
             clearTransientState();
-            setScreen("entry");
+            setScreen("first-time");
             return;
           }
           openBlockedState(result.state);
