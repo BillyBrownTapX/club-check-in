@@ -243,6 +243,10 @@ function EventDetailRoute() {
   const [manualError, setManualError] = useState<string | null>(null);
   const [manualForm, setManualForm] = useState<ManualFormState>(EMPTY_MANUAL_FORM);
   const [restoringStudentId, setRestoringStudentId] = useState<string | null>(null);
+  const [editRow, setEditRow] = useState<AttendanceRow | null>(null);
+  const [editForm, setEditForm] = useState<{ firstName: string; lastName: string; studentEmail: string }>({ firstName: "", lastName: "", studentEmail: "" });
+  const [editSubmitting, setEditSubmitting] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
   const [rosterQuery, setRosterQuery] = useState("");
   const [methodFilter, setMethodFilter] = useState<RosterMethodFilter>("all");
   const [sortMode, setSortMode] = useState<RosterSort>("newest");
