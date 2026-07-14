@@ -707,6 +707,30 @@ function EventDetailRoute() {
               detail={event.is_archived ? "Bring this event back to active" : "Hide from active operations"}
               onClick={() => setArchiveDialogOpen(true)}
             />
+            <ActionSheet
+              trigger={
+                <button type="button" className="ios-list-row w-full text-left">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-destructive/10">
+                    <ShieldAlert className="h-[18px] w-[18px] text-destructive" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[15px] font-medium leading-tight text-foreground">
+                      {regeneratingQr ? "Regenerating…" : "Regenerate QR token"}
+                    </div>
+                    <div className="mt-0.5 text-[13px] text-muted-foreground">Invalidates old check-in and display links</div>
+                  </div>
+                </button>
+              }
+              title="Regenerate QR token?"
+              description="Old /check-in and /display links will stop working. Re-share the new link and re-open the Display view."
+            >
+              <ActionSheetItem
+                icon={ShieldAlert}
+                label="Yes, regenerate token"
+                destructive
+                onClick={() => void handleRegenerateQrToken()}
+              />
+            </ActionSheet>
             <ListRow
               icon={RefreshCw}
               label={refreshing ? "Refreshing…" : "Refresh now"}
