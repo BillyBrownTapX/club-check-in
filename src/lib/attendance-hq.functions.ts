@@ -2150,6 +2150,49 @@ export const closeCheckInEarly = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const regenerateEventQrToken = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(regenerateEventQrTokenSchema)
+  .handler(async ({ data, context }) => {
+    await requireOwnedEvent(context.supabase, context.userId, data.eventId);
+
+    const admin = await getSupabaseAdmin();
+
+    // qr_token has a UNIQUE constraint. Retry once on the rare collision.
+    let lastError: unknown = null;
+    let newToken: string | null = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const candidate = createQrToken();
+      const { data: updated, error } = await admin
+        .from("events")
+        .update({ qr_token: candidate, updated_at: new Date().toISOString() })
+        .eq("id", data.eventId)
+        .select("qr_token")
+        .single();
+      if (!error && updated) {
+        newToken = updated.qr_token;
+        break;
+      }
+      lastError = error;
+      // 23505 = unique violation. Any other error, stop.
+      if (!error || (error as { code?: string }).code !== "23505") break;
+    }
+    if (!newToken) {
+      throw new Error(safeMessage(lastError, "Unable to regenerate QR token."));
+    }
+
+    // Best-effort audit note. Failure here shouldn't roll back the rotation.
+    await admin.from("attendance_actions").insert({
+      event_id: data.eventId,
+      host_id: context.userId,
+      attendance_record_id: null,
+      action_type: "note",
+      notes: buildAttendanceActionNotes({ kind: "qr_token_regenerated" }),
+    });
+
+    return { ok: true, qrToken: newToken };
+  });
+
 // Cascade-delete a single event. Because the schema has no FK cascade
 // declarations, we have to remove attendance actions + records first,
 // then the event row itself. Ownership is re-verified via
