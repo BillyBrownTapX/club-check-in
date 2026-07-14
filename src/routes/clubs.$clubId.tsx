@@ -41,6 +41,7 @@ import {
   duplicateEventTemplate,
   getClubDetail,
   removeClubOfficer,
+  transferClubOwnership,
   updateClub,
   updateEventTemplate,
 } from "@/lib/attendance-hq.functions";
