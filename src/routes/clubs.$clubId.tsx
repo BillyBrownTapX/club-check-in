@@ -1,9 +1,19 @@
 import { useMemo, useState } from "react";
 import { Link, createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
-import { CalendarDays, History, Pencil, Plus, Trash2, Users, WandSparkles } from "lucide-react";
+import { CalendarDays, History, Pencil, Plus, Trash2, UserPlus, Users, WandSparkles, X } from "lucide-react";
 import { useAuthorizedMutation, useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   ActionSheet,
   ActionSheetItem,
@@ -24,17 +34,20 @@ import {
   StatTile,
 } from "@/components/attendance-hq/ios";
 import {
+  addClubOfficer,
   createEventTemplate,
   deleteClub,
   deleteEvent,
   duplicateEventTemplate,
   getClubDetail,
+  removeClubOfficer,
   updateClub,
   updateEventTemplate,
 } from "@/lib/attendance-hq.functions";
 import { useSignedLogoUrl } from "@/hooks/use-signed-logo";
-import type { EventTemplateWithClub, ManagementEventSummary } from "@/lib/attendance-hq";
+import type { ClubMemberEntry, EventTemplateWithClub, ManagementEventSummary } from "@/lib/attendance-hq";
 import { queryKeys } from "@/lib/query-keys";
+
 
 function ClubDetailNotFound() {
   return (
