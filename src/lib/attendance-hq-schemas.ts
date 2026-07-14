@@ -176,6 +176,10 @@ export const closeCheckInEarlySchema = z.object({
   eventId: z.string().uuid(),
 });
 
+export const regenerateEventQrTokenSchema = z.object({
+  eventId: z.string().uuid(),
+});
+
 export const toggleEventArchiveSchema = z.object({
   eventId: z.string().uuid(),
   isArchived: z.boolean(),
