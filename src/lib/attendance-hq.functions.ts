@@ -275,7 +275,7 @@ const EVENT_STATUS_ORDER: Record<ManagementEventSummary["checkInStatus"], number
 };
 
 type AttendanceActionNotePayload = {
-  kind: "manual_check_in" | "removed" | "restored";
+  kind: "manual_check_in" | "removed" | "restored" | "profile_corrected";
   studentId: string;
   firstName: string;
   lastName: string;
@@ -307,6 +307,7 @@ function parseAttendanceActionLog(action: Database["public"]["Tables"]["attendan
       },
       checkedInAt: parsed.checkedInAt ?? null,
       attendanceRecordId: parsed.attendanceRecordId ?? action.attendance_record_id,
+      kind: parsed.kind ?? null,
     };
   } catch {
     return null;
