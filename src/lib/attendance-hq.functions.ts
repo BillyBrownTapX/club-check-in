@@ -36,6 +36,7 @@ import {
   type University,
   shiftTimeString,
   slugifyClubName,
+  WEEKLY_MEETING_TEMPLATE_DEFAULTS,
 } from "@/lib/attendance-hq";
 async function getSupabaseAdmin() {
   const mod = await import("@/integrations/supabase/client.server");
