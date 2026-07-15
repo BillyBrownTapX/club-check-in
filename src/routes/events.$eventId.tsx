@@ -717,8 +717,8 @@ function EventDetailRoute() {
           <GroupedList>
             <ListRow
               icon={Copy}
-              label={duplicating ? "Duplicating…" : "Duplicate event"}
-              detail="Create a copy you can edit"
+              label={duplicating ? "Duplicating…" : "Duplicate next week"}
+              detail="Same setup, date +7 days"
               onClick={() => void handleDuplicate()}
             />
             <ListRow
