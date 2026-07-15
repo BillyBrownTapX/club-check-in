@@ -44,7 +44,10 @@ function SignUpRoute() {
     const { data, error } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
-      options: { data: { full_name: values.fullName } },
+      options: {
+        data: { full_name: values.fullName },
+        emailRedirectTo: getConfirmEmailRedirectUrl(),
+      },
     });
     if (error) {
       setAuthSettling(false);
