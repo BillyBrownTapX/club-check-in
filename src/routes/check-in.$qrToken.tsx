@@ -395,6 +395,7 @@ function CheckInRouteComponent() {
   async function handleConfirmCheckIn() {
     if (!pendingStudent) return;
     setGlobalError(null);
+    setLastFailureWasNetwork(false);
 
     try {
       if (confirmMode === "remembered") {
