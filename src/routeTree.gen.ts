@@ -33,6 +33,7 @@ import { Route as CheckInQrTokenRouteImport } from './routes/check-in.$qrToken'
 import { Route as EventsEventIdEditRouteImport } from './routes/events.$eventId.edit'
 import { Route as EventsEventIdDisplayRouteImport } from './routes/events.$eventId.display'
 import { Route as ApiHostEventsEventIdAttendanceDotcsvRouteImport } from './routes/api.host.events.$eventId.attendance[.]csv'
+import { Route as ApiHostClubsClubIdSemesterAttendanceDotcsvRouteImport } from './routes/api.host.clubs.$clubId.semester-attendance[.]csv'
 
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
@@ -155,6 +156,12 @@ const ApiHostEventsEventIdAttendanceDotcsvRoute =
     path: '/api/host/events/$eventId/attendance.csv',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiHostClubsClubIdSemesterAttendanceDotcsvRoute =
+  ApiHostClubsClubIdSemesterAttendanceDotcsvRouteImport.update({
+    id: '/api/host/clubs/$clubId/semester-attendance.csv',
+    path: '/api/host/clubs/$clubId/semester-attendance.csv',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -180,6 +187,7 @@ export interface FileRoutesByFullPath {
   '/events/': typeof EventsIndexRoute
   '/events/$eventId/display': typeof EventsEventIdDisplayRoute
   '/events/$eventId/edit': typeof EventsEventIdEditRoute
+  '/api/host/clubs/$clubId/semester-attendance.csv': typeof ApiHostClubsClubIdSemesterAttendanceDotcsvRoute
   '/api/host/events/$eventId/attendance.csv': typeof ApiHostEventsEventIdAttendanceDotcsvRoute
 }
 export interface FileRoutesByTo {
@@ -206,6 +214,7 @@ export interface FileRoutesByTo {
   '/events': typeof EventsIndexRoute
   '/events/$eventId/display': typeof EventsEventIdDisplayRoute
   '/events/$eventId/edit': typeof EventsEventIdEditRoute
+  '/api/host/clubs/$clubId/semester-attendance.csv': typeof ApiHostClubsClubIdSemesterAttendanceDotcsvRoute
   '/api/host/events/$eventId/attendance.csv': typeof ApiHostEventsEventIdAttendanceDotcsvRoute
 }
 export interface FileRoutesById {
@@ -233,6 +242,7 @@ export interface FileRoutesById {
   '/events/': typeof EventsIndexRoute
   '/events/$eventId/display': typeof EventsEventIdDisplayRoute
   '/events/$eventId/edit': typeof EventsEventIdEditRoute
+  '/api/host/clubs/$clubId/semester-attendance.csv': typeof ApiHostClubsClubIdSemesterAttendanceDotcsvRoute
   '/api/host/events/$eventId/attendance.csv': typeof ApiHostEventsEventIdAttendanceDotcsvRoute
 }
 export interface FileRouteTypes {
@@ -261,6 +271,7 @@ export interface FileRouteTypes {
     | '/events/'
     | '/events/$eventId/display'
     | '/events/$eventId/edit'
+    | '/api/host/clubs/$clubId/semester-attendance.csv'
     | '/api/host/events/$eventId/attendance.csv'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -287,6 +298,7 @@ export interface FileRouteTypes {
     | '/events'
     | '/events/$eventId/display'
     | '/events/$eventId/edit'
+    | '/api/host/clubs/$clubId/semester-attendance.csv'
     | '/api/host/events/$eventId/attendance.csv'
   id:
     | '__root__'
@@ -313,6 +325,7 @@ export interface FileRouteTypes {
     | '/events/'
     | '/events/$eventId/display'
     | '/events/$eventId/edit'
+    | '/api/host/clubs/$clubId/semester-attendance.csv'
     | '/api/host/events/$eventId/attendance.csv'
   fileRoutesById: FileRoutesById
 }
@@ -338,6 +351,7 @@ export interface RootRouteChildren {
   OnboardingEventRoute: typeof OnboardingEventRoute
   ClubsIndexRoute: typeof ClubsIndexRoute
   EventsIndexRoute: typeof EventsIndexRoute
+  ApiHostClubsClubIdSemesterAttendanceDotcsvRoute: typeof ApiHostClubsClubIdSemesterAttendanceDotcsvRoute
   ApiHostEventsEventIdAttendanceDotcsvRoute: typeof ApiHostEventsEventIdAttendanceDotcsvRoute
 }
 
@@ -511,6 +525,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHostEventsEventIdAttendanceDotcsvRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/host/clubs/$clubId/semester-attendance.csv': {
+      id: '/api/host/clubs/$clubId/semester-attendance.csv'
+      path: '/api/host/clubs/$clubId/semester-attendance.csv'
+      fullPath: '/api/host/clubs/$clubId/semester-attendance.csv'
+      preLoaderRoute: typeof ApiHostClubsClubIdSemesterAttendanceDotcsvRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -550,6 +571,8 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingEventRoute: OnboardingEventRoute,
   ClubsIndexRoute: ClubsIndexRoute,
   EventsIndexRoute: EventsIndexRoute,
+  ApiHostClubsClubIdSemesterAttendanceDotcsvRoute:
+    ApiHostClubsClubIdSemesterAttendanceDotcsvRoute,
   ApiHostEventsEventIdAttendanceDotcsvRoute:
     ApiHostEventsEventIdAttendanceDotcsvRoute,
 }
