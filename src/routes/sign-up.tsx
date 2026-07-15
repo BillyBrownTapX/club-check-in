@@ -7,6 +7,7 @@ import { AuthCard, AuthShell, AuthSupportLinks, EmailInput, InlineErrorMessage, 
 import { useRequireGuestRedirect } from "@/components/attendance-hq/host-management";
 import { supabase } from "@/integrations/supabase/client";
 import { signUpSchema } from "@/lib/attendance-hq-schemas";
+import { getConfirmEmailRedirectUrl } from "@/lib/attendance-hq";
 import { normalizeSupabaseAuthError } from "@/lib/server-errors";
 
 const formSchema = signUpSchema;
@@ -43,7 +44,10 @@ function SignUpRoute() {
     const { data, error } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
-      options: { data: { full_name: values.fullName } },
+      options: {
+        data: { full_name: values.fullName },
+        emailRedirectTo: getConfirmEmailRedirectUrl(),
+      },
     });
     if (error) {
       setAuthSettling(false);
@@ -80,7 +84,17 @@ function SignUpRoute() {
           <InlineErrorMessage message={submitError ?? undefined} />
           <PrimaryButton type="submit" disabled={guardLoading || form.formState.isSubmitting || authSettling}>{guardLoading ? "Loading..." : authSettling ? "Finishing setup..." : "Create account"}</PrimaryButton>
         </form>
-        <AuthSupportLinks primary={<SecondaryTextLink from="/" to="/sign-in">Already have an account? Sign in</SecondaryTextLink>} secondary={<p className="text-xs text-muted-foreground">By continuing you can immediately set up your first club and event.</p>} />
+        <AuthSupportLinks
+          primary={<SecondaryTextLink from="/" to="/sign-in">Already have an account? Sign in</SecondaryTextLink>}
+          secondary={
+            <p className="text-xs text-muted-foreground">
+              By creating an account you agree to our{" "}
+              <SecondaryTextLink to="/privacy">Privacy Policy</SecondaryTextLink>
+              {" "}and{" "}
+              <SecondaryTextLink to="/terms">Terms</SecondaryTextLink>.
+            </p>
+          }
+        />
       </AuthCard>
     </AuthShell>
   );

@@ -9,10 +9,12 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as LiveRouteImport } from './routes/live'
 import { Route as HomeRouteImport } from './routes/home'
@@ -32,6 +34,11 @@ import { Route as EventsEventIdEditRouteImport } from './routes/events.$eventId.
 import { Route as EventsEventIdDisplayRouteImport } from './routes/events.$eventId.display'
 import { Route as ApiHostEventsEventIdAttendanceDotcsvRouteImport } from './routes/api.host.events.$eventId.attendance[.]csv'
 
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignUpRoute = SignUpRouteImport.update({
   id: '/sign-up',
   path: '/sign-up',
@@ -50,6 +57,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NotificationsRoute = NotificationsRouteImport.update({
@@ -151,10 +163,12 @@ export interface FileRoutesByFullPath {
   '/home': typeof HomeRoute
   '/live': typeof LiveRoute
   '/notifications': typeof NotificationsRoute
+  '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/terms': typeof TermsRoute
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
   '/display/$qrToken': typeof DisplayQrTokenRoute
@@ -175,10 +189,12 @@ export interface FileRoutesByTo {
   '/home': typeof HomeRoute
   '/live': typeof LiveRoute
   '/notifications': typeof NotificationsRoute
+  '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/terms': typeof TermsRoute
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
   '/display/$qrToken': typeof DisplayQrTokenRoute
@@ -200,10 +216,12 @@ export interface FileRoutesById {
   '/home': typeof HomeRoute
   '/live': typeof LiveRoute
   '/notifications': typeof NotificationsRoute
+  '/privacy': typeof PrivacyRoute
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/terms': typeof TermsRoute
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
   '/display/$qrToken': typeof DisplayQrTokenRoute
@@ -226,10 +244,12 @@ export interface FileRouteTypes {
     | '/home'
     | '/live'
     | '/notifications'
+    | '/privacy'
     | '/reset-password'
     | '/settings'
     | '/sign-in'
     | '/sign-up'
+    | '/terms'
     | '/check-in/$qrToken'
     | '/clubs/$clubId'
     | '/display/$qrToken'
@@ -250,10 +270,12 @@ export interface FileRouteTypes {
     | '/home'
     | '/live'
     | '/notifications'
+    | '/privacy'
     | '/reset-password'
     | '/settings'
     | '/sign-in'
     | '/sign-up'
+    | '/terms'
     | '/check-in/$qrToken'
     | '/clubs/$clubId'
     | '/display/$qrToken'
@@ -274,10 +296,12 @@ export interface FileRouteTypes {
     | '/home'
     | '/live'
     | '/notifications'
+    | '/privacy'
     | '/reset-password'
     | '/settings'
     | '/sign-in'
     | '/sign-up'
+    | '/terms'
     | '/check-in/$qrToken'
     | '/clubs/$clubId'
     | '/display/$qrToken'
@@ -299,10 +323,12 @@ export interface RootRouteChildren {
   HomeRoute: typeof HomeRoute
   LiveRoute: typeof LiveRoute
   NotificationsRoute: typeof NotificationsRoute
+  PrivacyRoute: typeof PrivacyRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SettingsRoute: typeof SettingsRoute
   SignInRoute: typeof SignInRoute
   SignUpRoute: typeof SignUpRoute
+  TermsRoute: typeof TermsRoute
   CheckInQrTokenRoute: typeof CheckInQrTokenRoute
   ClubsClubIdRoute: typeof ClubsClubIdRoute
   DisplayQrTokenRoute: typeof DisplayQrTokenRoute
@@ -317,6 +343,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sign-up': {
       id: '/sign-up'
       path: '/sign-up'
@@ -343,6 +376,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/notifications': {
@@ -495,10 +535,12 @@ const rootRouteChildren: RootRouteChildren = {
   HomeRoute: HomeRoute,
   LiveRoute: LiveRoute,
   NotificationsRoute: NotificationsRoute,
+  PrivacyRoute: PrivacyRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SettingsRoute: SettingsRoute,
   SignInRoute: SignInRoute,
   SignUpRoute: SignUpRoute,
+  TermsRoute: TermsRoute,
   CheckInQrTokenRoute: CheckInQrTokenRoute,
   ClubsClubIdRoute: ClubsClubIdRoute,
   DisplayQrTokenRoute: DisplayQrTokenRoute,

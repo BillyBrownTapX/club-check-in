@@ -11,7 +11,7 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "Attendance HQ — QR attendance for college clubs" },
       { property: "og:description", content: "Run mobile QR check-in for university club events with a polished, iOS-native workflow." },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://attendance-hq.com/" },
+      { property: "og:url", content: "https://checkin-swiftly.lovable.app/" },
       { name: "twitter:title", content: "Attendance HQ — QR attendance for college clubs" },
       { name: "twitter:description", content: "Run mobile QR check-in for university club events with a polished, iOS-native workflow." },
     ],
@@ -64,6 +64,11 @@ function Index() {
           <p className="px-2 text-center text-[12px] text-muted-foreground">
             Mobile-first. iPhone-native. Built for hosts who care.
           </p>
+          <div className="mt-2 flex items-center justify-center gap-3 text-[12px] text-muted-foreground">
+            <Link to="/privacy" className="hover:text-foreground">Privacy</Link>
+            <span aria-hidden="true">·</span>
+            <Link to="/terms" className="hover:text-foreground">Terms</Link>
+          </div>
         </div>
       </main>
     </div>
