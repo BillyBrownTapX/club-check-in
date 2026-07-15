@@ -167,6 +167,62 @@ export const PRODUCT_DOMAIN = "attendance-hq.com";
 export const HOST_REDIRECT_KEY = "attendance-hq-auth-redirect";
 export const DEVICE_TOKEN_KEY = "attendance-hq-device-token";
 
+// Canonical published origin. Auth emails (confirm signup, password reset)
+// MUST land here — never on a Lovable preview host or localhost — otherwise
+// clicked links won't open the real app.
+//
+// NOTE: Supabase Auth's own Site URL + Redirect allowlist (configured in the
+// Lovable/Supabase dashboard) must include this origin. Code alone cannot
+// change the Auth Site URL; the redirect helpers below just tell Supabase
+// which URL to embed in the outgoing email.
+export const PRODUCTION_APP_ORIGIN = "https://checkin-swiftly.lovable.app";
+
+function normalizeOrigin(raw: string): string {
+  return raw.trim().replace(/\/+$/, "");
+}
+
+function looksLikePreviewOrLocal(origin: string): boolean {
+  try {
+    const url = new URL(origin);
+    const host = url.hostname;
+    if (host === "localhost" || host === "127.0.0.1" || host.endsWith(".local")) return true;
+    if (host.startsWith("id-preview--")) return true;
+    // Any lovable.app subdomain that isn't the canonical published host.
+    if (host.endsWith(".lovable.app") && origin !== PRODUCTION_APP_ORIGIN) return true;
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+/**
+ * Returns the origin that outgoing auth emails should link back to. Prefers
+ * an explicit VITE_PUBLIC_APP_URL / VITE_APP_URL override; otherwise falls
+ * back to PRODUCTION_APP_ORIGIN. Never uses window.location.origin for a
+ * preview/localhost host — email links must resolve on the real deploy.
+ */
+export function getAuthEmailRedirectOrigin(): string {
+  const envOverride =
+    (import.meta.env?.VITE_PUBLIC_APP_URL as string | undefined) ||
+    (import.meta.env?.VITE_APP_URL as string | undefined);
+  if (envOverride && envOverride.trim().length > 0) {
+    return normalizeOrigin(envOverride);
+  }
+  if (typeof window !== "undefined") {
+    const current = normalizeOrigin(window.location.origin);
+    if (!looksLikePreviewOrLocal(current)) return current;
+  }
+  return PRODUCTION_APP_ORIGIN;
+}
+
+export function getConfirmEmailRedirectUrl(): string {
+  return `${getAuthEmailRedirectOrigin()}/sign-in`;
+}
+
+export function getResetPasswordRedirectUrl(): string {
+  return `${getAuthEmailRedirectOrigin()}/reset-password`;
+}
+
 // Remembered-device tokens expire so a leaked or long-idle device stops
 // getting the welcome-back fast path. Either threshold trips the client
 // back to first-time / returning check-in.
