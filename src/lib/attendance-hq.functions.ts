@@ -85,6 +85,7 @@ import {
   qrTokenSchema,
   rememberedDeviceInputSchema,
   removeAttendanceSchema,
+  purgeClubAttendanceSchema,
   removeClubOfficerSchema,
   restoreAttendanceSchema,
   returningLookupInputSchema,
