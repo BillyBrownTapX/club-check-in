@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createFileRoute, notFound, useRouter } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { useServerFn } from "@tanstack/react-start";
 import { CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
 import {
   CheckInFormCard,
   ErrorStateCard,
@@ -12,6 +13,7 @@ import {
   IdentityConfirmationCard,
   MobileInputField,
   MobileNumericField,
+  OfflineBanner,
   PrimaryButton,
   PublicCheckInShell,
   SecondaryTextButton,
@@ -27,6 +29,50 @@ import {
   type PublicStudentPreview,
 } from "@/lib/attendance-hq";
 import { returningLookupSchema, studentRegistrationSchema } from "@/lib/attendance-hq-schemas";
+import { isLikelyOfflineError, useOnlineStatus } from "@/hooks/use-online-status";
+
+// sessionStorage key for the first-time registration draft. Scoped per-QR
+// so re-scanning a different event doesn't restore stale values. We
+// intentionally use sessionStorage (not localStorage) so drafts don't
+// outlive the browser tab — no long-term PII persistence.
+const REGISTRATION_DRAFT_KEY = (qrToken: string) => `ahq:checkin-draft:${qrToken}`;
+const RETURNING_DRAFT_KEY = (qrToken: string) => `ahq:checkin-return-draft:${qrToken}`;
+
+type RegistrationDraft = {
+  firstName: string;
+  lastName: string;
+  studentEmail: string;
+  nineHundredNumber: string;
+};
+
+function readDraft<T>(key: string): T | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeDraft(key: string, value: unknown) {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* quota / private mode — ignore */
+  }
+}
+
+function clearDraft(key: string) {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(key);
+  } catch {
+    /* ignore */
+  }
+}
+
 
 type FlowScreen = "first-time" | "returning" | "confirm" | "success" | "blocked";
 type ConfirmMode = "returning" | "remembered";
@@ -102,6 +148,13 @@ function CheckInRouteComponent() {
   const [rememberedStudent, setRememberedStudent] = useState<PublicStudentPreview | null>(null);
   const [rememberedLoading, setRememberedLoading] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
+  // Distinguish "no network path" from "server said no". The offline banner
+  // is driven off `useOnlineStatus()` OR a sticky flag set when the last
+  // submit threw a transport-shaped error, so we can prompt the student to
+  // retry after switching to cellular without the toast lying about state.
+  const [lastFailureWasNetwork, setLastFailureWasNetwork] = useState(false);
+  const online = useOnlineStatus();
+  const wasOfflineRef = useRef(false);
 
   const registrationForm = useForm({
     resolver: zodResolver(studentRegistrationSchema),
@@ -118,6 +171,65 @@ function CheckInRouteComponent() {
     resolver: zodResolver(returningLookupSchema),
     defaultValues: { nineHundredNumber: "" },
   });
+
+  // Restore any draft the student left in this browser tab for this QR.
+  // Runs once on mount — we don't want later form.reset() calls to fight
+  // with what the student is currently typing.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const reg = readDraft<RegistrationDraft>(REGISTRATION_DRAFT_KEY(qrToken));
+    if (reg) {
+      registrationForm.reset({
+        firstName: reg.firstName ?? "",
+        lastName: reg.lastName ?? "",
+        studentEmail: reg.studentEmail ?? "",
+        nineHundredNumber: reg.nineHundredNumber ?? "",
+        rememberDevice: true,
+      });
+    }
+    const ret = readDraft<{ nineHundredNumber: string }>(RETURNING_DRAFT_KEY(qrToken));
+    if (ret?.nineHundredNumber) {
+      returningForm.reset({ nineHundredNumber: ret.nineHundredNumber });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qrToken]);
+
+  // Persist first-time draft on every change so a mid-flow reload / tab
+  // switch doesn't lose what the student typed. We deliberately exclude
+  // `rememberDevice` (UI toggle, not identity) and never touch localStorage.
+  useEffect(() => {
+    const sub = registrationForm.watch((values) => {
+      writeDraft(REGISTRATION_DRAFT_KEY(qrToken), {
+        firstName: values.firstName ?? "",
+        lastName: values.lastName ?? "",
+        studentEmail: values.studentEmail ?? "",
+        nineHundredNumber: values.nineHundredNumber ?? "",
+      });
+    });
+    return () => sub.unsubscribe();
+  }, [registrationForm, qrToken]);
+
+  useEffect(() => {
+    const sub = returningForm.watch((values) => {
+      writeDraft(RETURNING_DRAFT_KEY(qrToken), {
+        nineHundredNumber: values.nineHundredNumber ?? "",
+      });
+    });
+    return () => sub.unsubscribe();
+  }, [returningForm, qrToken]);
+
+  // Soft "back online" nudge — non-blocking, no auto-submit.
+  useEffect(() => {
+    if (!online) {
+      wasOfflineRef.current = true;
+      return;
+    }
+    if (wasOfflineRef.current) {
+      wasOfflineRef.current = false;
+      setLastFailureWasNetwork(false);
+      toast.success("Back online — you can check in now.");
+    }
+  }, [online]);
 
   useEffect(() => {
     if (initialBlockedState || typeof window === "undefined") return;
@@ -187,6 +299,8 @@ function CheckInRouteComponent() {
   // handled separately, so this path only fires on transport / panic.
   const PUBLIC_TRANSIENT_ERROR = "Something went wrong. Please try again.";
   const PUBLIC_RATE_LIMIT_ERROR = "Too many attempts. Please wait a moment and try again.";
+  const PUBLIC_OFFLINE_ERROR = "You appear to be offline. Turn on cellular or reconnect to Wi-Fi, then tap Try again.";
+  const PUBLIC_NETWORK_ERROR = "Couldn't reach the server. Check your connection and tap Try again — your info is saved.";
 
   // Rate-limit errors are thrown by the server (RateLimitedError) and
   // arrive here through TanStack Start's RPC serialization, which may
@@ -209,11 +323,27 @@ function CheckInRouteComponent() {
         return e.message;
       }
     }
+    if (isLikelyOfflineError(err)) {
+      return typeof navigator !== "undefined" && navigator.onLine === false
+        ? PUBLIC_OFFLINE_ERROR
+        : PUBLIC_NETWORK_ERROR;
+    }
     return PUBLIC_TRANSIENT_ERROR;
+  }
+
+  // Centralize submit-error handling so every flow (first-time, returning,
+  // confirm) sets the sticky "was network" flag consistently — this drives
+  // the offline banner even after the student comes back online but hasn't
+  // retried yet.
+  function handleSubmitError(err: unknown) {
+    const networkish = isLikelyOfflineError(err);
+    setLastFailureWasNetwork(networkish);
+    setGlobalError(getPublicCheckInErrorMessage(err));
   }
 
   const handleFirstTimeSubmit = registrationForm.handleSubmit(async (values) => {
     setGlobalError(null);
+    setLastFailureWasNetwork(false);
     try {
       const result = await submitStudentCheckIn({ data: { ...values, qrToken } });
       if (!result.ok) {
@@ -233,15 +363,19 @@ function CheckInRouteComponent() {
       if (typeof window !== "undefined" && result.deviceToken) {
         window.localStorage.setItem(DEVICE_TOKEN_KEY, result.deviceToken);
       }
+      // Successful commit — clear any saved draft for this QR.
+      clearDraft(REGISTRATION_DRAFT_KEY(qrToken));
+      clearDraft(RETURNING_DRAFT_KEY(qrToken));
       setSuccessAt(result.attendance.checked_in_at);
       setScreen("success");
     } catch (err) {
-      setGlobalError(getPublicCheckInErrorMessage(err));
+      handleSubmitError(err);
     }
   });
 
   const handleReturningSubmit = returningForm.handleSubmit(async (values) => {
     setGlobalError(null);
+    setLastFailureWasNetwork(false);
     try {
       const result = await lookupReturningStudent({ data: { ...values, qrToken } });
       if (!result.ok) {
@@ -254,13 +388,14 @@ function CheckInRouteComponent() {
       setConfirmMode("returning");
       setScreen("confirm");
     } catch (err) {
-      setGlobalError(getPublicCheckInErrorMessage(err));
+      handleSubmitError(err);
     }
   });
 
   async function handleConfirmCheckIn() {
     if (!pendingStudent) return;
     setGlobalError(null);
+    setLastFailureWasNetwork(false);
 
     try {
       if (confirmMode === "remembered") {
@@ -280,6 +415,8 @@ function CheckInRouteComponent() {
           return;
         }
         setSuccessAt(result.attendance.checked_in_at);
+        clearDraft(REGISTRATION_DRAFT_KEY(qrToken));
+        clearDraft(RETURNING_DRAFT_KEY(qrToken));
         setScreen("success");
         return;
       }
@@ -293,11 +430,20 @@ function CheckInRouteComponent() {
         return;
       }
       setSuccessAt(result.attendance.checked_in_at);
+      clearDraft(REGISTRATION_DRAFT_KEY(qrToken));
+      clearDraft(RETURNING_DRAFT_KEY(qrToken));
       setScreen("success");
     } catch (err) {
-      setGlobalError(getPublicCheckInErrorMessage(err));
+      handleSubmitError(err);
     }
   }
+
+  const showOfflineBanner = !online || lastFailureWasNetwork;
+  const offlineBannerVariant: "offline" | "network-error" = !online ? "offline" : "network-error";
+  const submitDisabledByNetwork = !online;
+  const primaryCtaLabel = !online ? "You're offline" : "Save and Check In";
+  const returningCtaLabel = !online ? "You're offline" : "Continue";
+  const confirmCtaLabel = !online ? "You're offline" : "Check In";
 
   function renderFirstTimeScreen() {
     const errors = registrationForm.formState.errors;
@@ -305,6 +451,7 @@ function CheckInRouteComponent() {
       <>
         <EventInfoCard event={event} status={status} />
         <EventContextRow event={event} />
+        {showOfflineBanner ? <OfflineBanner variant={offlineBannerVariant} /> : null}
         <section className="space-y-2 px-1">
           <h1 className="text-[2.25rem] font-semibold leading-tight text-foreground">Student check-in</h1>
           <p className="text-sm leading-6 text-muted-foreground">Enter your first name, last name, student email, and 9-digit 900 number to record your attendance.</p>
@@ -344,7 +491,7 @@ function CheckInRouteComponent() {
             <MobileInputField label="Student email" type="email" autoComplete="email" placeholder="name@college.edu" error={errors.studentEmail?.message} {...registrationForm.register("studentEmail")} />
             <MobileNumericField label="900 number" placeholder="900123456" maxLength={9} error={errors.nineHundredNumber?.message} {...registrationForm.register("nineHundredNumber")} />
             {globalError ? <p className="text-sm font-medium text-destructive">{globalError}</p> : null}
-            <PrimaryButton type="submit" disabled={registrationForm.formState.isSubmitting}>Save and Check In</PrimaryButton>
+            <PrimaryButton type="submit" disabled={registrationForm.formState.isSubmitting || submitDisabledByNetwork}>{primaryCtaLabel}</PrimaryButton>
           </form>
         </CheckInFormCard>
         <SecondaryTextButton type="button" onClick={() => { clearTransientState(); setScreen("returning"); }}>Already used Attendance HQ before?</SecondaryTextButton>
@@ -357,6 +504,7 @@ function CheckInRouteComponent() {
     return (
       <>
         <EventContextRow event={event} />
+        {showOfflineBanner ? <OfflineBanner variant={offlineBannerVariant} /> : null}
         <section className="space-y-2 px-1">
           <h1 className="text-[2.25rem] font-semibold leading-tight text-foreground">Returning check-in</h1>
           <p className="text-sm leading-6 text-muted-foreground">Enter your 900 number to continue.</p>
@@ -365,7 +513,7 @@ function CheckInRouteComponent() {
           <form className="space-y-4" onSubmit={(event) => void handleReturningSubmit(event)}>
             <MobileNumericField label="900 number" placeholder="900123456" maxLength={9} error={errors.nineHundredNumber?.message} {...returningForm.register("nineHundredNumber")} />
             {globalError ? <p className="text-sm font-medium text-destructive">{globalError}</p> : null}
-            <PrimaryButton type="submit" disabled={returningForm.formState.isSubmitting}>Continue</PrimaryButton>
+            <PrimaryButton type="submit" disabled={returningForm.formState.isSubmitting || submitDisabledByNetwork}>{returningCtaLabel}</PrimaryButton>
           </form>
         </CheckInFormCard>
         <SecondaryTextButton type="button" onClick={() => setScreen("first-time")}>First time using Attendance HQ?</SecondaryTextButton>
@@ -381,9 +529,10 @@ function CheckInRouteComponent() {
           <h1 className="text-[2.1rem] font-semibold leading-tight text-foreground">Is this you?</h1>
         </section>
         <IdentityConfirmationCard student={pendingStudent} />
+        {showOfflineBanner ? <OfflineBanner variant={offlineBannerVariant} /> : null}
         {globalError ? <p className="px-1 text-sm font-medium text-destructive">{globalError}</p> : null}
         <div className="space-y-3">
-          <PrimaryButton type="button" onClick={() => void handleConfirmCheckIn()}>Check In</PrimaryButton>
+          <PrimaryButton type="button" onClick={() => void handleConfirmCheckIn()} disabled={submitDisabledByNetwork}>{confirmCtaLabel}</PrimaryButton>
           <SecondaryTextButton type="button" onClick={() => { clearTransientState(); setScreen(confirmMode === "remembered" ? "first-time" : "returning"); }}>This is not me</SecondaryTextButton>
         </div>
       </>
