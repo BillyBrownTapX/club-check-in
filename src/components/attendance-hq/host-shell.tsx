@@ -15,9 +15,17 @@ const tabs = [
 export function HostAppShell({
   children,
   hideTabBar = false,
+  layout = "default",
 }: {
   children: React.ReactNode;
   hideTabBar?: boolean;
+  /**
+   * "default" — phone-first single column (max ~520px) at every breakpoint.
+   * "ops" — phone column on mobile; widens to a laptop-comfortable canvas
+   *   at md:+ so live event ops can show controls beside the roster.
+   *   Do not use this on list/browse pages — it's for the event ops screen.
+   */
+  layout?: "default" | "ops";
 }) {
   const { pathname } = useLocation();
 
@@ -25,6 +33,7 @@ export function HostAppShell({
     <div className="min-h-screen bg-transparent">
       <main className={cn(
         "mx-auto w-full max-w-[480px] px-4 pt-safe-1 sm:max-w-[520px] sm:px-5",
+        layout === "ops" && "md:max-w-4xl md:px-6 lg:max-w-6xl lg:px-8",
         hideTabBar ? "pb-safe-1" : "pb-tabbar",
       )}>
         {children}
