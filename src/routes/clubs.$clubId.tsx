@@ -148,6 +148,10 @@ function ClubDetailRoute() {
   const transferOwnershipMutation = useAuthorizedMutation(transferClubOwnership, {
     invalidate: [queryKeys.clubs.all],
   });
+  const purgeAttendanceMutation = useAuthorizedMutation(purgeClubAttendanceOlderThan, {
+    invalidate: [queryKeys.clubs.all, queryKeys.events.all, queryKeys.activity.all],
+  });
+
 
   const [officerDialogOpen, setOfficerDialogOpen] = useState(false);
   const [officerEmail, setOfficerEmail] = useState("");
