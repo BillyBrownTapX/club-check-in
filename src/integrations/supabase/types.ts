@@ -357,6 +357,51 @@ export type Database = {
           },
         ]
       }
+      host_activity: {
+        Row: {
+          activity_type: Database["public"]["Enums"]["host_activity_type"]
+          attendance_count: number | null
+          club_id: string
+          created_at: string
+          event_id: string
+          id: string
+          threshold: number | null
+        }
+        Insert: {
+          activity_type: Database["public"]["Enums"]["host_activity_type"]
+          attendance_count?: number | null
+          club_id: string
+          created_at?: string
+          event_id: string
+          id?: string
+          threshold?: number | null
+        }
+        Update: {
+          activity_type?: Database["public"]["Enums"]["host_activity_type"]
+          attendance_count?: number | null
+          club_id?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          threshold?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "host_activity_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "host_activity_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       host_profiles: {
         Row: {
           created_at: string
@@ -546,6 +591,10 @@ export type Database = {
         | "host_correction"
       check_in_source: "public_mobile" | "host_dashboard"
       club_member_role: "owner" | "officer"
+      host_activity_type:
+        | "first_check_in"
+        | "threshold_reached"
+        | "check_in_closed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -683,6 +732,11 @@ export const Constants = {
       ],
       check_in_source: ["public_mobile", "host_dashboard"],
       club_member_role: ["owner", "officer"],
+      host_activity_type: [
+        "first_check_in",
+        "threshold_reached",
+        "check_in_closed",
+      ],
     },
   },
 } as const
