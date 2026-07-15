@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createFileRoute, notFound, useRouter } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { useServerFn } from "@tanstack/react-start";
 import { CheckCircle2 } from "lucide-react";
+import { toast } from "sonner";
 import {
   CheckInFormCard,
   ErrorStateCard,
@@ -12,6 +13,7 @@ import {
   IdentityConfirmationCard,
   MobileInputField,
   MobileNumericField,
+  OfflineBanner,
   PrimaryButton,
   PublicCheckInShell,
   SecondaryTextButton,
@@ -27,6 +29,50 @@ import {
   type PublicStudentPreview,
 } from "@/lib/attendance-hq";
 import { returningLookupSchema, studentRegistrationSchema } from "@/lib/attendance-hq-schemas";
+import { isLikelyOfflineError, useOnlineStatus } from "@/hooks/use-online-status";
+
+// sessionStorage key for the first-time registration draft. Scoped per-QR
+// so re-scanning a different event doesn't restore stale values. We
+// intentionally use sessionStorage (not localStorage) so drafts don't
+// outlive the browser tab — no long-term PII persistence.
+const REGISTRATION_DRAFT_KEY = (qrToken: string) => `ahq:checkin-draft:${qrToken}`;
+const RETURNING_DRAFT_KEY = (qrToken: string) => `ahq:checkin-return-draft:${qrToken}`;
+
+type RegistrationDraft = {
+  firstName: string;
+  lastName: string;
+  studentEmail: string;
+  nineHundredNumber: string;
+};
+
+function readDraft<T>(key: string): T | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.sessionStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeDraft(key: string, value: unknown) {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* quota / private mode — ignore */
+  }
+}
+
+function clearDraft(key: string) {
+  if (typeof window === "undefined") return;
+  try {
+    window.sessionStorage.removeItem(key);
+  } catch {
+    /* ignore */
+  }
+}
+
 
 type FlowScreen = "first-time" | "returning" | "confirm" | "success" | "blocked";
 type ConfirmMode = "returning" | "remembered";
