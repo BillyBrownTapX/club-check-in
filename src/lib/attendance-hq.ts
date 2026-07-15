@@ -10,6 +10,22 @@ export type AttendanceRecord = Tables<"attendance_records">;
 export type AttendanceAction = Tables<"attendance_actions">;
 export type DeviceSession = Tables<"student_device_sessions">;
 
+export type HostActivityType = "first_check_in" | "threshold_reached" | "check_in_closed";
+
+export type HostActivityEntry = {
+  id: string;
+  activityType: HostActivityType;
+  threshold: number | null;
+  attendanceCount: number | null;
+  createdAt: string;
+  event: { id: string; eventName: string; eventDate: string };
+  club: { id: string; clubName: string };
+};
+
+// Attendance thresholds we announce as milestones. Kept small on purpose —
+// hosts should feel milestones, not get spammed on every check-in.
+export const HOST_ACTIVITY_THRESHOLDS = [10, 25, 50, 100] as const;
+
 export type EventSummary = Event & {
   clubs: Pick<Club, "id" | "club_name" | "club_slug"> | null;
   // PostgREST returns embedded aggregates as `[{ count: N }]`. We keep the legacy

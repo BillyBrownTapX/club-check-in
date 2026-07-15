@@ -33,4 +33,8 @@ export const queryKeys = {
   templates: {
     byClub: (clubId: string) => ["templates", "by-club", clubId] as const,
   },
+  activity: {
+    all: ["activity"] as const,
+    feed: () => ["activity", "feed"] as const,
+  },
 } as const;

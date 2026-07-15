@@ -33,6 +33,8 @@ import {
   getDefaultClubReportRange,
   isDeviceSessionExpired,
   type HostOnboardingState,
+  type HostActivityEntry,
+  type HostActivityType,
   type HostProfile,
   type ManagementEventSummary,
   maskEmail,
@@ -1600,6 +1602,97 @@ function isUniqueViolation(error: unknown, constraint?: string): boolean {
   return haystack.includes(constraint);
 }
 
+// Best-effort activity milestone writers. Failures MUST NOT fail the caller
+// (check-in / close). Unique partial indexes on host_activity ensure that
+// duplicates from concurrent check-ins collapse to a single row.
+async function recordCheckInMilestones(eventId: string): Promise<void> {
+  try {
+    const admin = await getSupabaseAdmin();
+    const { data: event, error: eventError } = await admin
+      .from("events")
+      .select("id, club_id")
+      .eq("id", eventId)
+      .maybeSingle();
+    if (eventError || !event) return;
+
+    const { count, error: countError } = await admin
+      .from("attendance_records")
+      .select("id", { count: "exact", head: true })
+      .eq("event_id", eventId);
+    if (countError) return;
+    const attendanceCount = count ?? 0;
+    if (attendanceCount < 1) return;
+
+    // Best-effort inserts. Unique conflicts are expected under races and are
+    // swallowed — that's the whole point of the partial unique indexes.
+    await admin
+      .from("host_activity")
+      .insert({
+        club_id: event.club_id,
+        event_id: eventId,
+        activity_type: "first_check_in",
+        attendance_count: attendanceCount,
+      });
+
+    const { HOST_ACTIVITY_THRESHOLDS } = await import("@/lib/attendance-hq");
+    for (const threshold of HOST_ACTIVITY_THRESHOLDS) {
+      if (attendanceCount >= threshold) {
+        await admin
+          .from("host_activity")
+          .insert({
+            club_id: event.club_id,
+            event_id: eventId,
+            activity_type: "threshold_reached",
+            threshold,
+            attendance_count: attendanceCount,
+          });
+      }
+    }
+  } catch (err) {
+    if (typeof console !== "undefined") {
+      const e = err as { code?: string; message?: string } | null;
+      console.error("[activity] recordCheckInMilestones failed", {
+        code: e?.code,
+        message: safeMessage(e ?? null, "unknown error"),
+      });
+    }
+  }
+}
+
+async function recordCheckInClosed(eventId: string): Promise<void> {
+  try {
+    const admin = await getSupabaseAdmin();
+    const { data: event, error: eventError } = await admin
+      .from("events")
+      .select("id, club_id")
+      .eq("id", eventId)
+      .maybeSingle();
+    if (eventError || !event) return;
+
+    const { count } = await admin
+      .from("attendance_records")
+      .select("id", { count: "exact", head: true })
+      .eq("event_id", eventId);
+
+    await admin
+      .from("host_activity")
+      .insert({
+        club_id: event.club_id,
+        event_id: eventId,
+        activity_type: "check_in_closed",
+        attendance_count: count ?? 0,
+      });
+  } catch (err) {
+    if (typeof console !== "undefined") {
+      const e = err as { code?: string; message?: string } | null;
+      console.error("[activity] recordCheckInClosed failed", {
+        code: e?.code,
+        message: safeMessage(e ?? null, "unknown error"),
+      });
+    }
+  }
+}
+
 async function createAttendanceRecord(input: {
   event: { id: string };
   studentId: string;
@@ -1642,6 +1735,7 @@ async function createAttendanceRecord(input: {
     throw new Error(safeMessage(error, "Unable to record attendance"));
   }
   if (!attendance) throw new Error(safeMessage(null, "Unable to record attendance"));
+  await recordCheckInMilestones(input.event.id);
   return { ok: true as const, attendance };
 }
 
@@ -2122,6 +2216,7 @@ export const manualCheckIn = createServerFn({ method: "POST" })
     });
     if (actionError) throw new Error(safeMessage(actionError, "Unable to record action."));
 
+    await recordCheckInMilestones(event.id);
     return { ok: true };
   });
 
@@ -2271,6 +2366,7 @@ export const closeCheckInEarly = createServerFn({ method: "POST" })
       .update({ is_active: false, check_in_closes_at: new Date().toISOString() })
       .eq("id", data.eventId);
     if (error) throw new Error(safeMessage(error));
+    await recordCheckInClosed(data.eventId);
     return { ok: true };
   });
 
@@ -2532,4 +2628,40 @@ export const getClubAttendanceReport = createServerFn({ method: "GET" })
       truncated,
     };
     return payload;
+  });
+
+// Host activity feed. RLS on host_activity restricts SELECT to club members,
+// so using the caller-scoped supabase client is enough — no explicit
+// membership filter needed here.
+export const getHostActivity = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<HostActivityEntry[]> => {
+    const { data, error } = await context.supabase
+      .from("host_activity")
+      .select(
+        "id, activity_type, threshold, attendance_count, created_at, event_id, club_id, events!inner(id, event_name, event_date), clubs!inner(id, club_name)",
+      )
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (error) throw new Error(safeMessage(error, "Unable to load activity."));
+    const rows = (data ?? []) as unknown as Array<{
+      id: string;
+      activity_type: HostActivityType;
+      threshold: number | null;
+      attendance_count: number | null;
+      created_at: string;
+      events: { id: string; event_name: string; event_date: string } | null;
+      clubs: { id: string; club_name: string } | null;
+    }>;
+    return rows
+      .filter((r) => r.events && r.clubs)
+      .map((r) => ({
+        id: r.id,
+        activityType: r.activity_type,
+        threshold: r.threshold,
+        attendanceCount: r.attendance_count,
+        createdAt: r.created_at,
+        event: { id: r.events!.id, eventName: r.events!.event_name, eventDate: r.events!.event_date },
+        club: { id: r.clubs!.id, clubName: r.clubs!.club_name },
+      }));
   });
