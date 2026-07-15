@@ -83,3 +83,12 @@ independent of Sentry.
 Do **not** pass student rows, attendance records, or auth headers into
 `reportError`. Pass short identifiers only (`{ boundary: "route" }`,
 `{ eventId }`, etc.).
+
+## Related: load testing
+
+Before large meetings, run the load harness at `scripts/load-check-in.ts`
+to confirm the shared-NAT venue rate-limit budgets hold. See
+[`load-test.md`](./load-test.md) — it drives the same public check-in
+path these health endpoints protect, and its outcomes tie back to
+`CHECK_IN_RATE_LIMITS` / `CHECK_IN_GLOBAL_RATE_LIMITS`.
+
