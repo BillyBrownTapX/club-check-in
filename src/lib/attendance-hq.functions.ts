@@ -2364,6 +2364,7 @@ export const closeCheckInEarly = createServerFn({ method: "POST" })
       .update({ is_active: false, check_in_closes_at: new Date().toISOString() })
       .eq("id", data.eventId);
     if (error) throw new Error(safeMessage(error));
+    await recordCheckInClosed(data.eventId);
     return { ok: true };
   });
 
