@@ -34,6 +34,7 @@ import {
   normalizeEmail,
   type PublicStudentPreview,
   type University,
+  shiftEventScheduleByDays,
   shiftTimeString,
   slugifyClubName,
   WEEKLY_MEETING_TEMPLATE_DEFAULTS,
@@ -1196,16 +1197,31 @@ export const getEventFormPayload = createServerFn({ method: "GET" })
 
     if (data.eventId || data.duplicateFrom) {
       const sourceEvent = await requireOwnedEvent(context.supabase, context.userId, data.eventId || data.duplicateFrom);
+      const isDuplicate = Boolean(data.duplicateFrom);
+      const schedule = isDuplicate
+        ? shiftEventScheduleByDays(
+            {
+              eventDate: sourceEvent.event_date,
+              checkInOpensAt: sourceEvent.check_in_opens_at,
+              checkInClosesAt: sourceEvent.check_in_closes_at,
+            },
+            7,
+          )
+        : {
+            eventDate: sourceEvent.event_date,
+            checkInOpensAt: sourceEvent.check_in_opens_at,
+            checkInClosesAt: sourceEvent.check_in_closes_at,
+          };
       initialValues = {
         clubId: sourceEvent.club_id,
         eventTemplateId: sourceEvent.event_template_id || "",
         eventName: sourceEvent.event_name,
-        eventDate: sourceEvent.event_date,
+        eventDate: schedule.eventDate,
         startTime: sourceEvent.start_time,
         endTime: sourceEvent.end_time,
         location: sourceEvent.location || "",
-        checkInOpensAt: sourceEvent.check_in_opens_at,
-        checkInClosesAt: sourceEvent.check_in_closes_at,
+        checkInOpensAt: schedule.checkInOpensAt,
+        checkInClosesAt: schedule.checkInClosesAt,
       };
     }
 

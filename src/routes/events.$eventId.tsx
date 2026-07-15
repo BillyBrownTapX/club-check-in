@@ -88,6 +88,7 @@ import {
   formatTimestamp,
   getCheckInMethodLabel,
   getCheckInStatus,
+  shiftEventScheduleByDays,
   type AttendanceActionLog,
   type AttendanceRow,
   type EventAttendanceSummary,
@@ -520,21 +521,30 @@ function EventDetailRoute() {
     if (duplicating) return;
     setDuplicating(true);
     try {
+      const schedule = shiftEventScheduleByDays(
+        {
+          eventDate: event.event_date,
+          checkInOpensAt: event.check_in_opens_at,
+          checkInClosesAt: event.check_in_closes_at,
+        },
+        7,
+      );
       const result = await duplicateEventMutation({
         data: {
           sourceEventId: eventId,
           clubId: event.club_id,
-          eventName: `${event.event_name} (copy)`,
-          eventDate: event.event_date,
+          eventTemplateId: event.event_template_id || "",
+          eventName: event.event_name,
+          eventDate: schedule.eventDate,
           startTime: event.start_time,
           endTime: event.end_time ?? event.start_time,
           location: event.location ?? "",
-          checkInOpensAt: event.check_in_opens_at,
-          checkInClosesAt: event.check_in_closes_at,
+          checkInOpensAt: schedule.checkInOpensAt,
+          checkInClosesAt: schedule.checkInClosesAt,
         },
       });
-      toast.success("Event duplicated");
-      navigate({ to: "/events/$eventId/edit", params: { eventId: result.event.id }, search: { created: "" } });
+      toast.success("Duplicated for next week", { description: result.event.event_name });
+      navigate({ to: "/events/$eventId", params: { eventId: result.event.id }, search: { created: "1" } });
     } catch (error) {
       toast.error(getManagementErrorMessage(error, "Unable to duplicate event."));
     } finally {
@@ -707,8 +717,8 @@ function EventDetailRoute() {
           <GroupedList>
             <ListRow
               icon={Copy}
-              label={duplicating ? "Duplicating…" : "Duplicate event"}
-              detail="Create a copy you can edit"
+              label={duplicating ? "Duplicating…" : "Duplicate next week"}
+              detail="Same setup, date +7 days"
               onClick={() => void handleDuplicate()}
             />
             <ListRow

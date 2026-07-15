@@ -93,13 +93,13 @@ function EventCreateRoute() {
   return (
     <EventForm
       payload={payload}
-      title={payload.sourceEventId ? "Duplicate Event" : "Create Event"}
-      description={payload.sourceEventId ? "Adjust the details and create a fresh event with a new QR code." : "Create the next event for one of your clubs."}
+      title={payload.sourceEventId ? "Duplicate next week" : "Create Event"}
+      description={payload.sourceEventId ? "Same setup as the source event, with the date and check-in window shifted forward by 7 days." : "Create the next event for one of your clubs."}
       submitLabel={payload.sourceEventId ? "Create Duplicate" : "Create Event"}
       onSubmit={async (values) => {
         if (payload.sourceEventId) {
           const result = await duplicateEventMutation.mutateAsync({ ...values, sourceEventId: payload.sourceEventId } as never);
-          toast.success("Event duplicated", { description: result.event.event_name });
+          toast.success("Duplicated for next week", { description: result.event.event_name });
           navigate({ to: "/events/$eventId", params: { eventId: result.event.id }, search: { created: "1" } });
           return;
         }

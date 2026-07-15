@@ -343,6 +343,44 @@ export function getCheckInStatus(event: Pick<Event, "check_in_opens_at" | "check
   return "open";
 }
 
+/**
+ * Shifts an event's date + check-in window forward by `days` calendar days,
+ * keeping wall-clock times intact. Used by the "duplicate next week" flow.
+ * - eventDate is a YYYY-MM-DD string; shifted via UTC to avoid DST/tz drift.
+ * - checkInOpensAt / checkInClosesAt are ISO timestamps; adding
+ *   `days * 86_400_000` ms preserves the clock time across the shift for
+ *   non-DST-edge cases (a weekly rollover).
+ */
+export function shiftEventScheduleByDays(
+  source: { eventDate: string; checkInOpensAt: string; checkInClosesAt: string },
+  days: number = 7,
+): { eventDate: string; checkInOpensAt: string; checkInClosesAt: string } {
+  const [yStr, mStr, dStr] = source.eventDate.slice(0, 10).split("-");
+  const y = Number(yStr);
+  const m = Number(mStr);
+  const d = Number(dStr);
+  let shiftedDate = source.eventDate;
+  if (Number.isFinite(y) && Number.isFinite(m) && Number.isFinite(d)) {
+    const shifted = new Date(Date.UTC(y, m - 1, d));
+    shifted.setUTCDate(shifted.getUTCDate() + days);
+    const yy = shifted.getUTCFullYear();
+    const mm = String(shifted.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(shifted.getUTCDate()).padStart(2, "0");
+    shiftedDate = `${yy}-${mm}-${dd}`;
+  }
+  const dayMs = 24 * 60 * 60 * 1000;
+  const shiftIso = (iso: string) => {
+    const t = new Date(iso).getTime();
+    if (!Number.isFinite(t)) return iso;
+    return new Date(t + days * dayMs).toISOString();
+  };
+  return {
+    eventDate: shiftedDate,
+    checkInOpensAt: shiftIso(source.checkInOpensAt),
+    checkInClosesAt: shiftIso(source.checkInClosesAt),
+  };
+}
+
 export function getCheckInMethodLabel(method: string | null | undefined) {
   if (method === "qr_scan") return "First scan";
   if (method === "returning_lookup") return "Returning";
