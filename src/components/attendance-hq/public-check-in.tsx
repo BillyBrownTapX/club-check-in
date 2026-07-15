@@ -143,6 +143,31 @@ export function EventContextRow({ event }: { event: EventWithClub }) {
   return <p className="px-1 text-[13px] font-medium text-muted-foreground">{event.clubs?.club_name} · {event.event_name}</p>;
 }
 
+export function OfflineBanner({ variant = "offline" }: { variant?: "offline" | "network-error" }) {
+  const isOffline = variant === "offline";
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      className="flex items-start gap-3 rounded-2xl border border-border/80 bg-muted/70 px-4 py-3 text-left"
+    >
+      <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-background text-muted-foreground">
+        <WifiOff className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 space-y-0.5">
+        <p className="text-[13px] font-semibold text-foreground">
+          {isOffline ? "You're offline" : "Network problem"}
+        </p>
+        <p className="text-[12px] leading-5 text-muted-foreground">
+          {isOffline
+            ? "Turn on cellular data or reconnect to Wi-Fi, then tap Try again. Your info is saved on this device."
+            : "We couldn't reach the server. Try switching to cellular, then tap Try again — your info is saved."}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export function RememberedStudentLabel({ student }: { student: PublicStudentPreview }) {
   return (
     <div className="flex items-center gap-2 text-[13px] text-muted-foreground">
