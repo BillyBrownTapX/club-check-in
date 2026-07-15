@@ -717,6 +717,25 @@ export const getClubDetail = createServerFn({ method: "GET" })
     if (eventsError) throw new Error(safeMessage(eventsError));
     if (templatesError) throw new Error(safeMessage(templatesError));
 
+    // Soft backfill: existing clubs created before the seed-on-create change
+    // (or where the seed failed) end up with zero templates. Insert a
+    // Weekly Meeting template idempotently so the templates surface stops
+    // being an empty section hosts ignore. Best-effort — never fails the
+    // detail load.
+    let templatesList = (templates ?? []) as EventTemplateWithClub[];
+    if (templatesList.length === 0) {
+      try {
+        const { data: seeded } = await context.supabase
+          .from("event_templates")
+          .insert({ club_id: club.id, ...WEEKLY_MEETING_TEMPLATE_DEFAULTS })
+          .select("*, clubs(id, club_name, club_slug)")
+          .single();
+        if (seeded) templatesList = [seeded as EventTemplateWithClub];
+      } catch (backfillError) {
+        console.warn("[getClubDetail] weekly template backfill skipped:", backfillError instanceof Error ? backfillError.message : "unknown");
+      }
+    }
+
     // Members: hosts can only SELECT their own host_profiles under RLS, so
     // join member rows to profile name/email via the admin client after the
     // requireClubAccess gate above.
