@@ -1092,6 +1092,53 @@ export const duplicateEventTemplate = createServerFn({ method: "POST" })
     return duplicated as EventTemplateWithClub;
   });
 
+export const saveEventAsTemplate = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(saveEventAsTemplateSchema)
+  .handler(async ({ data, context }) => {
+    const event = await requireOwnedEvent(context.supabase, context.userId, data.eventId);
+
+    // Reverse getEventFormPayload's template math:
+    //   open_ts  = combineDateAndTime(event_date, start_time) − openOffset(min)
+    //   close_ts = combineDateAndTime(event_date, end_time)   + closeOffset(min)
+    // Positive stored offsets mean "N min before start" / "N min after end".
+    const clampOffset = (mins: number) => Math.max(-1440, Math.min(1440, Math.round(mins)));
+
+    const startMs = new Date(`${event.event_date}T${event.start_time}`).getTime();
+    const endTime = event.end_time ?? event.start_time;
+    const endMs = new Date(`${event.event_date}T${endTime}`).getTime();
+    const openMs = new Date(event.check_in_opens_at).getTime();
+    const closeMs = new Date(event.check_in_closes_at).getTime();
+
+    const openOffset = Number.isFinite(startMs) && Number.isFinite(openMs)
+      ? clampOffset((startMs - openMs) / 60000)
+      : 15;
+    const closeOffset = Number.isFinite(endMs) && Number.isFinite(closeMs)
+      ? clampOffset((closeMs - endMs) / 60000)
+      : 15;
+
+    const rawName = (data.templateName ?? "").trim();
+    const templateName = rawName.length ? rawName.slice(0, 120) : `${event.event_name} template`.slice(0, 120);
+
+    const { data: template, error } = await context.supabase
+      .from("event_templates")
+      .insert({
+        club_id: event.club_id,
+        template_name: templateName,
+        default_event_name: event.event_name || null,
+        default_location: event.location || null,
+        default_start_time: event.start_time,
+        default_end_time: endTime,
+        default_check_in_open_offset_minutes: openOffset,
+        default_check_in_close_offset_minutes: closeOffset,
+      })
+      .select("*, clubs(id, club_name, club_slug)")
+      .single();
+
+    if (error || !template) throw new Error(safeMessage(error, "Unable to save template"));
+    return template as EventTemplateWithClub;
+  });
+
 export const getEventFormPayload = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator(eventFormPayloadInputSchema)
