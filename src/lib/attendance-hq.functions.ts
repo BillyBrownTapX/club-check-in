@@ -33,6 +33,8 @@ import {
   getDefaultClubReportRange,
   isDeviceSessionExpired,
   type HostOnboardingState,
+  type HostActivityEntry,
+  type HostActivityType,
   type HostProfile,
   type ManagementEventSummary,
   maskEmail,
