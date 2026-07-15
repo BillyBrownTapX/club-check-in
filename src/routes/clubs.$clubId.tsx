@@ -531,6 +531,46 @@ function ClubDetailRoute() {
           ) : null}
         </section>
 
+        {/* Data & privacy */}
+        <section className="space-y-3">
+          <SectionLabel className="mb-0 px-1">Data & privacy</SectionLabel>
+          <div className="ios-card space-y-3 rounded-2xl p-4">
+            <p className="text-[13px] leading-6 text-muted-foreground">
+              Attendance HQ keeps check-in history for about {ATTENDANCE_RETENTION_DAYS} days
+              (~2 academic years) by default. Export a{" "}
+              <button
+                type="button"
+                className="font-semibold text-primary underline underline-offset-2"
+                onClick={() => setReportOpen(true)}
+              >
+                semester report CSV
+              </button>{" "}
+              before purging so you keep the records you need. Read our{" "}
+              <Link to="/privacy" className="font-semibold text-primary underline underline-offset-2">
+                privacy policy
+              </Link>
+              . Campus policy may require different retention — follow yours.
+            </p>
+            {isOwner ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full justify-start gap-2 text-destructive"
+                onClick={() => setPurgeOpen(true)}
+              >
+                <ShieldAlert className="h-4 w-4" />
+                Delete attendance older than…
+              </Button>
+            ) : (
+              <p className="text-[12px] text-muted-foreground">
+                Only the club owner can purge old attendance. Ask them if a cleanup is needed.
+              </p>
+            )}
+          </div>
+        </section>
+
+
+
         <ClubDialog
           open={clubDialogOpen}
           onOpenChange={setClubDialogOpen}
