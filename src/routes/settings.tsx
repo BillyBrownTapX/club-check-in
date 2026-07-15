@@ -27,6 +27,8 @@ function SettingsRoute() {
   const auth = useAttendanceAuth();
   const navigate = useNavigate();
 
+  const adminMe = useAuthorizedQuery<{ isAdmin: boolean }>(["admin", "me"], getAdminMe, undefined, { staleTime: 60_000 });
+
   if (loading || !user) return <HostAppShell><div className="py-16 text-center text-sm text-muted-foreground">Loading…</div></HostAppShell>;
 
   const meta = (auth.user?.user_metadata ?? {}) as { full_name?: string };
