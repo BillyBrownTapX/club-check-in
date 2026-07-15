@@ -35,7 +35,7 @@ function ForgotPasswordRoute() {
   const onSubmit = form.handleSubmit(async (values) => {
     setSuccess(false);
     try {
-      await supabase.auth.resetPasswordForEmail(values.email, { redirectTo: `${window.location.origin}/reset-password` });
+      await supabase.auth.resetPasswordForEmail(values.email, { redirectTo: getResetPasswordRedirectUrl() });
     } catch {
     }
     setSuccess(true);
