@@ -111,6 +111,7 @@ function ClubDetailRoute() {
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<EventTemplateWithClub | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
+  const [purgeOpen, setPurgeOpen] = useState(false);
 
   const clubDetailQuery = useAuthorizedQuery(
     queryKeys.clubs.detail(clubId),
