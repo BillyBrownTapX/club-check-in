@@ -880,3 +880,100 @@ function SemesterReportDialog({
     </Dialog>
   );
 }
+
+// ─── Purge attendance ──────────────────────────────────────────────────
+// Owner-only destructive dialog. Requires typing the exact club name to
+// confirm; the server also gates on retention cutoff + confirmClubName, so
+// this is UX belt to the server's suspenders.
+function PurgeAttendanceDialog({
+  open,
+  onOpenChange,
+  clubId: _clubId,
+  clubName,
+  submitting,
+  onSubmit,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  clubId: string;
+  clubName: string;
+  submitting: boolean;
+  onSubmit: (input: { beforeDate: string; confirmClubName: string }) => Promise<void>;
+}) {
+  const cutoff = useMemo(() => getAttendanceRetentionCutoffDate(), []);
+  const [beforeDate, setBeforeDate] = useState<string>(cutoff);
+  const [confirm, setConfirm] = useState<string>("");
+
+  const cutoffLabel = formatEventDate(cutoff);
+  const dateWithinPolicy = beforeDate && beforeDate <= cutoff;
+  const nameMatches = confirm.trim() === clubName.trim();
+  const canSubmit = dateWithinPolicy && nameMatches && !submitting;
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        onOpenChange(next);
+        if (!next) {
+          setBeforeDate(cutoff);
+          setConfirm("");
+        }
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="text-destructive">Delete old attendance</DialogTitle>
+          <DialogDescription>
+            Permanently removes check-in records and history for events dated <strong>before</strong>{" "}
+            the chosen date. Events, templates, and student identities are kept. This cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <Label htmlFor="purge-before">Delete attendance before</Label>
+            <Input
+              id="purge-before"
+              type="date"
+              value={beforeDate}
+              max={cutoff}
+              onChange={(e) => setBeforeDate(e.target.value)}
+            />
+            <p className="text-[12px] text-muted-foreground">
+              Retention cutoff is {cutoffLabel} ({ATTENDANCE_RETENTION_DAYS} days). You can only
+              delete data older than this.
+            </p>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="purge-confirm">
+              Type <strong>{clubName}</strong> to confirm
+            </Label>
+            <Input
+              id="purge-confirm"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              placeholder={clubName}
+              autoComplete="off"
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            disabled={!canSubmit}
+            onClick={() => {
+              void onSubmit({ beforeDate, confirmClubName: confirm });
+            }}
+          >
+            {submitting ? "Deleting…" : "Delete attendance"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
