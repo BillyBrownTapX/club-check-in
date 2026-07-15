@@ -244,6 +244,7 @@ function EventDetailRoute() {
   const [duplicating, setDuplicating] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [regeneratingQr, setRegeneratingQr] = useState(false);
+  const [savingAsTemplate, setSavingAsTemplate] = useState(false);
   const [manualDialogOpen, setManualDialogOpen] = useState(false);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [manualSubmitting, setManualSubmitting] = useState(false);
