@@ -122,6 +122,7 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   useEffect(() => {
+    initClientMonitoring();
     if (typeof window === "undefined") return;
     const apply = () => {
       const standalone =
