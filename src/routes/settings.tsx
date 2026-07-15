@@ -70,6 +70,15 @@ function SettingsRoute() {
         <ListRow icon={Lock} label="Change password" to="/forgot-password" />
       </GroupedList>
 
+      {adminMe.data?.isAdmin ? (
+        <>
+          <SectionLabel className="mt-6">Staff</SectionLabel>
+          <GroupedList>
+            <ListRow icon={Shield} label="Admin console" detail="Hosts, clubs, universities" to="/admin" />
+          </GroupedList>
+        </>
+      ) : null}
+
       <SectionLabel className="mt-6">App</SectionLabel>
       <InstallButton />
 
