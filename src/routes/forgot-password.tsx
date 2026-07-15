@@ -6,6 +6,7 @@ import { z } from "zod";
 import { AuthCard, AuthShell, AuthSupportLinks, EmailInput, PageHeadingBlock, PrimaryButton, SecondaryTextLink, SuccessBanner } from "@/components/attendance-hq/host-onboarding";
 import { supabase } from "@/integrations/supabase/client";
 import { forgotPasswordSchema } from "@/lib/attendance-hq-schemas";
+import { getResetPasswordRedirectUrl } from "@/lib/attendance-hq";
 
 const formSchema = forgotPasswordSchema;
 type FormValues = z.infer<typeof formSchema>;
