@@ -299,6 +299,8 @@ function CheckInRouteComponent() {
   // handled separately, so this path only fires on transport / panic.
   const PUBLIC_TRANSIENT_ERROR = "Something went wrong. Please try again.";
   const PUBLIC_RATE_LIMIT_ERROR = "Too many attempts. Please wait a moment and try again.";
+  const PUBLIC_OFFLINE_ERROR = "You appear to be offline. Turn on cellular or reconnect to Wi-Fi, then tap Try again.";
+  const PUBLIC_NETWORK_ERROR = "Couldn't reach the server. Check your connection and tap Try again — your info is saved.";
 
   // Rate-limit errors are thrown by the server (RateLimitedError) and
   // arrive here through TanStack Start's RPC serialization, which may
@@ -321,7 +323,22 @@ function CheckInRouteComponent() {
         return e.message;
       }
     }
+    if (isLikelyOfflineError(err)) {
+      return typeof navigator !== "undefined" && navigator.onLine === false
+        ? PUBLIC_OFFLINE_ERROR
+        : PUBLIC_NETWORK_ERROR;
+    }
     return PUBLIC_TRANSIENT_ERROR;
+  }
+
+  // Centralize submit-error handling so every flow (first-time, returning,
+  // confirm) sets the sticky "was network" flag consistently — this drives
+  // the offline banner even after the student comes back online but hasn't
+  // retried yet.
+  function handleSubmitError(err: unknown) {
+    const networkish = isLikelyOfflineError(err);
+    setLastFailureWasNetwork(networkish);
+    setGlobalError(getPublicCheckInErrorMessage(err));
   }
 
   const handleFirstTimeSubmit = registrationForm.handleSubmit(async (values) => {
