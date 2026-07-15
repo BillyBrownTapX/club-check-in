@@ -393,7 +393,33 @@ function ClubDetailRoute() {
           ) : (
             <EmptyStateBlock
               title="No templates yet"
-              description="Create a template to speed up recurring event setup."
+              description="Templates save the setup for events you run every week."
+              action={
+                <Button
+                  type="button"
+                  variant="hero"
+                  onClick={async () => {
+                    try {
+                      const created = await createTemplateMutation.mutateAsync({
+                        clubId,
+                        templateName: "Weekly Meeting",
+                        defaultEventName: "Weekly Meeting",
+                        defaultLocation: "",
+                        defaultStartTime: "18:00",
+                        defaultEndTime: "19:00",
+                        defaultCheckInOpenOffsetMinutes: 15,
+                        defaultCheckInCloseOffsetMinutes: 15,
+                      } as never);
+                      toast.success("Template created", { description: created.template_name });
+                    } catch (e) {
+                      toast.error(getManagementErrorMessage(e, "Unable to create template."));
+                    }
+                  }}
+                  disabled={createTemplateMutation.isPending}
+                >
+                  {createTemplateMutation.isPending ? "Creating…" : "Create weekly meeting template"}
+                </Button>
+              }
             />
           )}
         </section>
