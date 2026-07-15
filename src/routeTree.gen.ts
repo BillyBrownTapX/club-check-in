@@ -34,6 +34,7 @@ import { Route as CheckInQrTokenRouteImport } from './routes/check-in.$qrToken'
 import { Route as ApiHealthRouteImport } from './routes/api.health'
 import { Route as EventsEventIdEditRouteImport } from './routes/events.$eventId.edit'
 import { Route as EventsEventIdDisplayRouteImport } from './routes/events.$eventId.display'
+import { Route as ApiPublicStudentCheckInRouteImport } from './routes/api.public.student-check-in'
 import { Route as ApiHealthReadyRouteImport } from './routes/api.health.ready'
 import { Route as ApiHealthCheckInRouteImport } from './routes/api.health.check-in'
 import { Route as ApiHostEventsEventIdAttendanceDotcsvRouteImport } from './routes/api.host.events.$eventId.attendance[.]csv'
@@ -164,6 +165,11 @@ const EventsEventIdDisplayRoute = EventsEventIdDisplayRouteImport.update({
   path: '/display',
   getParentRoute: () => EventsEventIdRoute,
 } as any)
+const ApiPublicStudentCheckInRoute = ApiPublicStudentCheckInRouteImport.update({
+  id: '/api/public/student-check-in',
+  path: '/api/public/student-check-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiHealthReadyRoute = ApiHealthReadyRouteImport.update({
   id: '/ready',
   path: '/ready',
@@ -213,6 +219,7 @@ export interface FileRoutesByFullPath {
   '/events/': typeof EventsIndexRoute
   '/api/health/check-in': typeof ApiHealthCheckInRoute
   '/api/health/ready': typeof ApiHealthReadyRoute
+  '/api/public/student-check-in': typeof ApiPublicStudentCheckInRoute
   '/events/$eventId/display': typeof EventsEventIdDisplayRoute
   '/events/$eventId/edit': typeof EventsEventIdEditRoute
   '/api/host/clubs/$clubId/semester-attendance.csv': typeof ApiHostClubsClubIdSemesterAttendanceDotcsvRoute
@@ -244,6 +251,7 @@ export interface FileRoutesByTo {
   '/events': typeof EventsIndexRoute
   '/api/health/check-in': typeof ApiHealthCheckInRoute
   '/api/health/ready': typeof ApiHealthReadyRoute
+  '/api/public/student-check-in': typeof ApiPublicStudentCheckInRoute
   '/events/$eventId/display': typeof EventsEventIdDisplayRoute
   '/events/$eventId/edit': typeof EventsEventIdEditRoute
   '/api/host/clubs/$clubId/semester-attendance.csv': typeof ApiHostClubsClubIdSemesterAttendanceDotcsvRoute
@@ -276,6 +284,7 @@ export interface FileRoutesById {
   '/events/': typeof EventsIndexRoute
   '/api/health/check-in': typeof ApiHealthCheckInRoute
   '/api/health/ready': typeof ApiHealthReadyRoute
+  '/api/public/student-check-in': typeof ApiPublicStudentCheckInRoute
   '/events/$eventId/display': typeof EventsEventIdDisplayRoute
   '/events/$eventId/edit': typeof EventsEventIdEditRoute
   '/api/host/clubs/$clubId/semester-attendance.csv': typeof ApiHostClubsClubIdSemesterAttendanceDotcsvRoute
@@ -309,6 +318,7 @@ export interface FileRouteTypes {
     | '/events/'
     | '/api/health/check-in'
     | '/api/health/ready'
+    | '/api/public/student-check-in'
     | '/events/$eventId/display'
     | '/events/$eventId/edit'
     | '/api/host/clubs/$clubId/semester-attendance.csv'
@@ -340,6 +350,7 @@ export interface FileRouteTypes {
     | '/events'
     | '/api/health/check-in'
     | '/api/health/ready'
+    | '/api/public/student-check-in'
     | '/events/$eventId/display'
     | '/events/$eventId/edit'
     | '/api/host/clubs/$clubId/semester-attendance.csv'
@@ -371,6 +382,7 @@ export interface FileRouteTypes {
     | '/events/'
     | '/api/health/check-in'
     | '/api/health/ready'
+    | '/api/public/student-check-in'
     | '/events/$eventId/display'
     | '/events/$eventId/edit'
     | '/api/host/clubs/$clubId/semester-attendance.csv'
@@ -401,6 +413,7 @@ export interface RootRouteChildren {
   OnboardingEventRoute: typeof OnboardingEventRoute
   ClubsIndexRoute: typeof ClubsIndexRoute
   EventsIndexRoute: typeof EventsIndexRoute
+  ApiPublicStudentCheckInRoute: typeof ApiPublicStudentCheckInRoute
   ApiHostClubsClubIdSemesterAttendanceDotcsvRoute: typeof ApiHostClubsClubIdSemesterAttendanceDotcsvRoute
   ApiHostEventsEventIdAttendanceDotcsvRoute: typeof ApiHostEventsEventIdAttendanceDotcsvRoute
 }
@@ -582,6 +595,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof EventsEventIdDisplayRouteImport
       parentRoute: typeof EventsEventIdRoute
     }
+    '/api/public/student-check-in': {
+      id: '/api/public/student-check-in'
+      path: '/api/public/student-check-in'
+      fullPath: '/api/public/student-check-in'
+      preLoaderRoute: typeof ApiPublicStudentCheckInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/health/ready': {
       id: '/api/health/ready'
       path: '/ready'
@@ -665,6 +685,7 @@ const rootRouteChildren: RootRouteChildren = {
   OnboardingEventRoute: OnboardingEventRoute,
   ClubsIndexRoute: ClubsIndexRoute,
   EventsIndexRoute: EventsIndexRoute,
+  ApiPublicStudentCheckInRoute: ApiPublicStudentCheckInRoute,
   ApiHostClubsClubIdSemesterAttendanceDotcsvRoute:
     ApiHostClubsClubIdSemesterAttendanceDotcsvRoute,
   ApiHostEventsEventIdAttendanceDotcsvRoute:
