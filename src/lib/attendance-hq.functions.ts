@@ -34,6 +34,7 @@ import {
   normalizeEmail,
   type PublicStudentPreview,
   type University,
+  shiftEventScheduleByDays,
   shiftTimeString,
   slugifyClubName,
   WEEKLY_MEETING_TEMPLATE_DEFAULTS,
