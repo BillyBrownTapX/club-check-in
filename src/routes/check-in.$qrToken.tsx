@@ -172,6 +172,65 @@ function CheckInRouteComponent() {
     defaultValues: { nineHundredNumber: "" },
   });
 
+  // Restore any draft the student left in this browser tab for this QR.
+  // Runs once on mount — we don't want later form.reset() calls to fight
+  // with what the student is currently typing.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const reg = readDraft<RegistrationDraft>(REGISTRATION_DRAFT_KEY(qrToken));
+    if (reg) {
+      registrationForm.reset({
+        firstName: reg.firstName ?? "",
+        lastName: reg.lastName ?? "",
+        studentEmail: reg.studentEmail ?? "",
+        nineHundredNumber: reg.nineHundredNumber ?? "",
+        rememberDevice: true,
+      });
+    }
+    const ret = readDraft<{ nineHundredNumber: string }>(RETURNING_DRAFT_KEY(qrToken));
+    if (ret?.nineHundredNumber) {
+      returningForm.reset({ nineHundredNumber: ret.nineHundredNumber });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [qrToken]);
+
+  // Persist first-time draft on every change so a mid-flow reload / tab
+  // switch doesn't lose what the student typed. We deliberately exclude
+  // `rememberDevice` (UI toggle, not identity) and never touch localStorage.
+  useEffect(() => {
+    const sub = registrationForm.watch((values) => {
+      writeDraft(REGISTRATION_DRAFT_KEY(qrToken), {
+        firstName: values.firstName ?? "",
+        lastName: values.lastName ?? "",
+        studentEmail: values.studentEmail ?? "",
+        nineHundredNumber: values.nineHundredNumber ?? "",
+      });
+    });
+    return () => sub.unsubscribe();
+  }, [registrationForm, qrToken]);
+
+  useEffect(() => {
+    const sub = returningForm.watch((values) => {
+      writeDraft(RETURNING_DRAFT_KEY(qrToken), {
+        nineHundredNumber: values.nineHundredNumber ?? "",
+      });
+    });
+    return () => sub.unsubscribe();
+  }, [returningForm, qrToken]);
+
+  // Soft "back online" nudge — non-blocking, no auto-submit.
+  useEffect(() => {
+    if (!online) {
+      wasOfflineRef.current = true;
+      return;
+    }
+    if (wasOfflineRef.current) {
+      wasOfflineRef.current = false;
+      setLastFailureWasNetwork(false);
+      toast.success("Back online — you can check in now.");
+    }
+  }, [online]);
+
   useEffect(() => {
     if (initialBlockedState || typeof window === "undefined") return;
     const storedDeviceToken = window.localStorage.getItem(DEVICE_TOKEN_KEY);
