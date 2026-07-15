@@ -556,6 +556,22 @@ function EventDetailRoute() {
     }
   };
 
+  const handleSaveAsTemplate = async () => {
+    if (savingAsTemplate) return;
+    setSavingAsTemplate(true);
+    try {
+      const template = await saveAsTemplateMutation({ data: { eventId } });
+      toast.success("Template saved", { description: template.template_name });
+      // Refresh club detail so the templates section reflects the new row
+      // when the host navigates back.
+      await queryClient.invalidateQueries({ queryKey: queryKeys.clubs.detail(event.club_id) });
+    } catch (error) {
+      toast.error(getManagementErrorMessage(error, "Unable to save template."));
+    } finally {
+      setSavingAsTemplate(false);
+    }
+  };
+
   const handleManualRefresh = async () => {
     await refresh();
   };
