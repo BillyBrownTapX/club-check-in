@@ -343,6 +343,7 @@ function CheckInRouteComponent() {
 
   const handleFirstTimeSubmit = registrationForm.handleSubmit(async (values) => {
     setGlobalError(null);
+    setLastFailureWasNetwork(false);
     try {
       const result = await submitStudentCheckIn({ data: { ...values, qrToken } });
       if (!result.ok) {
@@ -362,10 +363,13 @@ function CheckInRouteComponent() {
       if (typeof window !== "undefined" && result.deviceToken) {
         window.localStorage.setItem(DEVICE_TOKEN_KEY, result.deviceToken);
       }
+      // Successful commit — clear any saved draft for this QR.
+      clearDraft(REGISTRATION_DRAFT_KEY(qrToken));
+      clearDraft(RETURNING_DRAFT_KEY(qrToken));
       setSuccessAt(result.attendance.checked_in_at);
       setScreen("success");
     } catch (err) {
-      setGlobalError(getPublicCheckInErrorMessage(err));
+      handleSubmitError(err);
     }
   });
 
