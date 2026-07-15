@@ -36,6 +36,7 @@ import {
   type University,
   shiftTimeString,
   slugifyClubName,
+  WEEKLY_MEETING_TEMPLATE_DEFAULTS,
 } from "@/lib/attendance-hq";
 async function getSupabaseAdmin() {
   const mod = await import("@/integrations/supabase/client.server");
@@ -77,6 +78,7 @@ import {
   removeClubOfficerSchema,
   restoreAttendanceSchema,
   returningLookupInputSchema,
+  saveEventAsTemplateSchema,
   studentCheckInInputSchema,
   toggleEventArchiveSchema,
   transferClubOwnershipSchema,
@@ -715,6 +717,25 @@ export const getClubDetail = createServerFn({ method: "GET" })
     if (eventsError) throw new Error(safeMessage(eventsError));
     if (templatesError) throw new Error(safeMessage(templatesError));
 
+    // Soft backfill: existing clubs created before the seed-on-create change
+    // (or where the seed failed) end up with zero templates. Insert a
+    // Weekly Meeting template idempotently so the templates surface stops
+    // being an empty section hosts ignore. Best-effort — never fails the
+    // detail load.
+    let templatesList = (templates ?? []) as EventTemplateWithClub[];
+    if (templatesList.length === 0) {
+      try {
+        const { data: seeded } = await context.supabase
+          .from("event_templates")
+          .insert({ club_id: club.id, ...WEEKLY_MEETING_TEMPLATE_DEFAULTS })
+          .select("*, clubs(id, club_name, club_slug)")
+          .single();
+        if (seeded) templatesList = [seeded as EventTemplateWithClub];
+      } catch (backfillError) {
+        console.warn("[getClubDetail] weekly template backfill skipped:", backfillError instanceof Error ? backfillError.message : "unknown");
+      }
+    }
+
     // Members: hosts can only SELECT their own host_profiles under RLS, so
     // join member rows to profile name/email via the admin client after the
     // requireClubAccess gate above.
@@ -775,7 +796,7 @@ export const getClubDetail = createServerFn({ method: "GET" })
       },
       upcomingEvents,
       pastEvents,
-      templates: (templates ?? []) as EventTemplateWithClub[],
+      templates: templatesList,
       members,
       viewerRole,
     } as ClubDetailPayload;
@@ -937,6 +958,19 @@ export const createClubManagement = createServerFn({ method: "POST" })
       .single();
 
     if (error || !club) throw new Error(safeMessage(error, "Unable to create club"));
+
+    // Best-effort seed: new clubs start with a Weekly Meeting template so
+    // hosts see the templates section as a working default, not an empty
+    // list. Failure here must NOT roll back the club — it's a UX nicety.
+    try {
+      await context.supabase.from("event_templates").insert({
+        club_id: club.id,
+        ...WEEKLY_MEETING_TEMPLATE_DEFAULTS,
+      });
+    } catch (seedError) {
+      console.warn("[createClubManagement] weekly template seed skipped:", seedError instanceof Error ? seedError.message : "unknown");
+    }
+
     return club as Club;
   });
 
@@ -1056,6 +1090,53 @@ export const duplicateEventTemplate = createServerFn({ method: "POST" })
 
     if (duplicateError || !duplicated) throw new Error(safeMessage(duplicateError, "Unable to duplicate template"));
     return duplicated as EventTemplateWithClub;
+  });
+
+export const saveEventAsTemplate = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(saveEventAsTemplateSchema)
+  .handler(async ({ data, context }) => {
+    const event = await requireOwnedEvent(context.supabase, context.userId, data.eventId);
+
+    // Reverse getEventFormPayload's template math:
+    //   open_ts  = combineDateAndTime(event_date, start_time) − openOffset(min)
+    //   close_ts = combineDateAndTime(event_date, end_time)   + closeOffset(min)
+    // Positive stored offsets mean "N min before start" / "N min after end".
+    const clampOffset = (mins: number) => Math.max(-1440, Math.min(1440, Math.round(mins)));
+
+    const startMs = new Date(`${event.event_date}T${event.start_time}`).getTime();
+    const endTime = event.end_time ?? event.start_time;
+    const endMs = new Date(`${event.event_date}T${endTime}`).getTime();
+    const openMs = new Date(event.check_in_opens_at).getTime();
+    const closeMs = new Date(event.check_in_closes_at).getTime();
+
+    const openOffset = Number.isFinite(startMs) && Number.isFinite(openMs)
+      ? clampOffset((startMs - openMs) / 60000)
+      : 15;
+    const closeOffset = Number.isFinite(endMs) && Number.isFinite(closeMs)
+      ? clampOffset((closeMs - endMs) / 60000)
+      : 15;
+
+    const rawName = (data.templateName ?? "").trim();
+    const templateName = rawName.length ? rawName.slice(0, 120) : `${event.event_name} template`.slice(0, 120);
+
+    const { data: template, error } = await context.supabase
+      .from("event_templates")
+      .insert({
+        club_id: event.club_id,
+        template_name: templateName,
+        default_event_name: event.event_name || null,
+        default_location: event.location || null,
+        default_start_time: event.start_time,
+        default_end_time: endTime,
+        default_check_in_open_offset_minutes: openOffset,
+        default_check_in_close_offset_minutes: closeOffset,
+      })
+      .select("*, clubs(id, club_name, club_slug)")
+      .single();
+
+    if (error || !template) throw new Error(safeMessage(error, "Unable to save template"));
+    return template as EventTemplateWithClub;
   });
 
 export const getEventFormPayload = createServerFn({ method: "GET" })

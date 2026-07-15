@@ -21,6 +21,7 @@ import {
   ShieldAlert,
   Trash2,
   UserPlus,
+  WandSparkles,
   X,
 } from "lucide-react";
 import QRCode from "react-qr-code";
@@ -78,6 +79,7 @@ import {
   manualCheckIn,
   removeAttendance,
   restoreAttendance,
+  saveEventAsTemplate,
   toggleEventArchive,
 } from "@/lib/attendance-hq.functions";
 import {
@@ -189,6 +191,7 @@ function EventDetailRoute() {
   const deleteEventMutation = useAuthorizedServerFn(deleteEvent);
   const toggleArchiveMutation = useAuthorizedServerFn(toggleEventArchive);
   const regenerateQrTokenMutation = useAuthorizedServerFn(regenerateEventQrToken);
+  const saveAsTemplateMutation = useAuthorizedServerFn(saveEventAsTemplate);
 
   // Single source of truth: the events.detail query. Realtime invalidates
   // it, manual refresh invalidates it, mutations invalidate it.
@@ -241,6 +244,7 @@ function EventDetailRoute() {
   const [duplicating, setDuplicating] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [regeneratingQr, setRegeneratingQr] = useState(false);
+  const [savingAsTemplate, setSavingAsTemplate] = useState(false);
   const [manualDialogOpen, setManualDialogOpen] = useState(false);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
   const [manualSubmitting, setManualSubmitting] = useState(false);
@@ -552,6 +556,22 @@ function EventDetailRoute() {
     }
   };
 
+  const handleSaveAsTemplate = async () => {
+    if (savingAsTemplate) return;
+    setSavingAsTemplate(true);
+    try {
+      const template = await saveAsTemplateMutation({ data: { eventId } });
+      toast.success("Template saved", { description: template.template_name });
+      // Refresh club detail so the templates section reflects the new row
+      // when the host navigates back.
+      await queryClient.invalidateQueries({ queryKey: queryKeys.clubs.detail(event.club_id) });
+    } catch (error) {
+      toast.error(getManagementErrorMessage(error, "Unable to save template."));
+    } finally {
+      setSavingAsTemplate(false);
+    }
+  };
+
   const handleManualRefresh = async () => {
     await refresh();
   };
@@ -690,6 +710,12 @@ function EventDetailRoute() {
               label={duplicating ? "Duplicating…" : "Duplicate event"}
               detail="Create a copy you can edit"
               onClick={() => void handleDuplicate()}
+            />
+            <ListRow
+              icon={WandSparkles}
+              label={savingAsTemplate ? "Saving template…" : "Save as template"}
+              detail="Reuse these settings for next week"
+              onClick={() => void handleSaveAsTemplate()}
             />
             {status === "open" ? (
               <ListRow

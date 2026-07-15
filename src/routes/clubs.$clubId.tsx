@@ -326,6 +326,18 @@ function ClubDetailRoute() {
             <EmptyStateBlock
               title="No upcoming events"
               description="Create your next event to start tracking attendance."
+              action={
+                data.templates.length ? (
+                  <Button
+                    type="button"
+                    variant="hero"
+                    onClick={() => navigate({ to: "/events/new", search: { clubId: data.club.id, templateId: data.templates[0].id, duplicateFrom: "" } })}
+                  >
+                    <WandSparkles className="mr-2 h-4 w-4" />
+                    Create from {data.templates[0].template_name}
+                  </Button>
+                ) : undefined
+              }
             />
           )}
         </section>
@@ -393,7 +405,33 @@ function ClubDetailRoute() {
           ) : (
             <EmptyStateBlock
               title="No templates yet"
-              description="Create a template to speed up recurring event setup."
+              description="Templates save the setup for events you run every week."
+              action={
+                <Button
+                  type="button"
+                  variant="hero"
+                  onClick={async () => {
+                    try {
+                      const created = await createTemplateMutation.mutateAsync({
+                        clubId,
+                        templateName: "Weekly Meeting",
+                        defaultEventName: "Weekly Meeting",
+                        defaultLocation: "",
+                        defaultStartTime: "18:00",
+                        defaultEndTime: "19:00",
+                        defaultCheckInOpenOffsetMinutes: 15,
+                        defaultCheckInCloseOffsetMinutes: 15,
+                      } as never);
+                      toast.success("Template created", { description: created.template_name });
+                    } catch (e) {
+                      toast.error(getManagementErrorMessage(e, "Unable to create template."));
+                    }
+                  }}
+                  disabled={createTemplateMutation.isPending}
+                >
+                  {createTemplateMutation.isPending ? "Creating…" : "Create weekly meeting template"}
+                </Button>
+              }
             />
           )}
         </section>

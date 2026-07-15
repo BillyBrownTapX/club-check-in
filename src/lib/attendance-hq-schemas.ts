@@ -189,6 +189,11 @@ export const duplicateEventTemplateSchema = z.object({
   templateId: z.string().uuid(),
 });
 
+export const saveEventAsTemplateSchema = z.object({
+  eventId: z.string().uuid(),
+  templateName: z.string().trim().min(1).max(120).optional().or(z.literal("")),
+});
+
 export const deleteClubSchema = z.object({
   clubId: z.string().uuid(),
 });
