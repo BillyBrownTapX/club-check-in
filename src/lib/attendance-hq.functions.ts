@@ -3,6 +3,7 @@ import { createServerFn } from "@tanstack/react-start";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { notFound } from "@tanstack/react-router";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireHostActive } from "@/lib/host-active.middleware";
 import type { Database } from "@/integrations/supabase/types";
 import {
   buildEventDefaults,
@@ -812,7 +813,7 @@ export const getClubDetail = createServerFn({ method: "GET" })
   });
 
 export const addClubOfficer = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireHostActive])
   .inputValidator(addClubOfficerSchema)
   .handler(async ({ data, context }) => {
     await requireClubOwner(context.supabase, context.userId, data.clubId);
@@ -852,7 +853,7 @@ export const addClubOfficer = createServerFn({ method: "POST" })
   });
 
 export const removeClubOfficer = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireHostActive])
   .inputValidator(removeClubOfficerSchema)
   .handler(async ({ data, context }) => {
     await requireClubOwner(context.supabase, context.userId, data.clubId);
@@ -881,7 +882,7 @@ export const removeClubOfficer = createServerFn({ method: "POST" })
   });
 
 export const transferClubOwnership = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireHostActive])
   .inputValidator(transferClubOwnershipSchema)
   .handler(async ({ data, context }) => {
     await requireClubOwner(context.supabase, context.userId, data.clubId);
@@ -947,7 +948,7 @@ export const transferClubOwnership = createServerFn({ method: "POST" })
 
 
 export const createClubManagement = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireHostActive])
   .inputValidator(clubSchema)
   .handler(async ({ data, context }) => {
     const baseSlug = slugifyClubName(data.clubName);
@@ -984,7 +985,7 @@ export const createClubManagement = createServerFn({ method: "POST" })
   });
 
 export const updateClub = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireHostActive])
   .inputValidator(clubUpdateSchema)
   .handler(async ({ data, context }) => {
     await requireClubAccess(context.supabase, context.userId, data.clubId);
@@ -1011,7 +1012,7 @@ export const updateClub = createServerFn({ method: "POST" })
   });
 
 export const createEventTemplate = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireHostActive])
   .inputValidator(eventTemplateSchema)
   .handler(async ({ data, context }) => {
     await requireClubAccess(context.supabase, context.userId, data.clubId);
@@ -1036,7 +1037,7 @@ export const createEventTemplate = createServerFn({ method: "POST" })
   });
 
 export const updateEventTemplate = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireHostActive])
   .inputValidator(eventTemplateUpdateSchema)
   .handler(async ({ data, context }) => {
     await requireClubAccess(context.supabase, context.userId, data.clubId);
@@ -1062,7 +1063,7 @@ export const updateEventTemplate = createServerFn({ method: "POST" })
   });
 
 export const duplicateEventTemplate = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireHostActive])
   .inputValidator(duplicateEventTemplateSchema)
   .handler(async ({ data, context }) => {
     // 1. Look up the template via the user-scoped (RLS-enforced) client. If
@@ -1102,7 +1103,7 @@ export const duplicateEventTemplate = createServerFn({ method: "POST" })
   });
 
 export const saveEventAsTemplate = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireHostActive])
   .inputValidator(saveEventAsTemplateSchema)
   .handler(async ({ data, context }) => {
     const event = await requireOwnedEvent(context.supabase, context.userId, data.eventId);
@@ -1243,14 +1244,14 @@ export const getEventFormPayload = createServerFn({ method: "GET" })
   });
 
 export const createEvent = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireHostActive])
   .inputValidator(validatedEventSchema)
   .handler(async ({ data, context }) => {
     return createEventForUser(context.supabase, context.userId, data);
   });
 
 export const updateEvent = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireHostActive])
   .inputValidator(eventUpdateSchema)
   .handler(async ({ data, context }) => {
     const existing = await requireOwnedEvent(context.supabase, context.userId, data.eventId);
@@ -1281,7 +1282,7 @@ export const updateEvent = createServerFn({ method: "POST" })
   });
 
 export const duplicateEvent = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireHostActive])
   .inputValidator(duplicateEventSchema)
   .handler(async ({ data, context }) => {
     await requireOwnedEvent(context.supabase, context.userId, data.sourceEventId);
@@ -2036,7 +2037,7 @@ export const lookupStudent = createServerFn({ method: "POST" })
   }));
 
 export const removeAttendance = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireHostActive])
   .inputValidator(removeAttendanceSchema)
   .handler(async ({ data, context }) => {
     // 1. Verify the host owns the event the attendance is being removed from.
@@ -2092,7 +2093,7 @@ export const removeAttendance = createServerFn({ method: "POST" })
   });
 
 export const manualCheckIn = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireHostActive])
   .inputValidator(manualAttendanceSchema)
   .handler(async ({ data, context }) => {
     const event = await requireOwnedEvent(context.supabase, context.userId, data.eventId);
@@ -2221,7 +2222,7 @@ export const manualCheckIn = createServerFn({ method: "POST" })
   });
 
 export const restoreAttendance = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireHostActive])
   .inputValidator(restoreAttendanceSchema)
   .handler(async ({ data, context }) => {
     const event = await requireOwnedEvent(context.supabase, context.userId, data.eventId);
@@ -2273,7 +2274,7 @@ export const restoreAttendance = createServerFn({ method: "POST" })
 
 
 export const correctStudentProfile = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireHostActive])
   .inputValidator(correctStudentProfileSchema)
   .handler(async ({ data, context }) => {
     const event = await requireOwnedEvent(context.supabase, context.userId, data.eventId);
@@ -2336,7 +2337,7 @@ export const correctStudentProfile = createServerFn({ method: "POST" })
   });
 
 export const toggleEventArchive = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireHostActive])
   .inputValidator(toggleEventArchiveSchema)
   .handler(async ({ data, context }) => {
     await requireOwnedEvent(context.supabase, context.userId, data.eventId);
@@ -2353,7 +2354,7 @@ export const toggleEventArchive = createServerFn({ method: "POST" })
   });
 
 export const closeCheckInEarly = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireHostActive])
   .inputValidator(closeCheckInEarlySchema)
   .handler(async ({ data, context }) => {
     // Pre-fix, this function would close (deactivate + clamp window on)
@@ -2371,7 +2372,7 @@ export const closeCheckInEarly = createServerFn({ method: "POST" })
   });
 
 export const regenerateEventQrToken = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireHostActive])
   .inputValidator(regenerateEventQrTokenSchema)
   .handler(async ({ data, context }) => {
     await requireOwnedEvent(context.supabase, context.userId, data.eventId);
@@ -2440,7 +2441,7 @@ async function cascadeDeleteEvent(supabase: AppSupabaseClient, eventId: string) 
 }
 
 export const deleteEvent = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireHostActive])
   .inputValidator(deleteEventSchema)
   .handler(async ({ data, context }) => {
     await requireOwnedEvent(context.supabase, context.userId, data.eventId);
@@ -2462,7 +2463,7 @@ export const deleteEvent = createServerFn({ method: "POST" })
   });
 
 export const deleteClub = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
+  .middleware([requireHostActive])
   .inputValidator(deleteClubSchema)
   .handler(async ({ data, context }) => {
     await requireClubOwner(context.supabase, context.userId, data.clubId);

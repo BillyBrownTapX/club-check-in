@@ -405,25 +405,34 @@ export type Database = {
       host_profiles: {
         Row: {
           created_at: string
+          disabled_at: string | null
+          disabled_reason: string | null
           email: string
           full_name: string
           id: string
+          is_disabled: boolean
           logo_url: string | null
           updated_at: string
         }
         Insert: {
           created_at?: string
+          disabled_at?: string | null
+          disabled_reason?: string | null
           email: string
           full_name: string
           id: string
+          is_disabled?: boolean
           logo_url?: string | null
           updated_at?: string
         }
         Update: {
           created_at?: string
+          disabled_at?: string | null
+          disabled_reason?: string | null
           email?: string
           full_name?: string
           id?: string
+          is_disabled?: boolean
           logo_url?: string | null
           updated_at?: string
         }
