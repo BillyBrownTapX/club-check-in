@@ -148,6 +148,13 @@ function CheckInRouteComponent() {
   const [rememberedStudent, setRememberedStudent] = useState<PublicStudentPreview | null>(null);
   const [rememberedLoading, setRememberedLoading] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
+  // Distinguish "no network path" from "server said no". The offline banner
+  // is driven off `useOnlineStatus()` OR a sticky flag set when the last
+  // submit threw a transport-shaped error, so we can prompt the student to
+  // retry after switching to cellular without the toast lying about state.
+  const [lastFailureWasNetwork, setLastFailureWasNetwork] = useState(false);
+  const online = useOnlineStatus();
+  const wasOfflineRef = useRef(false);
 
   const registrationForm = useForm({
     resolver: zodResolver(studentRegistrationSchema),
