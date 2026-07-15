@@ -31,6 +31,7 @@ import {
   type EventWithClub,
   getCheckInMethodLabel,
   getCheckInStatus,
+  getAttendanceRetentionCutoffDate,
   getDefaultClubReportRange,
   isDeviceSessionExpired,
   type HostOnboardingState,
