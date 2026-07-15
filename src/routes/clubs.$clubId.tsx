@@ -658,6 +658,27 @@ function ClubDetailRoute() {
           clubName={data.club.club_name}
           accessToken={session?.access_token ?? null}
         />
+
+        {isOwner ? (
+          <PurgeAttendanceDialog
+            open={purgeOpen}
+            onOpenChange={setPurgeOpen}
+            clubId={data.club.id}
+            clubName={data.club.club_name}
+            submitting={purgeAttendanceMutation.isPending}
+            onSubmit={async ({ beforeDate, confirmClubName }) => {
+              const result = await purgeAttendanceMutation.mutateAsync({
+                clubId: data.club.id,
+                beforeDate,
+                confirmClubName,
+              } as never);
+              toast.success("Attendance purged", {
+                description: `${result.attendanceDeleted} check-ins across ${result.eventsTouched} event${result.eventsTouched === 1 ? "" : "s"} removed.`,
+              });
+              setPurgeOpen(false);
+            }}
+          />
+        ) : null}
       </div>
     </ManagementPageShell>
   );
