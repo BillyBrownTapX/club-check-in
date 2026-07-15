@@ -375,6 +375,7 @@ function CheckInRouteComponent() {
 
   const handleReturningSubmit = returningForm.handleSubmit(async (values) => {
     setGlobalError(null);
+    setLastFailureWasNetwork(false);
     try {
       const result = await lookupReturningStudent({ data: { ...values, qrToken } });
       if (!result.ok) {
@@ -387,7 +388,7 @@ function CheckInRouteComponent() {
       setConfirmMode("returning");
       setScreen("confirm");
     } catch (err) {
-      setGlobalError(getPublicCheckInErrorMessage(err));
+      handleSubmitError(err);
     }
   });
 
