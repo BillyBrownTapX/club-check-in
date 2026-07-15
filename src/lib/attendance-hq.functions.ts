@@ -1600,6 +1600,97 @@ function isUniqueViolation(error: unknown, constraint?: string): boolean {
   return haystack.includes(constraint);
 }
 
+// Best-effort activity milestone writers. Failures MUST NOT fail the caller
+// (check-in / close). Unique partial indexes on host_activity ensure that
+// duplicates from concurrent check-ins collapse to a single row.
+async function recordCheckInMilestones(eventId: string): Promise<void> {
+  try {
+    const admin = await getSupabaseAdmin();
+    const { data: event, error: eventError } = await admin
+      .from("events")
+      .select("id, club_id")
+      .eq("id", eventId)
+      .maybeSingle();
+    if (eventError || !event) return;
+
+    const { count, error: countError } = await admin
+      .from("attendance_records")
+      .select("id", { count: "exact", head: true })
+      .eq("event_id", eventId);
+    if (countError) return;
+    const attendanceCount = count ?? 0;
+    if (attendanceCount < 1) return;
+
+    // Best-effort inserts. Unique conflicts are expected under races and are
+    // swallowed — that's the whole point of the partial unique indexes.
+    await admin
+      .from("host_activity")
+      .insert({
+        club_id: event.club_id,
+        event_id: eventId,
+        activity_type: "first_check_in",
+        attendance_count: attendanceCount,
+      });
+
+    const { HOST_ACTIVITY_THRESHOLDS } = await import("@/lib/attendance-hq");
+    for (const threshold of HOST_ACTIVITY_THRESHOLDS) {
+      if (attendanceCount >= threshold) {
+        await admin
+          .from("host_activity")
+          .insert({
+            club_id: event.club_id,
+            event_id: eventId,
+            activity_type: "threshold_reached",
+            threshold,
+            attendance_count: attendanceCount,
+          });
+      }
+    }
+  } catch (err) {
+    if (typeof console !== "undefined") {
+      const e = err as { code?: string; message?: string } | null;
+      console.error("[activity] recordCheckInMilestones failed", {
+        code: e?.code,
+        message: safeMessage(e ?? null, "unknown error"),
+      });
+    }
+  }
+}
+
+async function recordCheckInClosed(eventId: string): Promise<void> {
+  try {
+    const admin = await getSupabaseAdmin();
+    const { data: event, error: eventError } = await admin
+      .from("events")
+      .select("id, club_id")
+      .eq("id", eventId)
+      .maybeSingle();
+    if (eventError || !event) return;
+
+    const { count } = await admin
+      .from("attendance_records")
+      .select("id", { count: "exact", head: true })
+      .eq("event_id", eventId);
+
+    await admin
+      .from("host_activity")
+      .insert({
+        club_id: event.club_id,
+        event_id: eventId,
+        activity_type: "check_in_closed",
+        attendance_count: count ?? 0,
+      });
+  } catch (err) {
+    if (typeof console !== "undefined") {
+      const e = err as { code?: string; message?: string } | null;
+      console.error("[activity] recordCheckInClosed failed", {
+        code: e?.code,
+        message: safeMessage(e ?? null, "unknown error"),
+      });
+    }
+  }
+}
+
 async function createAttendanceRecord(input: {
   event: { id: string };
   studentId: string;
