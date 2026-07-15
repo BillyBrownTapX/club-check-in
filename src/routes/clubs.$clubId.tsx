@@ -275,10 +275,10 @@ function ClubDetailRoute() {
             onClick={() => { setEditingTemplate(null); setTemplateDialogOpen(true); }}
           />
           <ActionTile
-            icon={Pencil}
-            label="Edit Club"
-            hint="Update club details"
-            onClick={() => setClubDialogOpen(true)}
+            icon={BarChart3}
+            label="Semester report"
+            hint="Attendance across meetings"
+            onClick={() => setReportOpen(true)}
           />
           {isOwner ? (
             <ActionSheet
