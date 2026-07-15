@@ -2214,6 +2214,7 @@ export const manualCheckIn = createServerFn({ method: "POST" })
     });
     if (actionError) throw new Error(safeMessage(actionError, "Unable to record action."));
 
+    await recordCheckInMilestones(event.id);
     return { ok: true };
   });
 
