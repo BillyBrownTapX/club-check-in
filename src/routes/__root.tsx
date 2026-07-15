@@ -45,6 +45,7 @@ function NotFoundComponent() {
 
 function RootErrorComponent({ error }: { error: Error }) {
   if (typeof console !== "undefined") console.error("[root-error]", error?.message, error?.stack);
+  reportError(error, { boundary: "root" });
 
   return (
     <FallbackShell>
