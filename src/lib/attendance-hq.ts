@@ -219,6 +219,10 @@ export function getConfirmEmailRedirectUrl(): string {
   return `${getAuthEmailRedirectOrigin()}/sign-in`;
 }
 
+export function getResetPasswordRedirectUrl(): string {
+  return `${getAuthEmailRedirectOrigin()}/reset-password`;
+}
+
 // Starter template seeded on new clubs (and lazily added to existing clubs
 // with zero templates). Positive offsets mean "N minutes before start" for
 // open and "N minutes after end" for close — matches getEventFormPayload's
