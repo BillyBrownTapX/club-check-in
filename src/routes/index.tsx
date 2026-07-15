@@ -11,7 +11,7 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "Attendance HQ — QR attendance for college clubs" },
       { property: "og:description", content: "Run mobile QR check-in for university club events with a polished, iOS-native workflow." },
       { property: "og:type", content: "website" },
-      { property: "og:url", content: "https://attendance-hq.com/" },
+      { property: "og:url", content: "https://checkin-swiftly.lovable.app/" },
       { name: "twitter:title", content: "Attendance HQ — QR attendance for college clubs" },
       { name: "twitter:description", content: "Run mobile QR check-in for university club events with a polished, iOS-native workflow." },
     ],
