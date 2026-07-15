@@ -1,0 +1,1 @@
+REVOKE ALL ON FUNCTION public.prevent_non_admin_host_disable_change() FROM PUBLIC, anon, authenticated;
