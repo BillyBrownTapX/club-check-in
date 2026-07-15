@@ -415,6 +415,8 @@ function CheckInRouteComponent() {
           return;
         }
         setSuccessAt(result.attendance.checked_in_at);
+        clearDraft(REGISTRATION_DRAFT_KEY(qrToken));
+        clearDraft(RETURNING_DRAFT_KEY(qrToken));
         setScreen("success");
         return;
       }
@@ -428,9 +430,11 @@ function CheckInRouteComponent() {
         return;
       }
       setSuccessAt(result.attendance.checked_in_at);
+      clearDraft(REGISTRATION_DRAFT_KEY(qrToken));
+      clearDraft(RETURNING_DRAFT_KEY(qrToken));
       setScreen("success");
     } catch (err) {
-      setGlobalError(getPublicCheckInErrorMessage(err));
+      handleSubmitError(err);
     }
   }
 
