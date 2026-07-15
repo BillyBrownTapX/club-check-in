@@ -8,6 +8,7 @@ import { routeTree } from "./routeTree.gen";
 function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
   if (typeof console !== "undefined") console.error("[route-error]", error?.message, error?.stack);
+  reportError(error, { boundary: "route" });
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-8">
