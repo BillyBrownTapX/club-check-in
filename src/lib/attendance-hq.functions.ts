@@ -949,7 +949,7 @@ export const createClubManagement = createServerFn({ method: "POST" })
         ...WEEKLY_MEETING_TEMPLATE_DEFAULTS,
       });
     } catch (seedError) {
-      console.warn("[createClubManagement] weekly template seed skipped:", safeMessage(seedError));
+      console.warn("[createClubManagement] weekly template seed skipped:", seedError instanceof Error ? seedError.message : "unknown");
     }
 
     return club as Club;
