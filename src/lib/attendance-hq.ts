@@ -219,9 +219,19 @@ export function getConfirmEmailRedirectUrl(): string {
   return `${getAuthEmailRedirectOrigin()}/sign-in`;
 }
 
-export function getResetPasswordRedirectUrl(): string {
-  return `${getAuthEmailRedirectOrigin()}/reset-password`;
-}
+// Starter template seeded on new clubs (and lazily added to existing clubs
+// with zero templates). Positive offsets mean "N minutes before start" for
+// open and "N minutes after end" for close — matches getEventFormPayload's
+// template application math.
+export const WEEKLY_MEETING_TEMPLATE_DEFAULTS = {
+  template_name: "Weekly Meeting",
+  default_event_name: "Weekly Meeting",
+  default_location: null as string | null,
+  default_start_time: "18:00",
+  default_end_time: "19:00",
+  default_check_in_open_offset_minutes: 15,
+  default_check_in_close_offset_minutes: 15,
+} as const;
 
 // Remembered-device tokens expire so a leaked or long-idle device stops
 // getting the welcome-back fast path. Either threshold trips the client
