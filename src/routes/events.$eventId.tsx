@@ -21,6 +21,7 @@ import {
   ShieldAlert,
   Trash2,
   UserPlus,
+  WandSparkles,
   X,
 } from "lucide-react";
 import QRCode from "react-qr-code";
