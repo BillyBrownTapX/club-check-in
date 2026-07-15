@@ -182,6 +182,18 @@ export const CLUB_REPORT_MAX_EVENTS = 40;
 export const CLUB_REPORT_MAX_STUDENTS = 400;
 export const CLUB_REPORT_DEFAULT_RANGE_DAYS = 120;
 
+// Default retention window for attendance history. Roughly two academic
+// years — long enough to cover any single-semester audit + a follow-up
+// semester, short enough that stale check-in rosters don't linger forever.
+// Hosts can purge data older than this via the club "Data & privacy" panel.
+// Campus policy may require different retention; hosts must follow theirs.
+export const ATTENDANCE_RETENTION_DAYS = 730;
+
+export function getAttendanceRetentionCutoffDate(now: Date = new Date()): string {
+  const cutoffMs = now.getTime() - ATTENDANCE_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+  return new Date(cutoffMs).toISOString().slice(0, 10);
+}
+
 export function getDefaultClubReportRange(now: Date = new Date()): { fromDate: string; toDate: string } {
   const toDate = now.toISOString().slice(0, 10);
   const fromMs = now.getTime() - CLUB_REPORT_DEFAULT_RANGE_DAYS * 24 * 60 * 60 * 1000;
