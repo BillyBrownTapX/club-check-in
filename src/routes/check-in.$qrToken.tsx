@@ -491,7 +491,7 @@ function CheckInRouteComponent() {
             <MobileInputField label="Student email" type="email" autoComplete="email" placeholder="name@college.edu" error={errors.studentEmail?.message} {...registrationForm.register("studentEmail")} />
             <MobileNumericField label="900 number" placeholder="900123456" maxLength={9} error={errors.nineHundredNumber?.message} {...registrationForm.register("nineHundredNumber")} />
             {globalError ? <p className="text-sm font-medium text-destructive">{globalError}</p> : null}
-            <PrimaryButton type="submit" disabled={registrationForm.formState.isSubmitting}>Save and Check In</PrimaryButton>
+            <PrimaryButton type="submit" disabled={registrationForm.formState.isSubmitting || submitDisabledByNetwork}>{primaryCtaLabel}</PrimaryButton>
           </form>
         </CheckInFormCard>
         <SecondaryTextButton type="button" onClick={() => { clearTransientState(); setScreen("returning"); }}>Already used Attendance HQ before?</SecondaryTextButton>
