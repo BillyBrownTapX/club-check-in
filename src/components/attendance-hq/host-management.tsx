@@ -59,8 +59,16 @@ import {
 } from "@/lib/attendance-hq-schemas";
 import { cn } from "@/lib/utils";
 
-export function ManagementPageShell({ children, hideTabBar }: { children: React.ReactNode; hideTabBar?: boolean }) {
-  return <HostAppShell hideTabBar={hideTabBar}>{children}</HostAppShell>;
+export function ManagementPageShell({
+  children,
+  hideTabBar,
+  layout,
+}: {
+  children: React.ReactNode;
+  hideTabBar?: boolean;
+  layout?: "default" | "ops";
+}) {
+  return <HostAppShell hideTabBar={hideTabBar} layout={layout}>{children}</HostAppShell>;
 }
 
 /* ─── Mobile action sheet (bottom drawer) ─────────────────────────────

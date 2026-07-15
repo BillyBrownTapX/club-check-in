@@ -597,7 +597,7 @@ function EventDetailRoute() {
   ];
 
   return (
-    <ManagementPageShell>
+    <ManagementPageShell layout="ops">
       <div className="space-y-5 pb-6">
         <LargeTitleHeader
           eyebrow={event.clubs?.club_name ?? "Club event"}
@@ -610,6 +610,12 @@ function EventDetailRoute() {
             </Button>
           }
         />
+
+        {/* On mobile: single stacked column. At lg+: two-column ops layout —
+            left rail with hero/actions/tools stays sticky while the roster
+            (right) scrolls. */}
+        <div className="space-y-5 lg:grid lg:grid-cols-[22rem_minmax(0,1fr)] lg:items-start lg:gap-6 lg:space-y-0">
+          <div className="space-y-5 lg:sticky lg:top-4">
 
         {/* Hero card */}
         <div
@@ -805,7 +811,9 @@ function EventDetailRoute() {
             </ActionSheet>
           </GroupedList>
         </div>
+          </div>{/* end left rail */}
 
+          <div className="space-y-5">
         {/* Roster */}
         <div>
           <div className="mb-2 flex items-center justify-between px-3">
@@ -1032,6 +1040,8 @@ function EventDetailRoute() {
             </div>
           </div>
         </details>
+          </div>{/* end right column */}
+        </div>{/* end ops grid */}
       </div>
 
       <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
