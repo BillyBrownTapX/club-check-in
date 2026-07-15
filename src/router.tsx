@@ -2,6 +2,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { Link, createRouter, useRouter } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/attendance-hq/ios";
+import { reportError } from "@/lib/monitoring";
 import { routeTree } from "./routeTree.gen";
 
 function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
