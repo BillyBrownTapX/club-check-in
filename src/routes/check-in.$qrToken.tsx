@@ -438,12 +438,20 @@ function CheckInRouteComponent() {
     }
   }
 
+  const showOfflineBanner = !online || lastFailureWasNetwork;
+  const offlineBannerVariant: "offline" | "network-error" = !online ? "offline" : "network-error";
+  const submitDisabledByNetwork = !online;
+  const primaryCtaLabel = !online ? "You're offline" : "Save and Check In";
+  const returningCtaLabel = !online ? "You're offline" : "Continue";
+  const confirmCtaLabel = !online ? "You're offline" : "Check In";
+
   function renderFirstTimeScreen() {
     const errors = registrationForm.formState.errors;
     return (
       <>
         <EventInfoCard event={event} status={status} />
         <EventContextRow event={event} />
+        {showOfflineBanner ? <OfflineBanner variant={offlineBannerVariant} /> : null}
         <section className="space-y-2 px-1">
           <h1 className="text-[2.25rem] font-semibold leading-tight text-foreground">Student check-in</h1>
           <p className="text-sm leading-6 text-muted-foreground">Enter your first name, last name, student email, and 9-digit 900 number to record your attendance.</p>
