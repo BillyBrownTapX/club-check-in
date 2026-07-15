@@ -76,11 +76,6 @@ import {
   rememberedDeviceInputSchema,
   removeAttendanceSchema,
   removeClubOfficerSchema,
-  restoreAttendance: never; // sentinel, real import next
-} & Record<string, never>;
-export {};
-// eslint-disable-next-line — sentinel removed
-import {
   restoreAttendanceSchema,
   returningLookupInputSchema,
   saveEventAsTemplateSchema,
