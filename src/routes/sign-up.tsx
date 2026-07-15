@@ -7,6 +7,7 @@ import { AuthCard, AuthShell, AuthSupportLinks, EmailInput, InlineErrorMessage, 
 import { useRequireGuestRedirect } from "@/components/attendance-hq/host-management";
 import { supabase } from "@/integrations/supabase/client";
 import { signUpSchema } from "@/lib/attendance-hq-schemas";
+import { getConfirmEmailRedirectUrl } from "@/lib/attendance-hq";
 import { normalizeSupabaseAuthError } from "@/lib/server-errors";
 
 const formSchema = signUpSchema;
