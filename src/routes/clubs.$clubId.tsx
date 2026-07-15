@@ -54,7 +54,7 @@ import type {
   EventTemplateWithClub,
   ManagementEventSummary,
 } from "@/lib/attendance-hq";
-import { getDefaultClubReportRange, formatEventDate } from "@/lib/attendance-hq";
+import { ATTENDANCE_RETENTION_DAYS, getAttendanceRetentionCutoffDate, getDefaultClubReportRange, formatEventDate } from "@/lib/attendance-hq";
 import { queryKeys } from "@/lib/query-keys";
 
 
