@@ -504,6 +504,7 @@ function CheckInRouteComponent() {
     return (
       <>
         <EventContextRow event={event} />
+        {showOfflineBanner ? <OfflineBanner variant={offlineBannerVariant} /> : null}
         <section className="space-y-2 px-1">
           <h1 className="text-[2.25rem] font-semibold leading-tight text-foreground">Returning check-in</h1>
           <p className="text-sm leading-6 text-muted-foreground">Enter your 900 number to continue.</p>
@@ -512,7 +513,7 @@ function CheckInRouteComponent() {
           <form className="space-y-4" onSubmit={(event) => void handleReturningSubmit(event)}>
             <MobileNumericField label="900 number" placeholder="900123456" maxLength={9} error={errors.nineHundredNumber?.message} {...returningForm.register("nineHundredNumber")} />
             {globalError ? <p className="text-sm font-medium text-destructive">{globalError}</p> : null}
-            <PrimaryButton type="submit" disabled={returningForm.formState.isSubmitting}>Continue</PrimaryButton>
+            <PrimaryButton type="submit" disabled={returningForm.formState.isSubmitting || submitDisabledByNetwork}>{returningCtaLabel}</PrimaryButton>
           </form>
         </CheckInFormCard>
         <SecondaryTextButton type="button" onClick={() => setScreen("first-time")}>First time using Attendance HQ?</SecondaryTextButton>
