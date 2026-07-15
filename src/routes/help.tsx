@@ -94,9 +94,10 @@ function HelpRoute() {
         <ListRow icon={WifiOff} label="Switch to cellular" chevron={false} />
       </GroupedList>
       <p className="mt-2 px-3 text-[13px] leading-6 text-muted-foreground">
-        If the venue Wi-Fi is down, ask students to turn Wi-Fi off and use cellular data to scan and check in. If a
-        specific student can't get on either, use <strong>Manual check-in</strong> from the event page to add them by
-        900 number.
+        If the venue Wi-Fi is down, ask students to turn Wi-Fi off and use cellular data to scan and check in. The
+        check-in page keeps their typed name, email, and 900 number saved on their phone — if a submit fails, they can
+        switch to cellular and tap <strong>Try again</strong> without retyping. If a specific student can't get on
+        either network, use <strong>Manual check-in</strong> from the event page to add them by 900 number.
       </p>
 
       <SectionLabel className="mt-6">Export attendance</SectionLabel>
