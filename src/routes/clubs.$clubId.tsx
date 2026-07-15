@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
-import { ArrowRightLeft, BarChart3, CalendarDays, Download, History, Pencil, Plus, Trash2, UserPlus, Users, WandSparkles, X } from "lucide-react";
+import { ArrowRightLeft, BarChart3, CalendarDays, Download, History, Pencil, Plus, ShieldAlert, Trash2, UserPlus, Users, WandSparkles, X } from "lucide-react";
 import { useAuthorizedMutation, useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
