@@ -93,8 +93,8 @@ function EventCreateRoute() {
   return (
     <EventForm
       payload={payload}
-      title={payload.sourceEventId ? "Duplicate Event" : "Create Event"}
-      description={payload.sourceEventId ? "Adjust the details and create a fresh event with a new QR code." : "Create the next event for one of your clubs."}
+      title={payload.sourceEventId ? "Duplicate next week" : "Create Event"}
+      description={payload.sourceEventId ? "Same setup as the source event, with the date and check-in window shifted forward by 7 days." : "Create the next event for one of your clubs."}
       submitLabel={payload.sourceEventId ? "Create Duplicate" : "Create Event"}
       onSubmit={async (values) => {
         if (payload.sourceEventId) {
