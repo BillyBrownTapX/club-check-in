@@ -31,6 +31,7 @@ import {
   type EventWithClub,
   getCheckInMethodLabel,
   getCheckInStatus,
+  getAttendanceRetentionCutoffDate,
   getDefaultClubReportRange,
   isDeviceSessionExpired,
   type HostOnboardingState,
@@ -85,6 +86,7 @@ import {
   qrTokenSchema,
   rememberedDeviceInputSchema,
   removeAttendanceSchema,
+  purgeClubAttendanceSchema,
   removeClubOfficerSchema,
   restoreAttendanceSchema,
   returningLookupInputSchema,
@@ -2666,3 +2668,101 @@ export const getHostActivity = createServerFn({ method: "GET" })
         club: { id: r.clubs!.id, clubName: r.clubs!.club_name },
       }));
   });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Retention purge (club owner only). Deletes attendance history + actions for
+// events in a club whose event_date is strictly before `beforeDate`. Leaves
+// events, templates, clubs, students, and device sessions intact — students
+// are university-scoped and may attend other clubs; only the CLUB'S copy of
+// their attendance is removed. Guarded by exact club name confirmation +
+// retention-cutoff bound so hosts can't accidentally wipe recent data.
+// ─────────────────────────────────────────────────────────────────────────────
+export const purgeClubAttendanceOlderThan = createServerFn({ method: "POST" })
+  .middleware([requireHostActive])
+  .inputValidator(purgeClubAttendanceSchema)
+  .handler(async ({ data, context }) => {
+    const club = await requireClubOwner(context.supabase, context.userId, data.clubId);
+
+    // Confirmation phrase must match the club name exactly (trimmed). Cheap
+    // defense against tap-through mistakes.
+    if (data.confirmClubName.trim() !== club.club_name.trim()) {
+      throw new Error("Club name confirmation did not match.");
+    }
+
+    // beforeDate cannot be inside the retention window — only data older
+    // than the policy is eligible for purge.
+    const cutoff = getAttendanceRetentionCutoffDate();
+    if (data.beforeDate > cutoff) {
+      throw new Error(
+        `You can only delete attendance older than the retention cutoff (${cutoff}).`,
+      );
+    }
+
+    const admin = await getSupabaseAdmin();
+
+    // 1. Find eligible events.
+    const { data: eventsRaw, error: eventsError } = await admin
+      .from("events")
+      .select("id")
+      .eq("club_id", data.clubId)
+      .lt("event_date", data.beforeDate);
+    if (eventsError) throw new Error(safeMessage(eventsError, "Unable to load events for purge."));
+
+    const eventIds = (eventsRaw ?? []).map((e) => e.id);
+    if (!eventIds.length) {
+      return {
+        ok: true,
+        eventsTouched: 0,
+        attendanceDeleted: 0,
+        actionsDeleted: 0,
+        beforeDate: data.beforeDate,
+      };
+    }
+
+    // 2. Count actions + records for logging.
+    const { count: actionsCount } = await admin
+      .from("attendance_actions")
+      .select("id", { count: "exact", head: true })
+      .in("event_id", eventIds);
+    const { count: recordsCount } = await admin
+      .from("attendance_records")
+      .select("id", { count: "exact", head: true })
+      .in("event_id", eventIds);
+
+    // 3. Delete in FK-safe order: actions → records → activity.
+    const { error: actionsError } = await admin
+      .from("attendance_actions")
+      .delete()
+      .in("event_id", eventIds);
+    if (actionsError) throw new Error(safeMessage(actionsError, "Unable to purge attendance actions."));
+
+    const { error: recordsError } = await admin
+      .from("attendance_records")
+      .delete()
+      .in("event_id", eventIds);
+    if (recordsError) throw new Error(safeMessage(recordsError, "Unable to purge attendance records."));
+
+    // host_activity references events too; drop the milestone rows for those
+    // events so we don't leave orphan "first check-in" notices pointing at an
+    // event that has zero attendance.
+    await admin.from("host_activity").delete().in("event_id", eventIds);
+
+    // Counts-only log — never emails, 900s, or student names.
+    // eslint-disable-next-line no-console
+    console.info("[purgeClubAttendance]", {
+      clubId: data.clubId,
+      beforeDate: data.beforeDate,
+      eventsTouched: eventIds.length,
+      attendanceDeleted: recordsCount ?? 0,
+      actionsDeleted: actionsCount ?? 0,
+    });
+
+    return {
+      ok: true,
+      eventsTouched: eventIds.length,
+      attendanceDeleted: recordsCount ?? 0,
+      actionsDeleted: actionsCount ?? 0,
+      beforeDate: data.beforeDate,
+    };
+  });
+

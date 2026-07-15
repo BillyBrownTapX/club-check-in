@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
-import { ArrowRightLeft, BarChart3, CalendarDays, Download, History, Pencil, Plus, Trash2, UserPlus, Users, WandSparkles, X } from "lucide-react";
+import { ArrowRightLeft, BarChart3, CalendarDays, Download, History, Pencil, Plus, ShieldAlert, Trash2, UserPlus, Users, WandSparkles, X } from "lucide-react";
 import { useAuthorizedMutation, useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,7 @@ import {
   duplicateEventTemplate,
   getClubAttendanceReport,
   getClubDetail,
+  purgeClubAttendanceOlderThan,
   removeClubOfficer,
   transferClubOwnership,
   updateClub,
@@ -53,7 +54,7 @@ import type {
   EventTemplateWithClub,
   ManagementEventSummary,
 } from "@/lib/attendance-hq";
-import { getDefaultClubReportRange, formatEventDate } from "@/lib/attendance-hq";
+import { ATTENDANCE_RETENTION_DAYS, getAttendanceRetentionCutoffDate, getDefaultClubReportRange, formatEventDate } from "@/lib/attendance-hq";
 import { queryKeys } from "@/lib/query-keys";
 
 
@@ -110,6 +111,7 @@ function ClubDetailRoute() {
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<EventTemplateWithClub | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
+  const [purgeOpen, setPurgeOpen] = useState(false);
 
   const clubDetailQuery = useAuthorizedQuery(
     queryKeys.clubs.detail(clubId),
@@ -146,6 +148,10 @@ function ClubDetailRoute() {
   const transferOwnershipMutation = useAuthorizedMutation(transferClubOwnership, {
     invalidate: [queryKeys.clubs.all],
   });
+  const purgeAttendanceMutation = useAuthorizedMutation(purgeClubAttendanceOlderThan, {
+    invalidate: [queryKeys.clubs.all, queryKeys.events.all, queryKeys.activity.all],
+  });
+
 
   const [officerDialogOpen, setOfficerDialogOpen] = useState(false);
   const [officerEmail, setOfficerEmail] = useState("");
@@ -525,6 +531,46 @@ function ClubDetailRoute() {
           ) : null}
         </section>
 
+        {/* Data & privacy */}
+        <section className="space-y-3">
+          <SectionLabel className="mb-0 px-1">Data & privacy</SectionLabel>
+          <div className="ios-card space-y-3 rounded-2xl p-4">
+            <p className="text-[13px] leading-6 text-muted-foreground">
+              Attendance HQ keeps check-in history for about {ATTENDANCE_RETENTION_DAYS} days
+              (~2 academic years) by default. Export a{" "}
+              <button
+                type="button"
+                className="font-semibold text-primary underline underline-offset-2"
+                onClick={() => setReportOpen(true)}
+              >
+                semester report CSV
+              </button>{" "}
+              before purging so you keep the records you need. Read our{" "}
+              <Link to="/privacy" className="font-semibold text-primary underline underline-offset-2">
+                privacy policy
+              </Link>
+              . Campus policy may require different retention — follow yours.
+            </p>
+            {isOwner ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full justify-start gap-2 text-destructive"
+                onClick={() => setPurgeOpen(true)}
+              >
+                <ShieldAlert className="h-4 w-4" />
+                Delete attendance older than…
+              </Button>
+            ) : (
+              <p className="text-[12px] text-muted-foreground">
+                Only the club owner can purge old attendance. Ask them if a cleanup is needed.
+              </p>
+            )}
+          </div>
+        </section>
+
+
+
         <ClubDialog
           open={clubDialogOpen}
           onOpenChange={setClubDialogOpen}
@@ -612,6 +658,27 @@ function ClubDetailRoute() {
           clubName={data.club.club_name}
           accessToken={session?.access_token ?? null}
         />
+
+        {isOwner ? (
+          <PurgeAttendanceDialog
+            open={purgeOpen}
+            onOpenChange={setPurgeOpen}
+            clubId={data.club.id}
+            clubName={data.club.club_name}
+            submitting={purgeAttendanceMutation.isPending}
+            onSubmit={async ({ beforeDate, confirmClubName }) => {
+              const result = await purgeAttendanceMutation.mutateAsync({
+                clubId: data.club.id,
+                beforeDate,
+                confirmClubName,
+              } as never);
+              toast.success("Attendance purged", {
+                description: `${result.attendanceDeleted} check-ins across ${result.eventsTouched} event${result.eventsTouched === 1 ? "" : "s"} removed.`,
+              });
+              setPurgeOpen(false);
+            }}
+          />
+        ) : null}
       </div>
     </ManagementPageShell>
   );
@@ -808,6 +875,103 @@ function SemesterReportDialog({
 
         <DialogFooter>
           <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ─── Purge attendance ──────────────────────────────────────────────────
+// Owner-only destructive dialog. Requires typing the exact club name to
+// confirm; the server also gates on retention cutoff + confirmClubName, so
+// this is UX belt to the server's suspenders.
+function PurgeAttendanceDialog({
+  open,
+  onOpenChange,
+  clubId: _clubId,
+  clubName,
+  submitting,
+  onSubmit,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  clubId: string;
+  clubName: string;
+  submitting: boolean;
+  onSubmit: (input: { beforeDate: string; confirmClubName: string }) => Promise<void>;
+}) {
+  const cutoff = useMemo(() => getAttendanceRetentionCutoffDate(), []);
+  const [beforeDate, setBeforeDate] = useState<string>(cutoff);
+  const [confirm, setConfirm] = useState<string>("");
+
+  const cutoffLabel = formatEventDate(cutoff);
+  const dateWithinPolicy = beforeDate && beforeDate <= cutoff;
+  const nameMatches = confirm.trim() === clubName.trim();
+  const canSubmit = dateWithinPolicy && nameMatches && !submitting;
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        onOpenChange(next);
+        if (!next) {
+          setBeforeDate(cutoff);
+          setConfirm("");
+        }
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle className="text-destructive">Delete old attendance</DialogTitle>
+          <DialogDescription>
+            Permanently removes check-in records and history for events dated <strong>before</strong>{" "}
+            the chosen date. Events, templates, and student identities are kept. This cannot be undone.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <Label htmlFor="purge-before">Delete attendance before</Label>
+            <Input
+              id="purge-before"
+              type="date"
+              value={beforeDate}
+              max={cutoff}
+              onChange={(e) => setBeforeDate(e.target.value)}
+            />
+            <p className="text-[12px] text-muted-foreground">
+              Retention cutoff is {cutoffLabel} ({ATTENDANCE_RETENTION_DAYS} days). You can only
+              delete data older than this.
+            </p>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="purge-confirm">
+              Type <strong>{clubName}</strong> to confirm
+            </Label>
+            <Input
+              id="purge-confirm"
+              value={confirm}
+              onChange={(e) => setConfirm(e.target.value)}
+              placeholder={clubName}
+              autoComplete="off"
+            />
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            disabled={!canSubmit}
+            onClick={() => {
+              void onSubmit({ beforeDate, confirmClubName: confirm });
+            }}
+          >
+            {submitting ? "Deleting…" : "Delete attendance"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

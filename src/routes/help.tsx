@@ -1,7 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { HostAppShell } from "@/components/attendance-hq/host-shell";
 import { useRequireHostRedirect } from "@/components/attendance-hq/host-management";
 import { GroupedList, LargeTitleHeader, ListRow, SectionLabel } from "@/components/attendance-hq/ios";
+import { ATTENDANCE_RETENTION_DAYS } from "@/lib/attendance-hq";
 import {
   CalendarCheck2,
   Clock,
@@ -10,6 +11,7 @@ import {
   Timer,
   WifiOff,
   Download,
+  ShieldAlert,
 } from "lucide-react";
 
 export const Route = createFileRoute("/help")({
@@ -104,6 +106,20 @@ function HelpRoute() {
       <p className="mt-2 px-3 text-[13px] leading-6 text-muted-foreground">
         Once the meeting ends, open the event and use <strong>Export CSV</strong>. The file includes each student's
         name, email, 900 number, check-in time, and method — ready for a gradebook or advisor report.
+      </p>
+
+      <SectionLabel className="mt-6">Data retention & FERPA</SectionLabel>
+      <GroupedList>
+        <ListRow icon={ShieldAlert} label="Retention & purge" chevron={false} />
+      </GroupedList>
+      <p className="mt-2 px-3 text-[13px] leading-6 text-muted-foreground">
+        Attendance HQ keeps check-in history for about {ATTENDANCE_RETENTION_DAYS} days (~2 academic
+        years) by default. Export the semester report CSV regularly, and only run the club's
+        <strong> Delete attendance older than…</strong> control after you've exported. See our{" "}
+        <Link to="/privacy" className="font-semibold text-primary underline underline-offset-2">
+          privacy policy
+        </Link>{" "}
+        for the full story; campus policy may require shorter or longer retention — follow yours.
       </p>
 
       <p className="mt-8 px-2 text-center text-[12px] text-muted-foreground">Attendance HQ · Host runbook</p>

@@ -226,6 +226,15 @@ export const clubAttendanceReportSchema = z.object({
   toDate: yyyyMmDd.optional().or(z.literal("")),
 });
 
+// Owner-only destructive purge of attendance older than a cutoff. beforeDate
+// must be a plain YYYY-MM-DD; the server also enforces beforeDate <= today's
+// retention cutoff so hosts can't wipe data still inside the retention window.
+export const purgeClubAttendanceSchema = z.object({
+  clubId: z.string().uuid(),
+  beforeDate: yyyyMmDd,
+  confirmClubName: z.string().trim().min(1, "Type the club name to confirm").max(160),
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Tightened validators for previously loose server-fn inputs.
 // Every server fn must validate its surface area — even GET handlers — so a
