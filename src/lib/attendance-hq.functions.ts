@@ -939,6 +939,19 @@ export const createClubManagement = createServerFn({ method: "POST" })
       .single();
 
     if (error || !club) throw new Error(safeMessage(error, "Unable to create club"));
+
+    // Best-effort seed: new clubs start with a Weekly Meeting template so
+    // hosts see the templates section as a working default, not an empty
+    // list. Failure here must NOT roll back the club — it's a UX nicety.
+    try {
+      await context.supabase.from("event_templates").insert({
+        club_id: club.id,
+        ...WEEKLY_MEETING_TEMPLATE_DEFAULTS,
+      });
+    } catch (seedError) {
+      console.warn("[createClubManagement] weekly template seed skipped:", safeMessage(seedError));
+    }
+
     return club as Club;
   });
 
