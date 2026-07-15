@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Clock3, MapPin, QrCode, ShieldAlert, Sparkles } from "lucide-react";
+import { Clock3, MapPin, QrCode, ShieldAlert, Sparkles, WifiOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
