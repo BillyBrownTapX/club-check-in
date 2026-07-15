@@ -2629,3 +2629,39 @@ export const getClubAttendanceReport = createServerFn({ method: "GET" })
     };
     return payload;
   });
+
+// Host activity feed. RLS on host_activity restricts SELECT to club members,
+// so using the caller-scoped supabase client is enough — no explicit
+// membership filter needed here.
+export const getHostActivity = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<HostActivityEntry[]> => {
+    const { data, error } = await context.supabase
+      .from("host_activity")
+      .select(
+        "id, activity_type, threshold, attendance_count, created_at, event_id, club_id, events!inner(id, event_name, event_date), clubs!inner(id, club_name)",
+      )
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (error) throw new Error(safeMessage(error, "Unable to load activity."));
+    const rows = (data ?? []) as unknown as Array<{
+      id: string;
+      activity_type: HostActivityType;
+      threshold: number | null;
+      attendance_count: number | null;
+      created_at: string;
+      events: { id: string; event_name: string; event_date: string } | null;
+      clubs: { id: string; club_name: string } | null;
+    }>;
+    return rows
+      .filter((r) => r.events && r.clubs)
+      .map((r) => ({
+        id: r.id,
+        activityType: r.activity_type,
+        threshold: r.threshold,
+        attendanceCount: r.attendance_count,
+        createdAt: r.created_at,
+        event: { id: r.events!.id, eventName: r.events!.event_name, eventDate: r.events!.event_date },
+        club: { id: r.clubs!.id, clubName: r.clubs!.club_name },
+      }));
+  });
