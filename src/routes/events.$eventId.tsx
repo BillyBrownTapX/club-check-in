@@ -811,7 +811,9 @@ function EventDetailRoute() {
             </ActionSheet>
           </GroupedList>
         </div>
+          </div>{/* end left rail */}
 
+          <div className="space-y-5">
         {/* Roster */}
         <div>
           <div className="mb-2 flex items-center justify-between px-3">
