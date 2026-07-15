@@ -41,6 +41,7 @@ import {
   duplicateEventTemplate,
   getClubAttendanceReport,
   getClubDetail,
+  purgeClubAttendanceOlderThan,
   removeClubOfficer,
   transferClubOwnership,
   updateClub,
