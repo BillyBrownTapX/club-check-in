@@ -161,8 +161,10 @@ export const listAdminHosts = createServerFn({ method: "GET" })
     const { data: rows, error } = await query;
     if (error) throw new Error(safeMessage(error, "Unable to load hosts."));
     const ids = (rows ?? []).map((r) => r.id);
-    // Fetch club counts per host in one query
-    let counts: Record<string, number> = {};
+    // Owner-club count per host (the `sync_club_owner_membership` trigger
+    // guarantees every club owner has a matching `club_members` row, so we
+    // don't need to also union in the legacy `clubs.host_id` column).
+    const counts: Record<string, number> = {};
     if (ids.length) {
       const { data: memRows } = await admin
         .from("club_members")
@@ -171,21 +173,6 @@ export const listAdminHosts = createServerFn({ method: "GET" })
         .eq("role", "owner");
       for (const m of memRows ?? []) {
         counts[m.user_id] = (counts[m.user_id] ?? 0) + 1;
-      }
-      // Legacy: some clubs still track ownership via `clubs.host_id` for
-      // pre-membership rows. Fold those in too so the count matches what
-      // hosts see in their dashboard.
-      const { data: legacyRows } = await admin
-        .from("clubs")
-        .select("host_id")
-        .in("host_id", ids);
-      const seenPair = new Set<string>();
-      for (const m of memRows ?? []) seenPair.add(`${m.user_id}`);
-      // Legacy rows might duplicate a membership row; that's OK — we accept
-      // a slight overcount rather than issuing N per-host joins.
-      void seenPair;
-      for (const row of legacyRows ?? []) {
-        counts[row.host_id] = (counts[row.host_id] ?? 0) + 0; // no-op: memberships already cover owner
       }
     }
     return (rows ?? []).map((r) => ({
