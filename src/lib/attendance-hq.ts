@@ -132,6 +132,47 @@ export type PublicStudentPreview = {
   maskedEmail: string;
 };
 
+export type ClubAttendanceReportEvent = {
+  id: string;
+  eventName: string;
+  eventDate: string;
+};
+
+export type ClubAttendanceReportStudent = {
+  studentId: string;
+  firstName: string;
+  lastName: string;
+  studentEmail: string;
+  nineHundredNumber: string;
+  totalCheckIns: number;
+  // Parallel to events[]: null when the student did not check in to that event,
+  // otherwise the ISO checked_in_at timestamp of their first check-in for it.
+  attendanceByEventId: Record<string, string | null>;
+};
+
+export type ClubAttendanceReportPayload = {
+  club: { id: string; club_name: string };
+  fromDate: string;
+  toDate: string;
+  events: ClubAttendanceReportEvent[];
+  students: ClubAttendanceReportStudent[];
+  summary: { eventCount: number; studentCount: number; totalCheckIns: number };
+  // True when either events or students were capped by CLUB_REPORT_MAX_* — the
+  // CSV export streams the full range and should be recommended in the UI.
+  truncated: boolean;
+};
+
+export const CLUB_REPORT_MAX_EVENTS = 40;
+export const CLUB_REPORT_MAX_STUDENTS = 400;
+export const CLUB_REPORT_DEFAULT_RANGE_DAYS = 120;
+
+export function getDefaultClubReportRange(now: Date = new Date()): { fromDate: string; toDate: string } {
+  const toDate = now.toISOString().slice(0, 10);
+  const fromMs = now.getTime() - CLUB_REPORT_DEFAULT_RANGE_DAYS * 24 * 60 * 60 * 1000;
+  const fromDate = new Date(fromMs).toISOString().slice(0, 10);
+  return { fromDate, toDate };
+}
+
 export type HostOnboardingState = {
   hasProfile: boolean;
   club: Club | null;
