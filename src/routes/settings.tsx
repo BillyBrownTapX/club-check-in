@@ -1,10 +1,11 @@
 import { useNavigate, createFileRoute, Link } from "@tanstack/react-router";
-import { Bell, ChevronRight, LifeBuoy, Lock, LogOut, Mail, ShieldCheck, User as UserIcon } from "lucide-react";
-import { useAttendanceAuth } from "@/components/attendance-hq/auth-provider";
+import { Bell, ChevronRight, LifeBuoy, Lock, LogOut, Mail, Shield, ShieldCheck, User as UserIcon } from "lucide-react";
+import { useAttendanceAuth, useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
 import { HostAppShell } from "@/components/attendance-hq/host-shell";
 import { useRequireHostRedirect } from "@/components/attendance-hq/host-management";
 import { GroupedList, LargeTitleHeader, ListRow, SectionLabel } from "@/components/attendance-hq/ios";
 import { InstallButton } from "@/components/attendance-hq/install-cta";
+import { getAdminMe } from "@/lib/admin.functions";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
