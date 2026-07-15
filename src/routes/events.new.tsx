@@ -99,7 +99,7 @@ function EventCreateRoute() {
       onSubmit={async (values) => {
         if (payload.sourceEventId) {
           const result = await duplicateEventMutation.mutateAsync({ ...values, sourceEventId: payload.sourceEventId } as never);
-          toast.success("Event duplicated", { description: result.event.event_name });
+          toast.success("Duplicated for next week", { description: result.event.event_name });
           navigate({ to: "/events/$eventId", params: { eventId: result.event.id }, search: { created: "1" } });
           return;
         }
