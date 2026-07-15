@@ -529,9 +529,10 @@ function CheckInRouteComponent() {
           <h1 className="text-[2.1rem] font-semibold leading-tight text-foreground">Is this you?</h1>
         </section>
         <IdentityConfirmationCard student={pendingStudent} />
+        {showOfflineBanner ? <OfflineBanner variant={offlineBannerVariant} /> : null}
         {globalError ? <p className="px-1 text-sm font-medium text-destructive">{globalError}</p> : null}
         <div className="space-y-3">
-          <PrimaryButton type="button" onClick={() => void handleConfirmCheckIn()}>Check In</PrimaryButton>
+          <PrimaryButton type="button" onClick={() => void handleConfirmCheckIn()} disabled={submitDisabledByNetwork}>{confirmCtaLabel}</PrimaryButton>
           <SecondaryTextButton type="button" onClick={() => { clearTransientState(); setScreen(confirmMode === "remembered" ? "first-time" : "returning"); }}>This is not me</SecondaryTextButton>
         </div>
       </>
