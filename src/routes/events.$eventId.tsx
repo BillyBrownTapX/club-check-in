@@ -1040,6 +1040,8 @@ function EventDetailRoute() {
             </div>
           </div>
         </details>
+          </div>{/* end right column */}
+        </div>{/* end ops grid */}
       </div>
 
       <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
