@@ -1733,6 +1733,7 @@ async function createAttendanceRecord(input: {
     throw new Error(safeMessage(error, "Unable to record attendance"));
   }
   if (!attendance) throw new Error(safeMessage(null, "Unable to record attendance"));
+  await recordCheckInMilestones(input.event.id);
   return { ok: true as const, attendance };
 }
 
