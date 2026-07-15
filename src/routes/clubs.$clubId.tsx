@@ -604,6 +604,14 @@ function ClubDetailRoute() {
             }
           }}
         />
+
+        <SemesterReportDialog
+          open={reportOpen}
+          onOpenChange={setReportOpen}
+          clubId={data.club.id}
+          clubName={data.club.club_name}
+          accessToken={session?.access_token ?? null}
+        />
       </div>
     </ManagementPageShell>
   );
