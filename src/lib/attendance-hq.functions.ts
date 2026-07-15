@@ -796,7 +796,7 @@ export const getClubDetail = createServerFn({ method: "GET" })
       },
       upcomingEvents,
       pastEvents,
-      templates: (templates ?? []) as EventTemplateWithClub[],
+      templates: templatesList,
       members,
       viewerRole,
     } as ClubDetailPayload;
