@@ -217,6 +217,15 @@ export const deleteEventSchema = z.object({
   eventId: z.string().uuid(),
 });
 
+// Semester attendance report. Dates are optional YYYY-MM-DD; server fills
+// defaults (120 days ago → today UTC) so the caller can omit them.
+const yyyyMmDd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date");
+export const clubAttendanceReportSchema = z.object({
+  clubId: z.string().uuid(),
+  fromDate: yyyyMmDd.optional().or(z.literal("")),
+  toDate: yyyyMmDd.optional().or(z.literal("")),
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Tightened validators for previously loose server-fn inputs.
 // Every server fn must validate its surface area — even GET handlers — so a

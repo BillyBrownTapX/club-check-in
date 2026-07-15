@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
-import { ArrowRightLeft, CalendarDays, History, Pencil, Plus, Trash2, UserPlus, Users, WandSparkles, X } from "lucide-react";
+import { ArrowRightLeft, BarChart3, CalendarDays, Download, History, Pencil, Plus, Trash2, UserPlus, Users, WandSparkles, X } from "lucide-react";
 import { useAuthorizedMutation, useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,7 @@ import {
   deleteClub,
   deleteEvent,
   duplicateEventTemplate,
+  getClubAttendanceReport,
   getClubDetail,
   removeClubOfficer,
   transferClubOwnership,
@@ -46,7 +47,13 @@ import {
   updateEventTemplate,
 } from "@/lib/attendance-hq.functions";
 import { useSignedLogoUrl } from "@/hooks/use-signed-logo";
-import type { ClubMemberEntry, EventTemplateWithClub, ManagementEventSummary } from "@/lib/attendance-hq";
+import type {
+  ClubAttendanceReportPayload,
+  ClubMemberEntry,
+  EventTemplateWithClub,
+  ManagementEventSummary,
+} from "@/lib/attendance-hq";
+import { getDefaultClubReportRange, formatEventDate } from "@/lib/attendance-hq";
 import { queryKeys } from "@/lib/query-keys";
 
 
@@ -96,12 +103,13 @@ export const Route = createFileRoute("/clubs/$clubId")({
 });
 
 function ClubDetailRoute() {
-  const { loading, user } = useRequireHostRedirect();
+  const { loading, user, session } = useRequireHostRedirect();
   const { clubId } = Route.useParams();
   const navigate = useNavigate();
   const [clubDialogOpen, setClubDialogOpen] = useState(false);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<EventTemplateWithClub | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
 
   const clubDetailQuery = useAuthorizedQuery(
     queryKeys.clubs.detail(clubId),
@@ -268,10 +276,10 @@ function ClubDetailRoute() {
             onClick={() => { setEditingTemplate(null); setTemplateDialogOpen(true); }}
           />
           <ActionTile
-            icon={Pencil}
-            label="Edit Club"
-            hint="Update club details"
-            onClick={() => setClubDialogOpen(true)}
+            icon={BarChart3}
+            label="Semester report"
+            hint="Attendance across meetings"
+            onClick={() => setReportOpen(true)}
           />
           {isOwner ? (
             <ActionSheet
@@ -596,6 +604,14 @@ function ClubDetailRoute() {
             }
           }}
         />
+
+        <SemesterReportDialog
+          open={reportOpen}
+          onOpenChange={setReportOpen}
+          clubId={data.club.id}
+          clubName={data.club.club_name}
+          accessToken={session?.access_token ?? null}
+        />
       </div>
     </ManagementPageShell>
   );
@@ -608,5 +624,192 @@ function ClubHeaderLogo({ path, name }: { path: string | null; name: string }) {
     <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-gradient-brand font-display text-base font-extrabold text-primary-foreground shadow-[0_14px_30px_-20px_color-mix(in_oklab,var(--color-primary)_40%,transparent)]">
       {url ? <img src={url} alt={`${name} logo`} className="h-full w-full object-cover" /> : <span>{initials}</span>}
     </div>
+  );
+}
+
+// ─── Semester report ───────────────────────────────────────────────────
+// Read-only student × meeting matrix for a date range. Opens over the club
+// detail so hosts don't lose their spot. Uses the same ?token= pattern as
+// the per-event export for the CSV download.
+function SemesterReportDialog({
+  open,
+  onOpenChange,
+  clubId,
+  clubName,
+  accessToken,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  clubId: string;
+  clubName: string;
+  accessToken: string | null;
+}) {
+  const defaults = useMemo(() => getDefaultClubReportRange(), []);
+  const [fromDate, setFromDate] = useState<string>(defaults.fromDate);
+  const [toDate, setToDate] = useState<string>(defaults.toDate);
+
+  const query = useAuthorizedQuery<ClubAttendanceReportPayload, { clubId: string; fromDate: string; toDate: string }>(
+    ["clubs", "report", clubId, fromDate, toDate],
+    getClubAttendanceReport,
+    { clubId, fromDate, toDate },
+    { enabled: open, staleTime: 30_000 },
+  );
+
+  const handleExport = () => {
+    if (!accessToken) {
+      toast.error("Your session expired. Please sign in again.");
+      return;
+    }
+    const params = new URLSearchParams({ token: accessToken, from: fromDate, to: toDate });
+    const url = `/api/host/clubs/${encodeURIComponent(clubId)}/semester-attendance.csv?${params.toString()}`;
+    const a = document.createElement("a");
+    a.href = url;
+    a.rel = "noopener";
+    a.download = "";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    toast.success("Preparing your CSV download…");
+  };
+
+  const data = query.data;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl">
+        <DialogHeader>
+          <DialogTitle>Semester report — {clubName}</DialogTitle>
+          <DialogDescription>
+            Attendance across every meeting in this range. Read-only. Export the full range as CSV.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 sm:items-end">
+          <div className="space-y-1">
+            <Label htmlFor="report-from">From</Label>
+            <Input
+              id="report-from"
+              type="date"
+              value={fromDate}
+              max={toDate}
+              onChange={(e) => setFromDate(e.target.value)}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="report-to">To</Label>
+            <Input
+              id="report-to"
+              type="date"
+              value={toDate}
+              min={fromDate}
+              onChange={(e) => setToDate(e.target.value)}
+            />
+          </div>
+          <Button
+            type="button"
+            variant="hero"
+            onClick={handleExport}
+            disabled={!accessToken || query.isLoading}
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Export CSV
+          </Button>
+        </div>
+
+        {query.isLoading ? (
+          <div className="py-10 text-center text-sm text-muted-foreground">Loading report…</div>
+        ) : query.error ? (
+          <div className="py-6 text-center text-sm text-destructive">
+            {getManagementErrorMessage(query.error, "Unable to load report.")}
+          </div>
+        ) : data ? (
+          <>
+            <div className="grid grid-cols-3 gap-3 text-center">
+              <div className="ios-card rounded-2xl p-3">
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Meetings</div>
+                <div className="font-display text-xl font-bold text-foreground">{data.summary.eventCount}</div>
+              </div>
+              <div className="ios-card rounded-2xl p-3">
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Students</div>
+                <div className="font-display text-xl font-bold text-foreground">{data.summary.studentCount}</div>
+              </div>
+              <div className="ios-card rounded-2xl p-3">
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Check-ins</div>
+                <div className="font-display text-xl font-bold text-foreground">{data.summary.totalCheckIns}</div>
+              </div>
+            </div>
+
+            {data.truncated ? (
+              <p className="text-[12px] text-muted-foreground">
+                Preview capped for readability. Export CSV for the full range.
+              </p>
+            ) : null}
+
+            {data.events.length === 0 ? (
+              <div className="ios-card rounded-2xl p-6 text-center text-sm text-muted-foreground">
+                No meetings in this range.
+              </div>
+            ) : (
+              <div className="max-h-[55vh] overflow-auto rounded-2xl border border-border/60">
+                <table className="min-w-full border-collapse text-[13px]">
+                  <thead className="sticky top-0 z-10 bg-background">
+                    <tr className="text-left">
+                      <th className="sticky left-0 z-20 bg-background px-3 py-2 font-display font-semibold text-foreground">Student</th>
+                      {data.events.map((e) => (
+                        <th key={e.id} className="whitespace-nowrap px-2 py-2 text-center font-medium text-muted-foreground">
+                          <div className="font-display text-[12px] font-semibold text-foreground">{e.eventName}</div>
+                          <div className="text-[11px]">{formatEventDate(e.eventDate)}</div>
+                        </th>
+                      ))}
+                      <th className="whitespace-nowrap px-3 py-2 text-center font-display font-semibold text-foreground">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.students.length === 0 ? (
+                      <tr>
+                        <td colSpan={data.events.length + 2} className="px-3 py-6 text-center text-muted-foreground">
+                          No check-ins recorded in this range.
+                        </td>
+                      </tr>
+                    ) : (
+                      data.students.map((s) => (
+                        <tr key={s.studentId} className="border-t border-border/60">
+                          <td className="sticky left-0 z-10 bg-background px-3 py-2">
+                            <div className="font-display font-semibold text-foreground">
+                              {s.lastName}, {s.firstName}
+                            </div>
+                            {s.nineHundredNumber ? (
+                              <div className="text-[11px] text-muted-foreground">{s.nineHundredNumber}</div>
+                            ) : null}
+                          </td>
+                          {data.events.map((e) => (
+                            <td key={e.id} className="px-2 py-2 text-center">
+                              {s.attendanceByEventId[e.id] ? (
+                                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-success/15 text-success">
+                                  ✓
+                                </span>
+                              ) : (
+                                <span className="text-muted-foreground/50">·</span>
+                              )}
+                            </td>
+                          ))}
+                          <td className="px-3 py-2 text-center font-display font-semibold text-foreground">
+                            {s.totalCheckIns}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </>
+        ) : null}
+
+        <DialogFooter>
+          <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

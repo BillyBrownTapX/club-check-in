@@ -11,6 +11,10 @@ import {
   type AttendanceActionStudentSnapshot,
   type AttendanceRow,
   type Club,
+  CLUB_REPORT_MAX_EVENTS,
+  CLUB_REPORT_MAX_STUDENTS,
+  type ClubAttendanceReportPayload,
+  type ClubAttendanceReportStudent,
   type ClubDetailPayload,
   type ClubSummary,
   combineDateAndTime,
@@ -26,6 +30,7 @@ import {
   type EventWithClub,
   getCheckInMethodLabel,
   getCheckInStatus,
+  getDefaultClubReportRange,
   isDeviceSessionExpired,
   type HostOnboardingState,
   type HostProfile,
@@ -51,6 +56,7 @@ async function rateLimit(scope: "lookup" | "register" | "fast", qrToken: string)
 
 import {
   addClubOfficerSchema,
+  clubAttendanceReportSchema,
   clubIdInputSchema,
   clubIdOptionalInputSchema,
   clubSchema,
@@ -2409,4 +2415,121 @@ export const deleteClub = createServerFn({ method: "POST" })
     if (clubError) throw new Error(safeMessage(clubError, "Unable to delete club."));
 
     return { ok: true };
+  });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Semester attendance report (club-scoped, read-only).
+// A student × meeting matrix over a date range. Hosts of the club see the
+// matrix inline and can hit the streaming CSV route for the un-capped export.
+// Authz: requireClubAccess — owner/officer of that specific club only. RLS
+// still applies to every query below; the gate is defense-in-depth.
+// ─────────────────────────────────────────────────────────────────────────────
+export const getClubAttendanceReport = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(clubAttendanceReportSchema)
+  .handler(async ({ data, context }) => {
+    const club = await requireClubAccess(context.supabase, context.userId, data.clubId);
+
+    const defaults = getDefaultClubReportRange();
+    const fromDate = data.fromDate && data.fromDate.length ? data.fromDate : defaults.fromDate;
+    const toDate = data.toDate && data.toDate.length ? data.toDate : defaults.toDate;
+
+    // Events in range — include archived, so hosts see who missed every
+    // meeting even if the row was later archived.
+    const { data: eventsRaw, error: eventsError } = await context.supabase
+      .from("events")
+      .select("id, event_name, event_date, start_time")
+      .eq("club_id", club.id)
+      .gte("event_date", fromDate)
+      .lte("event_date", toDate)
+      .order("event_date", { ascending: true })
+      .order("start_time", { ascending: true });
+    if (eventsError) throw new Error(safeMessage(eventsError, "Unable to load events."));
+
+    let events = (eventsRaw ?? []) as { id: string; event_name: string; event_date: string; start_time: string }[];
+    let truncated = false;
+    if (events.length > CLUB_REPORT_MAX_EVENTS) {
+      events = events.slice(0, CLUB_REPORT_MAX_EVENTS);
+      truncated = true;
+    }
+    const eventIds = events.map((e) => e.id);
+
+    type StudentEntry = ClubAttendanceReportStudent;
+    const studentsMap = new Map<string, StudentEntry>();
+
+    if (eventIds.length) {
+      const PAGE = 1000;
+      let offset = 0;
+      for (;;) {
+        const { data: rows, error } = await context.supabase
+          .from("attendance_records")
+          .select(
+            "event_id, checked_in_at, students(id, first_name, last_name, student_email, nine_hundred_number)",
+          )
+          .in("event_id", eventIds)
+          .order("checked_in_at", { ascending: true })
+          .range(offset, offset + PAGE - 1);
+        if (error) throw new Error(safeMessage(error, "Unable to load attendance."));
+
+        const page = (rows ?? []) as Array<{
+          event_id: string;
+          checked_in_at: string;
+          students: {
+            id: string;
+            first_name: string;
+            last_name: string;
+            student_email: string;
+            nine_hundred_number: string | null;
+          } | null;
+        }>;
+        for (const row of page) {
+          const s = row.students;
+          if (!s) continue;
+          let entry = studentsMap.get(s.id);
+          if (!entry) {
+            entry = {
+              studentId: s.id,
+              firstName: s.first_name,
+              lastName: s.last_name,
+              studentEmail: s.student_email,
+              nineHundredNumber: s.nine_hundred_number ?? "",
+              totalCheckIns: 0,
+              attendanceByEventId: Object.fromEntries(eventIds.map((id) => [id, null])),
+            };
+            studentsMap.set(s.id, entry);
+          }
+          // First check-in wins (ordered ASC), so re-check-ins after a
+          // remove/restore don't overwrite the earliest timestamp.
+          if (!entry.attendanceByEventId[row.event_id]) {
+            entry.attendanceByEventId[row.event_id] = row.checked_in_at;
+            entry.totalCheckIns += 1;
+          }
+        }
+        if (page.length < PAGE) break;
+        offset += PAGE;
+      }
+    }
+
+    let students = Array.from(studentsMap.values()).sort((a, b) => {
+      const ln = a.lastName.localeCompare(b.lastName);
+      if (ln !== 0) return ln;
+      return a.firstName.localeCompare(b.firstName);
+    });
+    if (students.length > CLUB_REPORT_MAX_STUDENTS) {
+      students = students.slice(0, CLUB_REPORT_MAX_STUDENTS);
+      truncated = true;
+    }
+
+    const totalCheckIns = students.reduce((sum, s) => sum + s.totalCheckIns, 0);
+
+    const payload: ClubAttendanceReportPayload = {
+      club: { id: club.id, club_name: club.club_name },
+      fromDate,
+      toDate,
+      events: events.map((e) => ({ id: e.id, eventName: e.event_name, eventDate: e.event_date })),
+      students,
+      summary: { eventCount: events.length, studentCount: students.length, totalCheckIns },
+      truncated,
+    };
+    return payload;
   });
