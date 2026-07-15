@@ -1,7 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { HostAppShell } from "@/components/attendance-hq/host-shell";
 import { useRequireHostRedirect } from "@/components/attendance-hq/host-management";
 import { GroupedList, LargeTitleHeader, ListRow, SectionLabel } from "@/components/attendance-hq/ios";
+import { ATTENDANCE_RETENTION_DAYS } from "@/lib/attendance-hq";
 import {
   CalendarCheck2,
   Clock,
@@ -10,6 +11,7 @@ import {
   Timer,
   WifiOff,
   Download,
+  ShieldAlert,
 } from "lucide-react";
 
 export const Route = createFileRoute("/help")({
