@@ -5,6 +5,7 @@ import { AttendanceAuthProvider } from "@/components/attendance-hq/auth-provider
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
 import { BrandMark } from "@/components/attendance-hq/ios";
+import { initClientMonitoring, reportError } from "@/lib/monitoring";
 import appCss from "../styles.css?url";
 
 export interface AppRouterContext {
