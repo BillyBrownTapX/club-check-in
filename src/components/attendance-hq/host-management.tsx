@@ -408,7 +408,7 @@ export function EventCard({ event, showClub = true, onDuplicate, onDelete }: { e
             onClick={() => navigate({ to: "/events/$eventId/edit", params: { eventId: event.id }, search: { created: "" } })}
           />
           {onDuplicate ? (
-            <ActionSheetItem icon={Copy} label="Duplicate" onClick={() => onDuplicate(event.id)} />
+            <ActionSheetItem icon={Copy} label="Duplicate next week" onClick={() => onDuplicate(event.id)} />
           ) : null}
           {onDelete ? (
             <ActionSheetItem
