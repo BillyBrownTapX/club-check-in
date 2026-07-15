@@ -31,6 +31,7 @@ import { Route as EventsEventIdRouteImport } from './routes/events.$eventId'
 import { Route as DisplayQrTokenRouteImport } from './routes/display.$qrToken'
 import { Route as ClubsClubIdRouteImport } from './routes/clubs.$clubId'
 import { Route as CheckInQrTokenRouteImport } from './routes/check-in.$qrToken'
+import { Route as ApiHealthRouteImport } from './routes/api.health'
 import { Route as EventsEventIdEditRouteImport } from './routes/events.$eventId.edit'
 import { Route as EventsEventIdDisplayRouteImport } from './routes/events.$eventId.display'
 import { Route as ApiHostEventsEventIdAttendanceDotcsvRouteImport } from './routes/api.host.events.$eventId.attendance[.]csv'
@@ -146,6 +147,11 @@ const CheckInQrTokenRoute = CheckInQrTokenRouteImport.update({
   path: '/check-in/$qrToken',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EventsEventIdEditRoute = EventsEventIdEditRouteImport.update({
   id: '/edit',
   path: '/edit',
@@ -183,6 +189,7 @@ export interface FileRoutesByFullPath {
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/terms': typeof TermsRoute
+  '/api/health': typeof ApiHealthRoute
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
   '/display/$qrToken': typeof DisplayQrTokenRoute
@@ -211,6 +218,7 @@ export interface FileRoutesByTo {
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/terms': typeof TermsRoute
+  '/api/health': typeof ApiHealthRoute
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
   '/display/$qrToken': typeof DisplayQrTokenRoute
@@ -240,6 +248,7 @@ export interface FileRoutesById {
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
   '/terms': typeof TermsRoute
+  '/api/health': typeof ApiHealthRoute
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
   '/display/$qrToken': typeof DisplayQrTokenRoute
@@ -270,6 +279,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/terms'
+    | '/api/health'
     | '/check-in/$qrToken'
     | '/clubs/$clubId'
     | '/display/$qrToken'
@@ -298,6 +308,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/terms'
+    | '/api/health'
     | '/check-in/$qrToken'
     | '/clubs/$clubId'
     | '/display/$qrToken'
@@ -326,6 +337,7 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-up'
     | '/terms'
+    | '/api/health'
     | '/check-in/$qrToken'
     | '/clubs/$clubId'
     | '/display/$qrToken'
@@ -355,6 +367,7 @@ export interface RootRouteChildren {
   SignInRoute: typeof SignInRoute
   SignUpRoute: typeof SignUpRoute
   TermsRoute: typeof TermsRoute
+  ApiHealthRoute: typeof ApiHealthRoute
   CheckInQrTokenRoute: typeof CheckInQrTokenRoute
   ClubsClubIdRoute: typeof ClubsClubIdRoute
   DisplayQrTokenRoute: typeof DisplayQrTokenRoute
@@ -524,6 +537,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CheckInQrTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/events/$eventId/edit': {
       id: '/events/$eventId/edit'
       path: '/edit'
@@ -583,6 +603,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignInRoute: SignInRoute,
   SignUpRoute: SignUpRoute,
   TermsRoute: TermsRoute,
+  ApiHealthRoute: ApiHealthRoute,
   CheckInQrTokenRoute: CheckInQrTokenRoute,
   ClubsClubIdRoute: ClubsClubIdRoute,
   DisplayQrTokenRoute: DisplayQrTokenRoute,
@@ -600,12 +621,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}
