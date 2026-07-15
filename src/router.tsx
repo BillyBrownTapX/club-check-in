@@ -2,11 +2,13 @@ import { QueryClient } from "@tanstack/react-query";
 import { Link, createRouter, useRouter } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { BrandMark } from "@/components/attendance-hq/ios";
+import { reportError } from "@/lib/monitoring";
 import { routeTree } from "./routeTree.gen";
 
 function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
   if (typeof console !== "undefined") console.error("[route-error]", error?.message, error?.stack);
+  reportError(error, { boundary: "route" });
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4 py-8">
@@ -21,10 +23,7 @@ function DefaultErrorComponent({ error, reset }: { error: Error; reset: () => vo
             </svg>
           </div>
           <h1 className="mt-4 ios-screen-title">Something went wrong</h1>
-          <p className="mt-2 text-[14px] leading-6 text-muted-foreground">An unexpected error interrupted the app.</p>
-          {error?.message ? (
-            <pre className="mt-4 max-h-40 overflow-auto rounded-xl bg-muted p-3 text-left font-mono text-[11px] text-destructive whitespace-pre-wrap break-words">{error.message}</pre>
-          ) : null}
+          <p className="mt-2 text-[14px] leading-6 text-muted-foreground">An unexpected error interrupted the app. Try again in a moment.</p>
           <div className="mt-6 flex flex-col gap-2.5">
             <Button type="button" variant="hero" size="lg" onClick={() => { router.invalidate(); reset(); }}>Try again</Button>
             <Button asChild variant="outline" size="lg"><Link to="/">Go home</Link></Button>

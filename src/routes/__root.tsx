@@ -5,6 +5,7 @@ import { AttendanceAuthProvider } from "@/components/attendance-hq/auth-provider
 import { Button } from "@/components/ui/button";
 import { Toaster } from "@/components/ui/sonner";
 import { BrandMark } from "@/components/attendance-hq/ios";
+import { initClientMonitoring, reportError } from "@/lib/monitoring";
 import appCss from "../styles.css?url";
 
 export interface AppRouterContext {
@@ -44,6 +45,7 @@ function NotFoundComponent() {
 
 function RootErrorComponent({ error }: { error: Error }) {
   if (typeof console !== "undefined") console.error("[root-error]", error?.message, error?.stack);
+  reportError(error, { boundary: "root" });
 
   return (
     <FallbackShell>
@@ -120,6 +122,7 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   useEffect(() => {
+    initClientMonitoring();
     if (typeof window === "undefined") return;
     const apply = () => {
       const standalone =

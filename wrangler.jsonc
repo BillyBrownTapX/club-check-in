@@ -12,6 +12,9 @@
   //
   // SECRET values (NEVER commit; set with `wrangler secret put`):
   //   SUPABASE_SERVICE_ROLE_KEY  required by server-side admin client
+  //   SENTRY_DSN                 optional; enables server-side Sentry
+  //                              captures. When unset, monitoring degrades
+  //                              to console.error only — app still runs.
   // ───────────────────────────────────────────────────────────────────────
   "vars": {
     "SUPABASE_URL": "https://ikmxrbgsbdxettetvqiw.supabase.co",
