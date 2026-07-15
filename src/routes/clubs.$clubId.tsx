@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
-import { ArrowRightLeft, CalendarDays, History, Pencil, Plus, Trash2, UserPlus, Users, WandSparkles, X } from "lucide-react";
+import { ArrowRightLeft, BarChart3, CalendarDays, Download, History, Pencil, Plus, Trash2, UserPlus, Users, WandSparkles, X } from "lucide-react";
 import { useAuthorizedMutation, useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,7 @@ import {
   deleteClub,
   deleteEvent,
   duplicateEventTemplate,
+  getClubAttendanceReport,
   getClubDetail,
   removeClubOfficer,
   transferClubOwnership,
@@ -46,7 +47,13 @@ import {
   updateEventTemplate,
 } from "@/lib/attendance-hq.functions";
 import { useSignedLogoUrl } from "@/hooks/use-signed-logo";
-import type { ClubMemberEntry, EventTemplateWithClub, ManagementEventSummary } from "@/lib/attendance-hq";
+import type {
+  ClubAttendanceReportPayload,
+  ClubMemberEntry,
+  EventTemplateWithClub,
+  ManagementEventSummary,
+} from "@/lib/attendance-hq";
+import { getDefaultClubReportRange, formatEventDate } from "@/lib/attendance-hq";
 import { queryKeys } from "@/lib/query-keys";
 
 
