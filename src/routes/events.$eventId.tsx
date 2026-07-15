@@ -78,6 +78,7 @@ import {
   manualCheckIn,
   removeAttendance,
   restoreAttendance,
+  saveEventAsTemplate,
   toggleEventArchive,
 } from "@/lib/attendance-hq.functions";
 import {
