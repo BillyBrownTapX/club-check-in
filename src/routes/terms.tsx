@@ -40,7 +40,10 @@ function TermsRoute() {
             <p className="text-muted-foreground">
               Only invite officers you trust to help run your club. Keep your account credentials
               private. Use collected attendance data solely for legitimate club purposes, and share
-              it only with people who have a real reason to see it.
+              it only with people who have a real reason to see it. Hosts are responsible for
+              following their institution's FERPA and student-records policies, including any
+              retention, access, and deletion requirements your campus imposes on student
+              attendance rosters.
             </p>
           </section>
           <section className="space-y-1.5">
