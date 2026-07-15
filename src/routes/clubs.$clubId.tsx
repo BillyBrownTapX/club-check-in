@@ -103,9 +103,13 @@ export const Route = createFileRoute("/clubs/$clubId")({
 });
 
 function ClubDetailRoute() {
-  const { loading, user } = useRequireHostRedirect();
+  const { loading, user, session } = useRequireHostRedirect();
   const { clubId } = Route.useParams();
   const navigate = useNavigate();
+  const [clubDialogOpen, setClubDialogOpen] = useState(false);
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<EventTemplateWithClub | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
   const [clubDialogOpen, setClubDialogOpen] = useState(false);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<EventTemplateWithClub | null>(null);
