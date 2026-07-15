@@ -711,6 +711,12 @@ function EventDetailRoute() {
               detail="Create a copy you can edit"
               onClick={() => void handleDuplicate()}
             />
+            <ListRow
+              icon={WandSparkles}
+              label={savingAsTemplate ? "Saving template…" : "Save as template"}
+              detail="Reuse these settings for next week"
+              onClick={() => void handleSaveAsTemplate()}
+            />
             {status === "open" ? (
               <ListRow
                 icon={X}
