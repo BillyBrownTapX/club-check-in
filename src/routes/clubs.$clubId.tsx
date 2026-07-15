@@ -326,6 +326,18 @@ function ClubDetailRoute() {
             <EmptyStateBlock
               title="No upcoming events"
               description="Create your next event to start tracking attendance."
+              action={
+                data.templates.length ? (
+                  <Button
+                    type="button"
+                    variant="hero"
+                    onClick={() => navigate({ to: "/events/new", search: { clubId: data.club.id, templateId: data.templates[0].id, duplicateFrom: "" } })}
+                  >
+                    <WandSparkles className="mr-2 h-4 w-4" />
+                    Create from {data.templates[0].template_name}
+                  </Button>
+                ) : undefined
+              }
             />
           )}
         </section>
