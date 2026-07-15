@@ -88,6 +88,7 @@ import {
   formatTimestamp,
   getCheckInMethodLabel,
   getCheckInStatus,
+  shiftEventScheduleByDays,
   type AttendanceActionLog,
   type AttendanceRow,
   type EventAttendanceSummary,
