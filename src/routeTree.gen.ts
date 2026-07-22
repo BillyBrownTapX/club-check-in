@@ -9,17 +9,23 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VsGoogleFormsRouteImport } from './routes/vs-google-forms'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SignUpRouteImport } from './routes/sign-up'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as QrCodeAttendanceRouteImport } from './routes/qr-code-attendance'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as LiveRouteImport } from './routes/live'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as HelpRouteImport } from './routes/help'
+import { Route as GreekLifeAttendanceRouteImport } from './routes/greek-life-attendance'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as ClubAttendanceTrackerRouteImport } from './routes/club-attendance-tracker'
+import { Route as ChurchAttendanceAppRouteImport } from './routes/church-attendance-app'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EventsIndexRouteImport } from './routes/events.index'
@@ -40,9 +46,19 @@ import { Route as ApiHealthCheckInRouteImport } from './routes/api.health.check-
 import { Route as ApiHostEventsEventIdAttendanceDotcsvRouteImport } from './routes/api.host.events.$eventId.attendance[.]csv'
 import { Route as ApiHostClubsClubIdSemesterAttendanceDotcsvRouteImport } from './routes/api.host.clubs.$clubId.semester-attendance[.]csv'
 
+const VsGoogleFormsRoute = VsGoogleFormsRouteImport.update({
+  id: '/vs-google-forms',
+  path: '/vs-google-forms',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
+  id: '/sitemap.xml',
+  path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignUpRoute = SignUpRouteImport.update({
@@ -63,6 +79,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const QrCodeAttendanceRoute = QrCodeAttendanceRouteImport.update({
+  id: '/qr-code-attendance',
+  path: '/qr-code-attendance',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PrivacyRoute = PrivacyRouteImport.update({
@@ -90,9 +111,24 @@ const HelpRoute = HelpRouteImport.update({
   path: '/help',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GreekLifeAttendanceRoute = GreekLifeAttendanceRouteImport.update({
+  id: '/greek-life-attendance',
+  path: '/greek-life-attendance',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClubAttendanceTrackerRoute = ClubAttendanceTrackerRouteImport.update({
+  id: '/club-attendance-tracker',
+  path: '/club-attendance-tracker',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChurchAttendanceAppRoute = ChurchAttendanceAppRouteImport.update({
+  id: '/church-attendance-app',
+  path: '/church-attendance-app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -196,17 +232,23 @@ const ApiHostClubsClubIdSemesterAttendanceDotcsvRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/church-attendance-app': typeof ChurchAttendanceAppRoute
+  '/club-attendance-tracker': typeof ClubAttendanceTrackerRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/greek-life-attendance': typeof GreekLifeAttendanceRoute
   '/help': typeof HelpRoute
   '/home': typeof HomeRoute
   '/live': typeof LiveRoute
   '/notifications': typeof NotificationsRoute
   '/privacy': typeof PrivacyRoute
+  '/qr-code-attendance': typeof QrCodeAttendanceRoute
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
+  '/vs-google-forms': typeof VsGoogleFormsRoute
   '/api/health': typeof ApiHealthRouteWithChildren
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
@@ -228,17 +270,23 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/church-attendance-app': typeof ChurchAttendanceAppRoute
+  '/club-attendance-tracker': typeof ClubAttendanceTrackerRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/greek-life-attendance': typeof GreekLifeAttendanceRoute
   '/help': typeof HelpRoute
   '/home': typeof HomeRoute
   '/live': typeof LiveRoute
   '/notifications': typeof NotificationsRoute
   '/privacy': typeof PrivacyRoute
+  '/qr-code-attendance': typeof QrCodeAttendanceRoute
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
+  '/vs-google-forms': typeof VsGoogleFormsRoute
   '/api/health': typeof ApiHealthRouteWithChildren
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
@@ -261,17 +309,23 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/church-attendance-app': typeof ChurchAttendanceAppRoute
+  '/club-attendance-tracker': typeof ClubAttendanceTrackerRoute
   '/forgot-password': typeof ForgotPasswordRoute
+  '/greek-life-attendance': typeof GreekLifeAttendanceRoute
   '/help': typeof HelpRoute
   '/home': typeof HomeRoute
   '/live': typeof LiveRoute
   '/notifications': typeof NotificationsRoute
   '/privacy': typeof PrivacyRoute
+  '/qr-code-attendance': typeof QrCodeAttendanceRoute
   '/reset-password': typeof ResetPasswordRoute
   '/settings': typeof SettingsRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
+  '/vs-google-forms': typeof VsGoogleFormsRoute
   '/api/health': typeof ApiHealthRouteWithChildren
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
@@ -295,17 +349,23 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/church-attendance-app'
+    | '/club-attendance-tracker'
     | '/forgot-password'
+    | '/greek-life-attendance'
     | '/help'
     | '/home'
     | '/live'
     | '/notifications'
     | '/privacy'
+    | '/qr-code-attendance'
     | '/reset-password'
     | '/settings'
     | '/sign-in'
     | '/sign-up'
+    | '/sitemap.xml'
     | '/terms'
+    | '/vs-google-forms'
     | '/api/health'
     | '/check-in/$qrToken'
     | '/clubs/$clubId'
@@ -327,17 +387,23 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin'
+    | '/church-attendance-app'
+    | '/club-attendance-tracker'
     | '/forgot-password'
+    | '/greek-life-attendance'
     | '/help'
     | '/home'
     | '/live'
     | '/notifications'
     | '/privacy'
+    | '/qr-code-attendance'
     | '/reset-password'
     | '/settings'
     | '/sign-in'
     | '/sign-up'
+    | '/sitemap.xml'
     | '/terms'
+    | '/vs-google-forms'
     | '/api/health'
     | '/check-in/$qrToken'
     | '/clubs/$clubId'
@@ -359,17 +425,23 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/church-attendance-app'
+    | '/club-attendance-tracker'
     | '/forgot-password'
+    | '/greek-life-attendance'
     | '/help'
     | '/home'
     | '/live'
     | '/notifications'
     | '/privacy'
+    | '/qr-code-attendance'
     | '/reset-password'
     | '/settings'
     | '/sign-in'
     | '/sign-up'
+    | '/sitemap.xml'
     | '/terms'
+    | '/vs-google-forms'
     | '/api/health'
     | '/check-in/$qrToken'
     | '/clubs/$clubId'
@@ -392,17 +464,23 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  ChurchAttendanceAppRoute: typeof ChurchAttendanceAppRoute
+  ClubAttendanceTrackerRoute: typeof ClubAttendanceTrackerRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
+  GreekLifeAttendanceRoute: typeof GreekLifeAttendanceRoute
   HelpRoute: typeof HelpRoute
   HomeRoute: typeof HomeRoute
   LiveRoute: typeof LiveRoute
   NotificationsRoute: typeof NotificationsRoute
   PrivacyRoute: typeof PrivacyRoute
+  QrCodeAttendanceRoute: typeof QrCodeAttendanceRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   SettingsRoute: typeof SettingsRoute
   SignInRoute: typeof SignInRoute
   SignUpRoute: typeof SignUpRoute
+  SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
+  VsGoogleFormsRoute: typeof VsGoogleFormsRoute
   ApiHealthRoute: typeof ApiHealthRouteWithChildren
   CheckInQrTokenRoute: typeof CheckInQrTokenRoute
   ClubsClubIdRoute: typeof ClubsClubIdRoute
@@ -420,11 +498,25 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/vs-google-forms': {
+      id: '/vs-google-forms'
+      path: '/vs-google-forms'
+      fullPath: '/vs-google-forms'
+      preLoaderRoute: typeof VsGoogleFormsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/terms': {
       id: '/terms'
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sitemap.xml': {
+      id: '/sitemap.xml'
+      path: '/sitemap.xml'
+      fullPath: '/sitemap.xml'
+      preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sign-up': {
@@ -453,6 +545,13 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/qr-code-attendance': {
+      id: '/qr-code-attendance'
+      path: '/qr-code-attendance'
+      fullPath: '/qr-code-attendance'
+      preLoaderRoute: typeof QrCodeAttendanceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/privacy': {
@@ -490,11 +589,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof HelpRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/greek-life-attendance': {
+      id: '/greek-life-attendance'
+      path: '/greek-life-attendance'
+      fullPath: '/greek-life-attendance'
+      preLoaderRoute: typeof GreekLifeAttendanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/forgot-password': {
       id: '/forgot-password'
       path: '/forgot-password'
       fullPath: '/forgot-password'
       preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/club-attendance-tracker': {
+      id: '/club-attendance-tracker'
+      path: '/club-attendance-tracker'
+      fullPath: '/club-attendance-tracker'
+      preLoaderRoute: typeof ClubAttendanceTrackerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/church-attendance-app': {
+      id: '/church-attendance-app'
+      path: '/church-attendance-app'
+      fullPath: '/church-attendance-app'
+      preLoaderRoute: typeof ChurchAttendanceAppRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -664,17 +784,23 @@ const EventsEventIdRouteWithChildren = EventsEventIdRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  ChurchAttendanceAppRoute: ChurchAttendanceAppRoute,
+  ClubAttendanceTrackerRoute: ClubAttendanceTrackerRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
+  GreekLifeAttendanceRoute: GreekLifeAttendanceRoute,
   HelpRoute: HelpRoute,
   HomeRoute: HomeRoute,
   LiveRoute: LiveRoute,
   NotificationsRoute: NotificationsRoute,
   PrivacyRoute: PrivacyRoute,
+  QrCodeAttendanceRoute: QrCodeAttendanceRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   SettingsRoute: SettingsRoute,
   SignInRoute: SignInRoute,
   SignUpRoute: SignUpRoute,
+  SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
+  VsGoogleFormsRoute: VsGoogleFormsRoute,
   ApiHealthRoute: ApiHealthRouteWithChildren,
   CheckInQrTokenRoute: CheckInQrTokenRoute,
   ClubsClubIdRoute: ClubsClubIdRoute,
@@ -694,12 +820,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-  }
-}

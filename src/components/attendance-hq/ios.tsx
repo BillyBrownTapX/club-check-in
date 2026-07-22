@@ -2,14 +2,46 @@ import * as React from "react";
 import { Link } from "@tanstack/react-router";
 import { ChevronRight, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import logoAsset from "@/assets/attendance-hq-logo.png.asset.json";
 
 /* ─── Brand mark (auth-free) ──────────────────────────────────────────── */
-export function BrandMark({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
-  void size;
+export function BrandMark({
+  size = "md",
+  variant = "auto",
+}: {
+  size?: "sm" | "md" | "lg";
+  /** "auto" shows the icon on small screens, wordmark on larger. "icon" always shows the icon-only mark. "wordmark" shows the horizontal logo. */
+  variant?: "auto" | "icon" | "wordmark";
+}) {
+  const height = size === "lg" ? 40 : size === "sm" ? 24 : 32;
+  if (variant === "wordmark") {
+    return (
+      <img
+        src={logoAsset.url}
+        alt="Attendance-HQ"
+        height={height}
+        style={{ height, width: "auto" }}
+        className="block select-none"
+      />
+    );
+  }
   return (
-    <div className="inline-flex items-center gap-2.5">
-      <span className="font-display text-[17px] font-extrabold tracking-tight text-foreground">Attendance HQ</span>
-    </div>
+    <span className="inline-flex items-center gap-2.5">
+      <span
+        aria-hidden="true"
+        className="inline-flex items-center justify-center rounded-[8px] border-[2.5px] border-[#0B1F44] bg-white"
+        style={{ height, width: height }}
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="#2563EB" strokeWidth={3.5} strokeLinecap="round" strokeLinejoin="round" className="h-[65%] w-[65%]">
+          <path d="M5 12l5 5L20 7" />
+        </svg>
+      </span>
+      {variant !== "icon" ? (
+        <span className="font-display text-[17px] font-extrabold tracking-tight text-foreground">
+          Attendance<span className="text-primary">-HQ</span>
+        </span>
+      ) : null}
+    </span>
   );
 }
 
