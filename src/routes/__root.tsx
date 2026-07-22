@@ -97,6 +97,14 @@ export const Route = createRootRouteWithContext<AppRouterContext>()({
       { rel: "apple-touch-icon", href: "/icons/icon-192.png" },
       { rel: "apple-touch-icon", sizes: "512x512", href: "/icons/icon-512.png" },
     ],
+    scripts: [
+      { src: "https://plausible.io/js/pa-dBNFnlen1TZLWeewOeGJB.js", async: true },
+      {
+        children:
+          "window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};plausible.init()",
+      },
+    ],
+
   }),
   shellComponent: RootShell,
   component: RootComponent,
