@@ -660,7 +660,7 @@ function EventDetailRoute() {
           title={event.event_name}
           trailing={
             <Button asChild variant="tonal" size="icon" className="rounded-full" aria-label="Edit event">
-              <Link to="/events/$eventId_/edit" params={{ eventId }} search={{ created: "" }}>
+              <Link to="/events/$eventId/edit" params={{ eventId }} search={{ created: "" }}>
                 <Pencil className="h-[18px] w-[18px]" />
               </Link>
             </Button>
