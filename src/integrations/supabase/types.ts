@@ -292,6 +292,10 @@ export type Database = {
           is_active: boolean
           is_archived: boolean
           location: string | null
+          pre_check_in_closes_at: string | null
+          pre_check_in_enabled: boolean
+          pre_check_in_opens_at: string | null
+          pre_check_in_token: string | null
           qr_token: string
           start_time: string
           university_id: string | null
@@ -310,6 +314,10 @@ export type Database = {
           is_active?: boolean
           is_archived?: boolean
           location?: string | null
+          pre_check_in_closes_at?: string | null
+          pre_check_in_enabled?: boolean
+          pre_check_in_opens_at?: string | null
+          pre_check_in_token?: string | null
           qr_token: string
           start_time: string
           university_id?: string | null
@@ -328,6 +336,10 @@ export type Database = {
           is_active?: boolean
           is_archived?: boolean
           location?: string | null
+          pre_check_in_closes_at?: string | null
+          pre_check_in_enabled?: boolean
+          pre_check_in_opens_at?: string | null
+          pre_check_in_token?: string | null
           qr_token?: string
           start_time?: string
           university_id?: string | null
@@ -437,6 +449,51 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      pre_check_ins: {
+        Row: {
+          check_in_method: Database["public"]["Enums"]["check_in_method"]
+          checked_in_at: string
+          created_at: string
+          event_id: string
+          id: string
+          student_id: string
+          updated_at: string
+        }
+        Insert: {
+          check_in_method?: Database["public"]["Enums"]["check_in_method"]
+          checked_in_at?: string
+          created_at?: string
+          event_id: string
+          id?: string
+          student_id: string
+          updated_at?: string
+        }
+        Update: {
+          check_in_method?: Database["public"]["Enums"]["check_in_method"]
+          checked_in_at?: string
+          created_at?: string
+          event_id?: string
+          id?: string
+          student_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pre_check_ins_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pre_check_ins_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       student_device_sessions: {
         Row: {
