@@ -30,6 +30,7 @@ import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EventsIndexRouteImport } from './routes/events.index'
 import { Route as ClubsIndexRouteImport } from './routes/clubs.index'
+import { Route as PreCheckInPreTokenRouteImport } from './routes/pre-check-in.$preToken'
 import { Route as OnboardingEventRouteImport } from './routes/onboarding.event'
 import { Route as OnboardingClubRouteImport } from './routes/onboarding.club'
 import { Route as EventsNewRouteImport } from './routes/events.new'
@@ -151,6 +152,11 @@ const ClubsIndexRoute = ClubsIndexRouteImport.update({
   path: '/clubs/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PreCheckInPreTokenRoute = PreCheckInPreTokenRouteImport.update({
+  id: '/pre-check-in/$preToken',
+  path: '/pre-check-in/$preToken',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OnboardingEventRoute = OnboardingEventRouteImport.update({
   id: '/onboarding/event',
   path: '/onboarding/event',
@@ -257,6 +263,7 @@ export interface FileRoutesByFullPath {
   '/events/new': typeof EventsNewRoute
   '/onboarding/club': typeof OnboardingClubRoute
   '/onboarding/event': typeof OnboardingEventRoute
+  '/pre-check-in/$preToken': typeof PreCheckInPreTokenRoute
   '/clubs/': typeof ClubsIndexRoute
   '/events/': typeof EventsIndexRoute
   '/api/health/check-in': typeof ApiHealthCheckInRoute
@@ -295,6 +302,7 @@ export interface FileRoutesByTo {
   '/events/new': typeof EventsNewRoute
   '/onboarding/club': typeof OnboardingClubRoute
   '/onboarding/event': typeof OnboardingEventRoute
+  '/pre-check-in/$preToken': typeof PreCheckInPreTokenRoute
   '/clubs': typeof ClubsIndexRoute
   '/events': typeof EventsIndexRoute
   '/api/health/check-in': typeof ApiHealthCheckInRoute
@@ -334,6 +342,7 @@ export interface FileRoutesById {
   '/events/new': typeof EventsNewRoute
   '/onboarding/club': typeof OnboardingClubRoute
   '/onboarding/event': typeof OnboardingEventRoute
+  '/pre-check-in/$preToken': typeof PreCheckInPreTokenRoute
   '/clubs/': typeof ClubsIndexRoute
   '/events/': typeof EventsIndexRoute
   '/api/health/check-in': typeof ApiHealthCheckInRoute
@@ -374,6 +383,7 @@ export interface FileRouteTypes {
     | '/events/new'
     | '/onboarding/club'
     | '/onboarding/event'
+    | '/pre-check-in/$preToken'
     | '/clubs/'
     | '/events/'
     | '/api/health/check-in'
@@ -412,6 +422,7 @@ export interface FileRouteTypes {
     | '/events/new'
     | '/onboarding/club'
     | '/onboarding/event'
+    | '/pre-check-in/$preToken'
     | '/clubs'
     | '/events'
     | '/api/health/check-in'
@@ -450,6 +461,7 @@ export interface FileRouteTypes {
     | '/events/new'
     | '/onboarding/club'
     | '/onboarding/event'
+    | '/pre-check-in/$preToken'
     | '/clubs/'
     | '/events/'
     | '/api/health/check-in'
@@ -489,6 +501,7 @@ export interface RootRouteChildren {
   EventsNewRoute: typeof EventsNewRoute
   OnboardingClubRoute: typeof OnboardingClubRoute
   OnboardingEventRoute: typeof OnboardingEventRoute
+  PreCheckInPreTokenRoute: typeof PreCheckInPreTokenRoute
   ClubsIndexRoute: typeof ClubsIndexRoute
   EventsIndexRoute: typeof EventsIndexRoute
   ApiPublicStudentCheckInRoute: typeof ApiPublicStudentCheckInRoute
@@ -643,6 +656,13 @@ declare module '@tanstack/react-router' {
       path: '/clubs'
       fullPath: '/clubs/'
       preLoaderRoute: typeof ClubsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pre-check-in/$preToken': {
+      id: '/pre-check-in/$preToken'
+      path: '/pre-check-in/$preToken'
+      fullPath: '/pre-check-in/$preToken'
+      preLoaderRoute: typeof PreCheckInPreTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding/event': {
@@ -809,6 +829,7 @@ const rootRouteChildren: RootRouteChildren = {
   EventsNewRoute: EventsNewRoute,
   OnboardingClubRoute: OnboardingClubRoute,
   OnboardingEventRoute: OnboardingEventRoute,
+  PreCheckInPreTokenRoute: PreCheckInPreTokenRoute,
   ClubsIndexRoute: ClubsIndexRoute,
   EventsIndexRoute: EventsIndexRoute,
   ApiPublicStudentCheckInRoute: ApiPublicStudentCheckInRoute,
