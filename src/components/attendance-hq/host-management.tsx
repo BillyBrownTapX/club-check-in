@@ -37,7 +37,7 @@ import {
   formatEventDate,
   formatEventTime,
   getCheckInMethodLabel,
-  shiftTimeString,
+  
   type Club,
   type ClubSummary,
   type EventFormPayload,
