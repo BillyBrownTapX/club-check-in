@@ -1088,7 +1088,27 @@ const EVENT_FIELD_LABELS: Record<string, string> = {
   location: "Location",
   checkInOpensAt: "Check-in opens",
   checkInClosesAt: "Check-in closes",
+  preCheckInOpensAt: "Early head count opens",
+  preCheckInClosesAt: "Early head count closes",
 };
+
+// <input type="datetime-local"> speaks local wall-clock time; the form stores
+// ISO strings. These two convert between the two representations without
+// pulling in a date library.
+function isoToLocalDateTimeInput(iso: string | undefined): string {
+  if (!iso) return "";
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+function localDateTimeInputToIso(value: string): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString();
+}
 
 function EventFormErrorSummary({ errors }: { errors: Record<string, { message?: string } | undefined> }) {
   const entries = Object.entries(errors)
@@ -1282,6 +1302,53 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
           <input type="hidden" {...form.register("checkInClosesAt")} />
           <DateTimeReadonly label="Check-in opens" value={form.watch("checkInOpensAt")} />
           <DateTimeReadonly label="Check-in closes" value={form.watch("checkInClosesAt")} />
+        </FormSection>
+
+        <FormSection
+          title="Pre-event check-in"
+          description="Optional early head count for marketing an upcoming event. Members who tap the early link still have to check in at the event — these numbers never count as attendance."
+        >
+          <div className="flex items-center justify-between gap-3 rounded-xl bg-muted/60 px-4 py-3">
+            <div className="min-w-0">
+              <p className="text-[14px] font-semibold text-foreground">Enable early head count</p>
+              <p className="mt-0.5 text-[12.5px] leading-snug text-muted-foreground">Creates a separate shareable link and QR for pre-event sign-ups.</p>
+            </div>
+            <Switch
+              checked={Boolean(form.watch("preCheckInEnabled"))}
+              onCheckedChange={(checked) => {
+                form.setValue("preCheckInEnabled", checked, { shouldValidate: true });
+                if (checked && !form.getValues("preCheckInOpensAt")) {
+                  const closes = form.getValues("checkInOpensAt");
+                  const closesMs = closes ? new Date(closes).getTime() : Date.now();
+                  const safeCloses = Number.isFinite(closesMs) ? closesMs : Date.now();
+                  form.setValue("preCheckInOpensAt", new Date(safeCloses - 7 * 24 * 60 * 60 * 1000).toISOString(), { shouldValidate: true });
+                  form.setValue("preCheckInClosesAt", new Date(safeCloses).toISOString(), { shouldValidate: true });
+                }
+              }}
+              aria-label="Enable early head count"
+            />
+          </div>
+          {form.watch("preCheckInEnabled") ? (
+            <>
+              <TextInput
+                type="datetime-local"
+                label="Early head count opens"
+                value={isoToLocalDateTimeInput(form.watch("preCheckInOpensAt"))}
+                onChange={(event) => form.setValue("preCheckInOpensAt", localDateTimeInputToIso(event.target.value), { shouldValidate: true })}
+                error={form.formState.errors.preCheckInOpensAt?.message}
+              />
+              <TextInput
+                type="datetime-local"
+                label="Early head count closes"
+                value={isoToLocalDateTimeInput(form.watch("preCheckInClosesAt"))}
+                onChange={(event) => form.setValue("preCheckInClosesAt", localDateTimeInputToIso(event.target.value), { shouldValidate: true })}
+                error={form.formState.errors.preCheckInClosesAt?.message}
+              />
+              <p className="text-[12.5px] leading-snug text-muted-foreground">
+                Make this window as long as you like — weeks or months ahead. It must close by the time day-of check-in closes.
+              </p>
+            </>
+          ) : null}
         </FormSection>
 
         {form.formState.errors.checkInOpensAt?.message ? <p className="text-sm text-destructive">{form.formState.errors.checkInOpensAt.message}</p> : null}
