@@ -1051,6 +1051,18 @@ function getMinutesAfterEnd(referenceIso: string, eventDate: string, endTime: st
   return Math.max(0, Math.round((reference - eventEnd) / 60000));
 }
 
+// Offset the event's start/end instant by N minutes. Doing the math on the
+// absolute timestamp (rather than shifting the wall-clock string) is what lets
+// a window cross midnight — shiftTimeString wraps 18:30 + 6h back to 00:30 on
+// the SAME date, which produced a close-before-open validation error.
+function offsetEventInstant(eventDate: string, time: string, minutes: number) {
+  const base = new Date(combineDateAndTime(eventDate, time)).getTime();
+  if (Number.isNaN(base)) return "";
+  return new Date(base + minutes * 60000).toISOString();
+}
+
+
+
 function DateTimeReadonly({ label, value }: { label: string; value: string }) {
   const date = new Date(value);
   const formatted = Number.isNaN(date.getTime())
