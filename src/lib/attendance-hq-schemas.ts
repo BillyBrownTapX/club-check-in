@@ -74,6 +74,10 @@ export const eventSchema = z.object({
   location: z.string().trim().max(160, "Location is too long").optional().or(z.literal("")),
   checkInOpensAt: z.string().min(1, "Choose when check-in opens"),
   checkInClosesAt: z.string().min(1, "Choose when check-in closes"),
+  // Pre-event head count. Off by default so existing callers are unaffected.
+  preCheckInEnabled: z.boolean().default(false),
+  preCheckInOpensAt: z.string().optional().or(z.literal("")),
+  preCheckInClosesAt: z.string().optional().or(z.literal("")),
 });
 
 const eventTimingValidation = <T extends z.ZodTypeAny>(schema: T) => schema.refine((value) => value.endTime > value.startTime, {
@@ -82,13 +86,69 @@ const eventTimingValidation = <T extends z.ZodTypeAny>(schema: T) => schema.refi
 }).refine((value) => new Date(value.checkInClosesAt).getTime() > new Date(value.checkInOpensAt).getTime(), {
   message: "Check-in close must be after open",
   path: ["checkInClosesAt"],
-});
+}).refine((value) => !value.preCheckInEnabled || (!!value.preCheckInOpensAt && !!value.preCheckInClosesAt), {
+  message: "Set both an open and close time for the early head count",
+  path: ["preCheckInClosesAt"],
+}).refine(
+  (value) =>
+    !value.preCheckInEnabled ||
+    !value.preCheckInOpensAt ||
+    !value.preCheckInClosesAt ||
+    new Date(value.preCheckInClosesAt).getTime() > new Date(value.preCheckInOpensAt).getTime(),
+  { message: "Early head count close must be after open", path: ["preCheckInClosesAt"] },
+).refine(
+  (value) =>
+    !value.preCheckInEnabled ||
+    !value.preCheckInClosesAt ||
+    new Date(value.preCheckInClosesAt).getTime() <= new Date(value.checkInClosesAt).getTime(),
+  {
+    message: "Early head count must close by the time day-of check-in closes",
+    path: ["preCheckInClosesAt"],
+  },
+);
 
 export const validatedEventSchema = eventTimingValidation(eventSchema);
 
 export const eventUpdateSchema = eventTimingValidation(eventSchema.extend({
   eventId: z.string().uuid(),
 }));
+
+// ── Pre-event check-in (early head count) ────────────────────────────────────
+
+export const preCheckInTokenSchema = z
+  .string()
+  .trim()
+  .min(16, "Invalid early check-in link")
+  .max(128, "Invalid early check-in link");
+
+export const preCheckInRegistrationInputSchema = studentRegistrationSchema
+  .omit({ rememberDevice: true })
+  .extend({
+    preToken: preCheckInTokenSchema,
+    rememberDevice: z.boolean().default(true),
+  });
+
+export const preCheckInReturningInputSchema = z.object({
+  preToken: preCheckInTokenSchema,
+  nineHundredNumber: z
+    .string()
+    .trim()
+    .refine(isValidNineHundredNumber, "Enter a valid 9-digit 900 number"),
+});
+
+export const preCheckInTokenInputSchema = z.object({
+  preToken: preCheckInTokenSchema,
+});
+
+export const togglePreCheckInSchema = z.object({
+  eventId: z.string().uuid(),
+  enabled: z.boolean(),
+});
+
+export const regeneratePreCheckInTokenSchema = z.object({
+  eventId: z.string().uuid(),
+});
+
 
 export const eventListFilterSchema = z.object({
   clubId: z.string().uuid().optional().or(z.literal("")),
