@@ -1,102 +1,60 @@
-## Goal
+# Pre-Event Check-In (early head count)
 
-Turn the landing page + a small hub of SEO subpages into a discovery engine for "QR attendance", "club attendance tracker", "sorority/fraternity chapter attendance", "church attendance app", etc. — surfaced by Google, Bing/Safari, and AI answer engines (ChatGPT, Perplexity, Gemini, Google AI Overviews). Re-skin around the new Attendance-HQ logo (navy `#0B1F44` + electric blue `#2563EB`), keep Inter + Plus Jakarta Sans.
+Add an optional "Pre Check-In" window to any event so members can tap in days or weeks ahead. It produces a marketing head count only — it never touches attendance numbers, rosters, reports, or CSV exports.
 
-## Scope
+## How it works for hosts
 
-**Audiences to target:** college clubs, Greek life, campus departments/Student Affairs, and general orgs (churches, nonprofits, gyms, K-12 clubs). Each gets a dedicated vertical page so search engines see a distinct entity per query cluster.
+- On the event form (create and edit) a new optional block: **Pre check-in (early head count)**.
+  - Toggle: off by default, so existing behavior is unchanged.
+  - When on: pick a pre check-in **opens at** and **closes at** date+time. The window can be any length (minutes to months) and may extend right up to the event; the only rules are close-after-open and close no later than the event's day-of check-in close.
+- Event detail page gains a **Pre check-in** card (only when enabled):
+  - Big early head-count number, plus a compact list of who tapped in (name, 900 number, timestamp).
+  - Copy link, show QR, and open the shareable pre check-in page — a separate URL and QR from the day-of code, safe to post in flyers, group chats, and Instagram.
+  - Rotate pre check-in link (same pattern as the existing QR regenerate) and Disable pre check-in.
+  - CSV export of the pre check-in list.
+- Events list / dashboard: a small "early: N" chip on events with pre check-in enabled. No existing counts change.
 
-**Depth:** Landing + 4 SEO subpages + 1 comparison page (5 new pages total).
+## How it works for members
 
-## New pages
+- New public page at `/pre-check-in/<token>`, styled like the current student check-in page.
+- Same fields as real check-in (first name, last name, campus email, 900 number), same email-domain gate, same 900-number validation, same remembered-device fast path.
+- Copy makes clear this is not attendance: "You're on the early head count — remember to check in at the event."
+- Duplicate taps are idempotent (one pre check-in per student per event).
+- Before/after the pre window: friendly "not open yet" / "closed" states, mirroring the current check-in states.
+- A member who pre-checked-in must still check in at the event; nothing is auto-marked present.
 
-```
-/                              (revamped landing — hub)
-/qr-code-attendance            (product vertical — the flagship keyword)
-/club-attendance-tracker       (audience: college clubs & student orgs)
-/greek-life-attendance         (audience: fraternities / sororities / chapters)
-/church-attendance-app         (audience: churches, nonprofits, small orgs)
-/vs-google-forms               (comparison — steals high-intent "alternative" traffic)
-```
+## Not changed
 
-Each page ships with its own `head()` (unique title, description, og:title/description, canonical, og:url), a leaf-only `og:image`, and inline JSON-LD.
+Attendance records, live ops counts, semester report, host activity milestones, retention purge, existing QR tokens and links, existing event validation. Pre check-in data is separate and additive.
 
-## SEO / GEO / AI-visibility layer (applies to every new page)
+## Technical outline
 
-1. **Metadata**: unique 55-char titles + 150-char descriptions per page, keyword-front-loaded ("QR Code Attendance App for College Clubs — Attendance-HQ").
-2. **Structured data (JSON-LD)** injected via `head().scripts`:
-   - Root: `Organization` + `SoftwareApplication` (name, url, logo, applicationCategory, offers free, aggregateRating placeholder-safe omitted).
-   - Landing: `WebSite` + `SearchAction`.
-   - Vertical pages: `Product` / `Service` + `FAQPage` (5–8 Q&As each — the format AI answer engines quote verbatim).
-   - Comparison: `FAQPage` + `BreadcrumbList`.
-3. **AI-answer-engine optimization (GEO)**: each page has a 40-word "TL;DR" answer block near the top written in Q&A form, plus a plain-language "How it works in 3 steps" block. These are what ChatGPT/Perplexity/Gemini quote. Add clean H2/H3 hierarchy, definition sentences ("Attendance-HQ is a QR-code attendance app that…"), and use lists over paragraphs.
-4. **Sitemap + robots**: extend `src/routes/sitemap[.]xml.ts` with all new routes (priorities: `/` 1.0, verticals 0.9, comparison 0.7). Confirm `public/robots.txt` allows all + points to sitemap.
-5. **Internal linking**: landing links to all verticals; each vertical cross-links to 2 sibling verticals + comparison page. Anchor text uses target keywords.
-6. **Semantic HTML**: single H1 per page, `<article>` for content sections, `<nav aria-label>` for footer, alt text on every image, `hreflang` skipped (English-only).
-7. **Update root `__root.tsx`** brand meta (`theme-color` → new blue, `apple-mobile-web-app-title`, twitter site handle omitted if unknown, remove landing-specific title so leaves override cleanly).
+**Database migration (additive only)**
+- `events`: add `pre_check_in_enabled boolean not null default false`, `pre_check_in_opens_at timestamptz`, `pre_check_in_closes_at timestamptz`, `pre_check_in_token text unique`. Existing rows default to disabled with nulls.
+- New `public.pre_check_ins`: `id`, `event_id -> events(id) on delete cascade`, `student_id -> students(id)`, `checked_in_at`, `check_in_method` (reuse existing enum), `created_at`, `updated_at`, unique `(event_id, student_id)`, index on `event_id`.
+- GRANTs: `SELECT, INSERT, UPDATE, DELETE` to `authenticated`; `ALL` to `service_role`; no `anon` grant (public writes go through the server function with the admin client, like today's check-in).
+- Enable RLS; policies gated on the existing `is_event_host(event_id)` helper for host read/insert/update/delete.
+- `updated_at` trigger.
+- Validation trigger on `events` (not a CHECK, since it compares timestamps): when `pre_check_in_enabled`, both timestamps required, close > open, and close <= `check_in_closes_at`.
+- Extend `is_student_visible_to_host` to also consider `pre_check_ins`, so hosts can read student rows that only pre-checked-in.
 
-## Design refresh (fonts kept, colors from new logo)
+**Schemas (`src/lib/attendance-hq-schemas.ts`)**
+- Extend `eventSchema` with optional `preCheckInEnabled`, `preCheckInOpensAt`, `preCheckInClosesAt`; add refinements that only fire when enabled (no length cap on the window).
+- New `preCheckInInputSchema`, `preCheckInReturningSchema`, `preCheckInRememberedSchema` (reuse `qrTokenSchema` shape), `eventIdInputSchema` reuse for host reads, and `togglePreCheckInSchema` / `regeneratePreCheckInTokenSchema`.
 
-- Update `src/styles.css` tokens: primary `#2563EB` (electric blue) with primary-glow lighter, secondary/foreground `#0B1F44` (deep navy), accent stays warm gold for CTAs/success. New `hero-wash` = navy→electric-blue diagonal with subtle grid pattern.
-- Swap `BrandMark` component to render the new logo (upload logo as Lovable asset from `user-uploads://Generated_image_1.png`).
-- New favicon + og-image derived from the logo (blue navy backdrop, checkmark centered).
-- Retain iOS card / rounded shell language on the app itself; the marketing pages get a **wider, editorial** feel (max-w 1200, multi-column at ≥md) so they read as a real website — not a phone shell.
+**Server functions (`src/lib/attendance-hq.functions.ts`)**
+- Write-through in `createEvent`, `updateEvent`, `duplicateEvent` (shift pre window by the same day offset as `shiftEventScheduleByDays`), and `getEventFormPayload` (return the new fields).
+- Public, unauthenticated (same rate-limit + admin-client pattern as `studentCheckIn`): `getPreCheckInEvent`, `preCheckInStudent`, `lookupPreCheckInStudent`, `fastPreCheckIn`. Each resolves the event by `pre_check_in_token`, enforces the window, the university email domain gate, and per-university 900-number binding, then upserts into `pre_check_ins`.
+- Host-side, `requireSupabaseAuth` + `requireActiveHost`: `getEventPreCheckIns`, `regeneratePreCheckInToken`, `disablePreCheckIn`.
+- `getEventDetail` / event summaries add a `preCheckInCount` alongside existing counts (additive field).
 
-## New landing page structure
+**UI**
+- `src/components/attendance-hq/host-management.tsx`: pre check-in fieldset in `EventForm` (toggle + two datetime fields, hidden when off).
+- `src/routes/events.$eventId.tsx`: pre check-in card in the ops left rail with count, list, copy link, QR, rotate, disable, CSV link.
+- New `src/routes/pre-check-in.$preToken.tsx`: public page reusing `public-check-in.tsx` primitives, offline banner, and draft persistence.
+- New `src/routes/api.host.events.$eventId.pre-check-ins[.]csv.ts` for export.
+- `src/lib/query-keys.ts`: `events.preCheckIns(eventId)` key.
+- `src/lib/attendance-hq.ts`: `getPreCheckInStatus()` helper + copy constants; `src/integrations/supabase/types.ts` regenerated after the migration.
+- `robots.txt`/sitemap untouched; the public pre check-in route is `noindex` like `/check-in`.
 
-```
-Sticky header (logo · Product ▾ · For · Compare · Pricing · Sign in · Get started)
-Hero
-  H1: "QR code attendance, built for college clubs and student orgs"
-  Sub: 1-line pitch + "Free forever for the first club"
-  Dual CTA: Start free · See it in 60 seconds (anchor)
-  Trust row: "Used by clubs at [university logos placeholder]" + FERPA-aware badge
-"How it works" 3-step visual (Create event → Share QR → Watch roster fill)
-"Built for every kind of org" — 4 vertical cards → /qr-code-attendance, /club-attendance-tracker, /greek-life-attendance, /church-attendance-app
-Feature grid (8): QR check-in, roster CSV, semester report, offline resilience, live ops, templates, officers/roles, admin console
-"Attendance-HQ vs Google Forms / paper sign-in" teaser → /vs-google-forms
-FAQ (8 Q&As — powers FAQPage schema)
-Final CTA band
-Footer with sitemap-style link block (all verticals + legal)
-```
-
-## Vertical page template (reused)
-
-- Hero with audience-specific H1 ("Fraternity & sorority chapter attendance, in seconds")
-- TL;DR answer block (GEO)
-- 3-step how-it-works
-- 4-feature grid tuned to the audience (Greek: risk mgmt / national reporting; Church: recurring services; Clubs: SGA reporting; General: unlimited events)
-- Use-case scenarios (3 short stories)
-- Testimonial placeholder slot (safe empty state — no fake reviews)
-- FAQ (6 Q&As, audience-specific → FAQPage schema)
-- Cross-links to sibling verticals + CTA
-
-## Comparison page (`/vs-google-forms`)
-
-Side-by-side table (Attendance-HQ vs Google Forms vs Paper sign-in vs Excel), migration guide, FAQ. Also good for AI answer engines when users ask "best alternative to Google Forms for attendance."
-
-## Technical notes
-
-- All 5 new routes use `createFileRoute` with `head()` returning meta/links/scripts. Canonical + og:url self-reference the route on `https://attendance-hq.com`.
-- `og:image` only on leaf routes (never `__root`). Generate one 1200×630 branded card per page via `generate_image` (premium tier for text legibility) — 6 images total.
-- No new dependencies. No backend/schema changes. No auth/RLS changes.
-- Reuse existing `Button`, `Chip`, `BrandMark`. Add lightweight `<MarketingShell>` component under `src/components/marketing/` (header, footer, container) so subpages stay consistent without touching the app shell used by hosts.
-
-## Out of scope
-
-- Blog / CMS scaffold (can add later if we want compounding SEO).
-- Real testimonials or university logos (design leaves clean empty states; you can drop them in later).
-- Multi-language / hreflang.
-- Paid ads landing variants.
-- Backend, DB, auth changes.
-
-## Deliverables checklist
-
-1. Upload logo → Lovable asset; new `BrandMark` renders it.
-2. Refreshed color tokens in `src/styles.css`.
-3. New `MarketingShell` + shared `FaqBlock`, `SeoJsonLd` helpers.
-4. Rewritten `src/routes/index.tsx`.
-5. 5 new route files: `qr-code-attendance.tsx`, `club-attendance-tracker.tsx`, `greek-life-attendance.tsx`, `church-attendance-app.tsx`, `vs-google-forms.tsx`.
-6. Updated `sitemap[.]xml.ts` + verified `robots.txt`.
-7. Updated root meta + new favicon + 6 og-images.
-8. Root `__root.tsx` theme-color updated; landing-only tags moved to `/`.
+**Order of work**: migration first (approval required), then schemas + server functions, then host UI, then the public page and CSV route.
