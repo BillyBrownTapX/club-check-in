@@ -1205,14 +1205,15 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
     if (currentEventDate && currentStartTime && currentEndTime) {
       form.setValue(
         "checkInOpensAt",
-        combineDateAndTime(currentEventDate, `${shiftTimeString(currentStartTime, -offsets.openMinutesBeforeStart)}:00`),
+        offsetEventInstant(currentEventDate, currentStartTime, -offsets.openMinutesBeforeStart),
         { shouldValidate: false },
       );
       form.setValue(
         "checkInClosesAt",
-        combineDateAndTime(currentEventDate, `${shiftTimeString(currentEndTime, offsets.closeMinutesAfterEnd)}:00`),
+        offsetEventInstant(currentEventDate, currentEndTime, offsets.closeMinutesAfterEnd),
         { shouldValidate: false },
       );
+
     }
     void submit(event);
   };
