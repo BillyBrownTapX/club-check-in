@@ -1247,8 +1247,11 @@ export const getEventFormPayload = createServerFn({ method: "GET" })
         eventTemplateId: sourceEvent.event_template_id || "",
         eventName: sourceEvent.event_name,
         eventDate: schedule.eventDate,
-        startTime: sourceEvent.start_time,
-        endTime: sourceEvent.end_time,
+        // Postgres returns "HH:MM:SS"; <input type="time"> and the form's
+        // offset math expect "HH:MM".
+        startTime: (sourceEvent.start_time ?? "").slice(0, 5),
+        endTime: (sourceEvent.end_time ?? sourceEvent.start_time ?? "").slice(0, 5),
+
         location: sourceEvent.location || "",
         checkInOpensAt: schedule.checkInOpensAt,
         checkInClosesAt: schedule.checkInClosesAt,

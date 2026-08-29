@@ -30,7 +30,7 @@ function EventEditNotFound() {
   return <ManagementPageShell><div className="py-16 text-center text-sm text-muted-foreground">Event not found.</div></ManagementPageShell>;
 }
 
-export const Route = createFileRoute("/events/$eventId/edit")({
+export const Route = createFileRoute("/events/$eventId_/edit")({
   errorComponent: EventEditError,
   notFoundComponent: EventEditNotFound,
   head: () => ({

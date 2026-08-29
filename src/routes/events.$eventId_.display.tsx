@@ -36,7 +36,7 @@ function DisplayNotFound() {
   );
 }
 
-export const Route = createFileRoute("/events/$eventId/display")({
+export const Route = createFileRoute("/events/$eventId_/display")({
   errorComponent: DisplayError,
   notFoundComponent: DisplayNotFound,
   head: () => ({

@@ -621,8 +621,14 @@ export function getBlockedStateCopy(state: PublicBlockedState) {
 }
 
 export function combineDateAndTime(date: string, time: string) {
-  return new Date(`${date}T${time}`).toISOString();
+  // Time values reach us in several shapes: "18:00" from <input type="time">,
+  // "18:00:00" from Postgres, and occasionally "18:00:00:00" when a caller
+  // appends ":00" to an already-seconds-bearing value. Normalize to HH:MM:SS
+  // so this never produces an Invalid Date (toISOString would throw).
+  const normalizedTime = `${time.slice(0, 5)}:00`;
+  return new Date(`${date}T${normalizedTime}`).toISOString();
 }
+
 
 export function isValidNineHundredNumber(value: string) {
   return /^\d{9}$/.test(value.trim());

@@ -37,7 +37,7 @@ import {
   formatEventDate,
   formatEventTime,
   getCheckInMethodLabel,
-  shiftTimeString,
+  
   type Club,
   type ClubSummary,
   type EventFormPayload,
@@ -1051,6 +1051,18 @@ function getMinutesAfterEnd(referenceIso: string, eventDate: string, endTime: st
   return Math.max(0, Math.round((reference - eventEnd) / 60000));
 }
 
+// Offset the event's start/end instant by N minutes. Doing the math on the
+// absolute timestamp (rather than shifting the wall-clock string) is what lets
+// a window cross midnight — shiftTimeString wraps 18:30 + 6h back to 00:30 on
+// the SAME date, which produced a close-before-open validation error.
+function offsetEventInstant(eventDate: string, time: string, minutes: number) {
+  const base = new Date(combineDateAndTime(eventDate, time)).getTime();
+  if (Number.isNaN(base)) return "";
+  return new Date(base + minutes * 60000).toISOString();
+}
+
+
+
 function DateTimeReadonly({ label, value }: { label: string; value: string }) {
   const date = new Date(value);
   const formatted = Number.isNaN(date.getTime())
@@ -1155,8 +1167,9 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
 
   useEffect(() => {
     if (!eventDate || !startTime || !endTime) return;
-    form.setValue("checkInOpensAt", combineDateAndTime(eventDate, `${shiftTimeString(startTime, -offsets.openMinutesBeforeStart)}:00`), { shouldValidate: true });
-    form.setValue("checkInClosesAt", combineDateAndTime(eventDate, `${shiftTimeString(endTime, offsets.closeMinutesAfterEnd)}:00`), { shouldValidate: true });
+    form.setValue("checkInOpensAt", offsetEventInstant(eventDate, startTime, -offsets.openMinutesBeforeStart), { shouldValidate: true });
+    form.setValue("checkInClosesAt", offsetEventInstant(eventDate, endTime, offsets.closeMinutesAfterEnd), { shouldValidate: true });
+
   }, [endTime, eventDate, form, offsets.closeMinutesAfterEnd, offsets.openMinutesBeforeStart, startTime]);
 
   const submit = form.handleSubmit(
@@ -1192,14 +1205,15 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
     if (currentEventDate && currentStartTime && currentEndTime) {
       form.setValue(
         "checkInOpensAt",
-        combineDateAndTime(currentEventDate, `${shiftTimeString(currentStartTime, -offsets.openMinutesBeforeStart)}:00`),
+        offsetEventInstant(currentEventDate, currentStartTime, -offsets.openMinutesBeforeStart),
         { shouldValidate: false },
       );
       form.setValue(
         "checkInClosesAt",
-        combineDateAndTime(currentEventDate, `${shiftTimeString(currentEndTime, offsets.closeMinutesAfterEnd)}:00`),
+        offsetEventInstant(currentEventDate, currentEndTime, offsets.closeMinutesAfterEnd),
         { shouldValidate: false },
       );
+
     }
     void submit(event);
   };
