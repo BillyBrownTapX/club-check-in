@@ -314,7 +314,13 @@ export type EventFormValues = {
   location?: string;
   checkInOpensAt: string;
   checkInClosesAt: string;
+  // Pre-event ("early head count") window. Optional and independent of the
+  // day-of check-in window; the host may make it as long as they like.
+  preCheckInEnabled?: boolean;
+  preCheckInOpensAt?: string;
+  preCheckInClosesAt?: string;
 };
+
 
 export type EventFormPayload = {
   clubs: ClubWithUniversity[];
