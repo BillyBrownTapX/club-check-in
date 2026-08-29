@@ -803,7 +803,7 @@ function EventDetailRoute() {
                         : "Window not set"}
                     </p>
                   </div>
-                  <Chip tone={preStatus === "open" ? "success" : preStatus === "upcoming" ? "warning" : "muted"}>
+                  <Chip tone={preStatus === "open" ? "success" : preStatus === "upcoming" ? "gold" : "muted"}>
                     {preStatus === "open" ? "Live" : preStatus === "upcoming" ? "Scheduled" : "Closed"}
                   </Chip>
                 </div>
