@@ -5,6 +5,7 @@ import {
   AlertCircle,
   Archive,
   ArrowDownUp,
+  CalendarCheck2,
   CalendarDays,
   ChevronDown,
   Clock3,
@@ -76,6 +77,8 @@ import {
   duplicateEvent,
   getEventOperations,
   regenerateEventQrToken,
+  regeneratePreCheckInToken,
+  togglePreCheckIn,
   manualCheckIn,
   removeAttendance,
   restoreAttendance,
@@ -88,6 +91,7 @@ import {
   formatTimestamp,
   getCheckInMethodLabel,
   getCheckInStatus,
+  getPreCheckInStatus,
   shiftEventScheduleByDays,
   type AttendanceActionLog,
   type AttendanceRow,
@@ -192,6 +196,8 @@ function EventDetailRoute() {
   const deleteEventMutation = useAuthorizedServerFn(deleteEvent);
   const toggleArchiveMutation = useAuthorizedServerFn(toggleEventArchive);
   const regenerateQrTokenMutation = useAuthorizedServerFn(regenerateEventQrToken);
+  const togglePreCheckInMutation = useAuthorizedServerFn(togglePreCheckIn);
+  const regeneratePreTokenMutation = useAuthorizedServerFn(regeneratePreCheckInToken);
   const saveAsTemplateMutation = useAuthorizedServerFn(saveEventAsTemplate);
 
   // Single source of truth: the events.detail query. Realtime invalidates
@@ -245,6 +251,8 @@ function EventDetailRoute() {
   const [duplicating, setDuplicating] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [regeneratingQr, setRegeneratingQr] = useState(false);
+  const [preQrDialogOpen, setPreQrDialogOpen] = useState(false);
+  const [preCheckInBusy, setPreCheckInBusy] = useState(false);
   const [savingAsTemplate, setSavingAsTemplate] = useState(false);
   const [manualDialogOpen, setManualDialogOpen] = useState(false);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
@@ -287,6 +295,14 @@ function EventDetailRoute() {
     return typeof window === "undefined"
       ? `/check-in/${event.qr_token}`
       : `${window.location.origin}/check-in/${event.qr_token}`;
+  }, [event]);
+
+  // Marketing link for the early head count. Distinct token from the day-of
+  // QR so sharing it publicly never exposes live check-in.
+  const preCheckInUrl = useMemo(() => {
+    const token = event?.pre_check_in_token;
+    if (!token) return "";
+    return typeof window === "undefined" ? `/pre-check-in/${token}` : `${window.location.origin}/pre-check-in/${token}`;
   }, [event]);
 
   const filteredAttendance = useMemo(() => {
@@ -332,6 +348,46 @@ function EventDetailRoute() {
   if (!event) return <EventDetailNotFound />;
 
   const status = getCheckInStatus(event);
+  const preStatus = getPreCheckInStatus(event);
+  const preCheckInCount = data?.preCheckInCount ?? 0;
+  const preCheckInConvertedCount = data?.preCheckInConvertedCount ?? 0;
+
+  const handleCopyPreLink = async () => {
+    try {
+      await navigator.clipboard.writeText(preCheckInUrl);
+      toast.success("Early check-in link copied");
+    } catch {
+      toast.error("Unable to copy link");
+    }
+  };
+
+  const handleTogglePreCheckIn = async (enabled: boolean) => {
+    if (preCheckInBusy) return;
+    setPreCheckInBusy(true);
+    try {
+      await togglePreCheckInMutation({ data: { eventId, enabled } });
+      toast.success(enabled ? "Early head count is on" : "Early head count turned off");
+      await refresh();
+    } catch (error) {
+      toast.error(getManagementErrorMessage(error, "Unable to update early head count."));
+    } finally {
+      setPreCheckInBusy(false);
+    }
+  };
+
+  const handleRegeneratePreToken = async () => {
+    if (preCheckInBusy) return;
+    setPreCheckInBusy(true);
+    try {
+      await regeneratePreTokenMutation({ data: { eventId } });
+      toast.success("New early check-in link created", { description: "Re-share the link — the old one no longer works." });
+      await refresh();
+    } catch (error) {
+      toast.error(getManagementErrorMessage(error, "Unable to regenerate the early check-in link."));
+    } finally {
+      setPreCheckInBusy(false);
+    }
+  };
   const opensAt = new Date(event.check_in_opens_at);
   const closesAt = new Date(event.check_in_closes_at);
   const statusBanner = status === "open"
@@ -717,6 +773,78 @@ function EventDetailRoute() {
           />
         </div>
 
+        {/* Pre-event check-in (early head count) */}
+        <div>
+          <SectionLabel>Pre-event check-in</SectionLabel>
+          <div className="ios-card rounded-2xl p-4">
+            {preStatus === "disabled" ? (
+              <>
+                <p className="text-[14px] font-semibold text-foreground">Early head count is off</p>
+                <p className="mt-0.5 text-[12.5px] leading-snug text-muted-foreground">
+                  Turn it on to get a shareable link for a rough head count before the event. It never counts as attendance.
+                </p>
+                <SecondaryButton
+                  type="button"
+                  className="mt-3 w-full"
+                  disabled={preCheckInBusy}
+                  onClick={() => void handleTogglePreCheckIn(true)}
+                >
+                  {preCheckInBusy ? "Turning on…" : "Turn on early head count"}
+                </SecondaryButton>
+              </>
+            ) : (
+              <>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[14px] font-semibold text-foreground">Early head count</p>
+                    <p className="mt-0.5 text-[12.5px] leading-snug text-muted-foreground">
+                      {event.pre_check_in_opens_at && event.pre_check_in_closes_at
+                        ? `${formatTimestamp(event.pre_check_in_opens_at)} → ${formatTimestamp(event.pre_check_in_closes_at)}`
+                        : "Window not set"}
+                    </p>
+                  </div>
+                  <Chip tone={preStatus === "open" ? "success" : preStatus === "upcoming" ? "warning" : "muted"}>
+                    {preStatus === "open" ? "Live" : preStatus === "upcoming" ? "Scheduled" : "Closed"}
+                  </Chip>
+                </div>
+                <div className="mt-3 flex items-end justify-between border-t border-border/60 pt-3">
+                  <div>
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Said they're coming</p>
+                    <p className="font-display text-[28px] font-extrabold leading-none text-foreground">{preCheckInCount}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Showed up</p>
+                    <p className="font-display text-[18px] font-bold text-foreground">
+                      {preCheckInConvertedCount}
+                      <span className="ml-1 text-[12px] font-medium text-muted-foreground">/ {preCheckInCount}</span>
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <SecondaryButton type="button" onClick={() => setPreQrDialogOpen(true)} disabled={!preCheckInUrl}>
+                    <QrCode className="h-4 w-4" />
+                    Share QR
+                  </SecondaryButton>
+                  <SecondaryButton type="button" onClick={() => void handleCopyPreLink()} disabled={!preCheckInUrl}>
+                    <Copy className="h-4 w-4" />
+                    Copy link
+                  </SecondaryButton>
+                </div>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <SecondaryButton type="button" disabled={preCheckInBusy} onClick={() => void handleRegeneratePreToken()}>
+                    <ShieldAlert className="h-4 w-4" />
+                    New link
+                  </SecondaryButton>
+                  <SecondaryButton type="button" disabled={preCheckInBusy} onClick={() => void handleTogglePreCheckIn(false)}>
+                    <X className="h-4 w-4" />
+                    Turn off
+                  </SecondaryButton>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
         {/* Event tools */}
         <div>
           <SectionLabel>Event tools</SectionLabel>
@@ -1043,6 +1171,27 @@ function EventDetailRoute() {
           </div>{/* end right column */}
         </div>{/* end ops grid */}
       </div>
+
+      <Dialog open={preQrDialogOpen} onOpenChange={setPreQrDialogOpen}>
+        <DialogContent className="max-w-sm rounded-3xl">
+          <DialogHeader>
+            <DialogTitle>Early head count QR</DialogTitle>
+            <DialogDescription>
+              Share this in group chats or on flyers before the event. Scanning it records a head count only — members still check in at the event.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="rounded-2xl bg-card p-4">
+            {preCheckInUrl ? <QRCode value={preCheckInUrl} size={240} className="h-auto w-full" /> : null}
+          </div>
+          <div className="rounded-xl bg-muted px-3 py-2">
+            <p className="break-all text-[12px] text-foreground">{preCheckInUrl}</p>
+          </div>
+          <SecondaryButton type="button" onClick={() => void handleCopyPreLink()}>
+            <Copy className="h-4 w-4" />
+            Copy link
+          </SecondaryButton>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={qrDialogOpen} onOpenChange={setQrDialogOpen}>
         <DialogContent className="rounded-[2rem] border-border/90 bg-card/98 p-0 sm:max-w-md">
