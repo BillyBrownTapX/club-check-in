@@ -88,7 +88,7 @@ function LiveRoute() {
                 <span className="inline-flex h-2 w-2 rounded-full bg-success" />
                 Live now
               </Chip>
-              <Link to="/events/$eventId/display" params={{ eventId: live.id }} search={{ created: "" }} className="text-[13px] font-semibold text-white/90 underline-offset-2 hover:underline">
+              <Link to="/events/$eventId_/display" params={{ eventId: live.id }} search={{ created: "" }} className="text-[13px] font-semibold text-white/90 underline-offset-2 hover:underline">
                 Open display
               </Link>
             </div>
@@ -113,13 +113,13 @@ function LiveRoute() {
 
           <div className="ios-glass sticky bottom-[5.5rem] z-10 grid grid-cols-3 gap-2 rounded-2xl p-2.5">
             <Button asChild variant="hero" size="sm" className="rounded-xl">
-              <Link to="/events/$eventId/display" params={{ eventId: live.id }} search={{ created: "" }}><QrCode className="h-4 w-4" /> QR</Link>
+              <Link to="/events/$eventId_/display" params={{ eventId: live.id }} search={{ created: "" }}><QrCode className="h-4 w-4" /> QR</Link>
             </Button>
             <Button asChild variant="default" size="sm" className="rounded-xl">
               <Link to="/events/$eventId" params={{ eventId: live.id }} search={{ created: "" }}><ListChecks className="h-4 w-4" /> Roster</Link>
             </Button>
             <Button asChild variant="outline" size="sm" className="rounded-xl">
-              <Link to="/events/$eventId/edit" params={{ eventId: live.id }} search={{ created: "" }}>Edit</Link>
+              <Link to="/events/$eventId_/edit" params={{ eventId: live.id }} search={{ created: "" }}>Edit</Link>
             </Button>
           </div>
         </div>

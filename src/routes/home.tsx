@@ -167,7 +167,7 @@ function HomeRoute() {
           <SectionLabel className="mt-7">Quick actions</SectionLabel>
           <div className="grid grid-cols-2 gap-3">
             <ActionTile icon={CalendarPlus} label="Create event" hint="Start a new meeting" tone="default" to="/events/new" search={{ clubId: "", templateId: "", duplicateFrom: "" }} />
-            <ActionTile icon={QrCode} label="Show QR" hint={featuredEvent ? "Open display" : "Pick an event"} tone="gold" onClick={() => featuredEvent ? navigate({ to: "/events/$eventId/display", params: { eventId: featuredEvent.id }, search: { created: "" } }) : navigate({ to: "/events", search: { clubId: "", status: "all", query: "" } })} />
+            <ActionTile icon={QrCode} label="Show QR" hint={featuredEvent ? "Open display" : "Pick an event"} tone="gold" onClick={() => featuredEvent ? navigate({ to: "/events/$eventId_/display", params: { eventId: featuredEvent.id }, search: { created: "" } }) : navigate({ to: "/events", search: { clubId: "", status: "all", query: "" } })} />
             <ActionTile icon={Activity} label="Go live" hint="Live ops view" tone="blue" to="/live" />
             <ActionTile icon={ListChecks} label="View roster" hint={liveEvent ? "Active event" : "Recent event"} onClick={() => featuredEvent ? navigate({ to: "/events/$eventId", params: { eventId: featuredEvent.id }, search: { created: "" } }) : navigate({ to: "/events", search: { clubId: "", status: "all", query: "" } })} />
           </div>
