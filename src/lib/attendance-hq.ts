@@ -118,7 +118,12 @@ export type EventOperationsPayload = {
   removedAttendance: AttendanceActionLog[];
   recentActions: AttendanceActionLog[];
   summary: EventAttendanceSummary;
+  // Pre-event head count (never mixed into attendance numbers).
+  preCheckInCount: number;
+  // How many of the early head count have actually checked in on the day.
+  preCheckInConvertedCount: number;
 };
+
 
 export type EventDisplayPayload = {
   event: EventWithClub;
