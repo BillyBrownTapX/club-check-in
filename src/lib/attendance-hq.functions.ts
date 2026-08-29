@@ -41,7 +41,11 @@ import {
   type ManagementEventSummary,
   maskEmail,
   normalizeEmail,
+  buildDefaultPreCheckInWindow,
+  getPreCheckInStatus,
+  type PreCheckInRow,
   type PublicStudentPreview,
+  shiftPreCheckInWindowByDays,
   type University,
   shiftEventScheduleByDays,
   shiftTimeString,
@@ -83,7 +87,12 @@ import {
   fastCheckInSchema,
   hostOnboardingInputSchema,
   manualAttendanceSchema,
+  preCheckInRegistrationInputSchema,
+  preCheckInReturningInputSchema,
+  preCheckInTokenInputSchema,
   qrTokenSchema,
+  regeneratePreCheckInTokenSchema,
+  togglePreCheckInSchema,
   rememberedDeviceInputSchema,
   removeAttendanceSchema,
   purgeClubAttendanceSchema,
@@ -652,6 +661,13 @@ async function createEventForUser(
       check_in_opens_at: data.checkInOpensAt,
       check_in_closes_at: data.checkInClosesAt,
       qr_token: createQrToken(),
+      // Pre-event head count is opt-in. The DB trigger enforces the window
+      // rules; we only pass through what the host asked for, and mint a
+      // distinct token so the marketing link never exposes the day-of QR.
+      pre_check_in_enabled: data.preCheckInEnabled ?? false,
+      pre_check_in_opens_at: data.preCheckInEnabled ? (data.preCheckInOpensAt || null) : null,
+      pre_check_in_closes_at: data.preCheckInEnabled ? (data.preCheckInClosesAt || null) : null,
+      pre_check_in_token: data.preCheckInEnabled ? createQrToken() : null,
     })
     .select("*, clubs(id, club_name, club_slug, description, university_id, universities(id, name, slug))")
     .single();
@@ -1173,6 +1189,9 @@ export const getEventFormPayload = createServerFn({ method: "GET" })
       location: "",
       checkInOpensAt: buildEventDefaults().checkInOpensAt,
       checkInClosesAt: buildEventDefaults().checkInClosesAt,
+      preCheckInEnabled: false,
+      preCheckInOpensAt: "",
+      preCheckInClosesAt: "",
     };
 
     if (!initialValues.clubId && clubs.length) initialValues.clubId = (clubs[0] as Club).id;
@@ -1233,6 +1252,25 @@ export const getEventFormPayload = createServerFn({ method: "GET" })
         location: sourceEvent.location || "",
         checkInOpensAt: schedule.checkInOpensAt,
         checkInClosesAt: schedule.checkInClosesAt,
+        preCheckInEnabled: sourceEvent.pre_check_in_enabled,
+        ...(() => {
+          const window = isDuplicate
+            ? shiftPreCheckInWindowByDays(
+                {
+                  preCheckInOpensAt: sourceEvent.pre_check_in_opens_at,
+                  preCheckInClosesAt: sourceEvent.pre_check_in_closes_at,
+                },
+                7,
+              )
+            : {
+                preCheckInOpensAt: sourceEvent.pre_check_in_opens_at,
+                preCheckInClosesAt: sourceEvent.pre_check_in_closes_at,
+              };
+          return {
+            preCheckInOpensAt: window.preCheckInOpensAt ?? "",
+            preCheckInClosesAt: window.preCheckInClosesAt ?? "",
+          };
+        })(),
       };
     }
 
@@ -1274,6 +1312,15 @@ export const updateEvent = createServerFn({ method: "POST" })
         is_active: true,
         is_archived: false,
         qr_token: existing.qr_token,
+        pre_check_in_enabled: data.preCheckInEnabled ?? false,
+        pre_check_in_opens_at: data.preCheckInEnabled ? (data.preCheckInOpensAt || null) : null,
+        pre_check_in_closes_at: data.preCheckInEnabled ? (data.preCheckInClosesAt || null) : null,
+        // Keep an existing pre-check-in link stable across edits so any
+        // already-published marketing QR keeps working; mint one on first
+        // enable. Disabling keeps the token so re-enabling reuses the link.
+        pre_check_in_token: data.preCheckInEnabled
+          ? (existing.pre_check_in_token ?? createQrToken())
+          : existing.pre_check_in_token,
       })
       .eq("id", data.eventId)
       .select("*, clubs(id, club_name, club_slug, description)")
