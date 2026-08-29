@@ -1167,8 +1167,9 @@ export function EventForm({ payload, title, description, submitLabel, onSubmit, 
 
   useEffect(() => {
     if (!eventDate || !startTime || !endTime) return;
-    form.setValue("checkInOpensAt", combineDateAndTime(eventDate, `${shiftTimeString(startTime, -offsets.openMinutesBeforeStart)}:00`), { shouldValidate: true });
-    form.setValue("checkInClosesAt", combineDateAndTime(eventDate, `${shiftTimeString(endTime, offsets.closeMinutesAfterEnd)}:00`), { shouldValidate: true });
+    form.setValue("checkInOpensAt", offsetEventInstant(eventDate, startTime, -offsets.openMinutesBeforeStart), { shouldValidate: true });
+    form.setValue("checkInClosesAt", offsetEventInstant(eventDate, endTime, offsets.closeMinutesAfterEnd), { shouldValidate: true });
+
   }, [endTime, eventDate, form, offsets.closeMinutesAfterEnd, offsets.openMinutesBeforeStart, startTime]);
 
   const submit = form.handleSubmit(
