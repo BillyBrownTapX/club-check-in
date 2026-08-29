@@ -148,6 +148,99 @@ export type PublicStudentPreview = {
   maskedEmail: string;
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Pre-event check-in ("early head count").
+//
+// Additive, opt-in feature: hosts can open a separate, arbitrarily long
+// window BEFORE the event where members tap a marketing link to say "I'm
+// coming". These rows live in `pre_check_ins` and never count as attendance —
+// members still check in on the day of the event.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type PreCheckIn = Tables<"pre_check_ins">;
+
+export type PreCheckInStatus = "disabled" | "upcoming" | "open" | "closed";
+
+export type PreCheckInEventFields = Pick<
+  Event,
+  "pre_check_in_enabled" | "pre_check_in_opens_at" | "pre_check_in_closes_at" | "is_archived"
+>;
+
+export type PreCheckInRow = {
+  id: string;
+  checkedInAt: string;
+  method: string;
+  student: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    studentEmail: string;
+    nineHundredNumber: string;
+  } | null;
+};
+
+export function getPreCheckInStatus(event: PreCheckInEventFields): PreCheckInStatus {
+  if (!event.pre_check_in_enabled) return "disabled";
+  if (event.is_archived) return "closed";
+  if (!event.pre_check_in_opens_at || !event.pre_check_in_closes_at) return "disabled";
+
+  const now = Date.now();
+  const opens = new Date(event.pre_check_in_opens_at).getTime();
+  const closes = new Date(event.pre_check_in_closes_at).getTime();
+  if (now < opens) return "upcoming";
+  if (now > closes) return "closed";
+  return "open";
+}
+
+export const PRE_CHECK_IN_COPY = {
+  heading: "Early head count",
+  subheading:
+    "Let the host know you're planning to come. This is not attendance — remember to check in at the event.",
+  successTitle: "You're on the early head count",
+  successBody: "Thanks! Remember to check in at the event so your attendance is recorded.",
+  notOpenTitle: "Early head count not open yet",
+  notOpenBody: "The host hasn't opened the early head count for this event yet. Check back soon.",
+  closedTitle: "Early head count closed",
+  closedBody: "The early head count for this event is closed. You can still check in at the event itself.",
+} as const;
+
+/**
+ * Shifts an optional pre check-in window by `days` calendar days, keeping the
+ * wall-clock time. Returns nulls untouched so disabled events stay disabled
+ * when duplicated.
+ */
+export function shiftPreCheckInWindowByDays(
+  source: { preCheckInOpensAt: string | null; preCheckInClosesAt: string | null },
+  days: number = 7,
+): { preCheckInOpensAt: string | null; preCheckInClosesAt: string | null } {
+  const dayMs = 24 * 60 * 60 * 1000;
+  const shiftIso = (iso: string | null) => {
+    if (!iso) return null;
+    const t = new Date(iso).getTime();
+    if (!Number.isFinite(t)) return iso;
+    return new Date(t + days * dayMs).toISOString();
+  };
+  return {
+    preCheckInOpensAt: shiftIso(source.preCheckInOpensAt),
+    preCheckInClosesAt: shiftIso(source.preCheckInClosesAt),
+  };
+}
+
+/** Default pre check-in window when a host first enables it: opens 7 days
+ * before the event's check-in opens, closes when day-of check-in opens. */
+export function buildDefaultPreCheckInWindow(checkInOpensAt: string): {
+  preCheckInOpensAt: string;
+  preCheckInClosesAt: string;
+} {
+  const opensMs = new Date(checkInOpensAt).getTime();
+  const safeOpens = Number.isFinite(opensMs) ? opensMs : Date.now();
+  return {
+    preCheckInOpensAt: new Date(safeOpens - 7 * 24 * 60 * 60 * 1000).toISOString(),
+    preCheckInClosesAt: new Date(safeOpens).toISOString(),
+  };
+}
+
+
 export type ClubAttendanceReportEvent = {
   id: string;
   eventName: string;
