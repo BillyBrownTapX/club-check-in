@@ -1380,12 +1380,29 @@ export const getEventOperations = createServerFn({ method: "GET" })
       }
     }
 
+    // Pre-event head count. Read separately and NEVER merged into the
+    // attendance arrays — the whole point of the feature is that the real
+    // attendance numbers stay clean.
+    const { data: preRows, error: preError } = await context.supabase
+      .from("pre_check_ins")
+      .select("student_id")
+      .eq("event_id", data.eventId);
+    if (preError) throw new Error(safeMessage(preError));
+    const preStudentIds = new Set((preRows ?? []).map((row) => row.student_id));
+    const attendedStudentIds = new Set(
+      normalizedAttendance.map((row) => row.students?.id).filter(Boolean) as string[],
+    );
+    let preCheckInConvertedCount = 0;
+    for (const id of preStudentIds) if (attendedStudentIds.has(id)) preCheckInConvertedCount += 1;
+
     return {
       event,
       attendance: normalizedAttendance,
       removedAttendance: [...removedAttendanceMap.values()],
       recentActions,
       summary: buildEventAttendanceSummary(normalizedAttendance, removedAttendanceMap.size, recentActions),
+      preCheckInCount: preStudentIds.size,
+      preCheckInConvertedCount,
     } as EventOperationsPayload;
   });
 
@@ -2813,3 +2830,328 @@ export const purgeClubAttendanceOlderThan = createServerFn({ method: "POST" })
     };
   });
 
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Pre-event check-in ("early head count")
+//
+// Fully additive surface. Everything is keyed off the event's separate
+// `pre_check_in_token`, so a marketing link can be shared publicly weeks in
+// advance without exposing the day-of QR token. Rows land in `pre_check_ins`
+// and never touch attendance_records, so real attendance stays untouched.
+// ─────────────────────────────────────────────────────────────────────────────
+
+type PreCheckInBlockedState = "invalid_link" | "not_open_yet" | "closed" | "already_pre_checked_in";
+
+async function getEventForPreCheckIn(preToken: string) {
+  const { data: event, error } = await (await getSupabaseAdmin())
+    .from("events")
+    .select("*, clubs(id, club_name, club_slug, description)")
+    .eq("pre_check_in_token", preToken)
+    .maybeSingle();
+  if (error) throw new Error(safeMessage(error));
+  if (!event) return { ok: false as const, state: "invalid_link" as const };
+
+  const status = getPreCheckInStatus(event);
+  if (status === "disabled") return { ok: false as const, state: "invalid_link" as const };
+  if (status === "upcoming") return { ok: false as const, state: "not_open_yet" as const, event };
+  if (status === "closed") return { ok: false as const, state: "closed" as const, event };
+  return { ok: true as const, event };
+}
+
+function toPublicPreCheckInEvent(event: Record<string, unknown>) {
+  const clubs = event.clubs as { club_name?: string } | { club_name?: string }[] | null;
+  const clubName = Array.isArray(clubs) ? (clubs[0]?.club_name ?? "Club event") : (clubs?.club_name ?? "Club event");
+  return {
+    event_name: event.event_name as string,
+    event_date: event.event_date as string,
+    start_time: event.start_time as string,
+    end_time: event.end_time as string,
+    location: (event.location as string | null) ?? null,
+    check_in_opens_at: event.check_in_opens_at as string,
+    check_in_closes_at: event.check_in_closes_at as string,
+    pre_check_in_opens_at: (event.pre_check_in_opens_at as string | null) ?? null,
+    pre_check_in_closes_at: (event.pre_check_in_closes_at as string | null) ?? null,
+    club_name: clubName,
+  };
+}
+
+/** Public: resolve the marketing link into event info + current head count. */
+export const getPublicPreCheckInEvent = createServerFn({ method: "GET" })
+  .inputValidator(preCheckInTokenInputSchema)
+  .handler(async ({ data }) => {
+    const resolved = await getEventForPreCheckIn(data.preToken);
+    if (!resolved.ok && !("event" in resolved)) {
+      return { ok: false as const, state: resolved.state as PreCheckInBlockedState };
+    }
+
+    const event = (resolved as { event: Record<string, unknown> }).event;
+    const { count } = await (await getSupabaseAdmin())
+      .from("pre_check_ins")
+      .select("id", { count: "exact", head: true })
+      .eq("event_id", event.id as string);
+
+    return {
+      ok: resolved.ok,
+      state: resolved.ok ? ("open" as const) : (resolved.state as PreCheckInBlockedState),
+      event: toPublicPreCheckInEvent(event),
+      preCheckInCount: count ?? 0,
+    };
+  });
+
+async function insertPreCheckIn(input: {
+  eventId: string;
+  studentId: string;
+  method: "qr_scan" | "returning_lookup" | "remembered_device";
+}) {
+  const admin = await getSupabaseAdmin();
+  const { data: existing } = await admin
+    .from("pre_check_ins")
+    .select("id, checked_in_at")
+    .eq("event_id", input.eventId)
+    .eq("student_id", input.studentId)
+    .maybeSingle();
+  if (existing) {
+    return { ok: false as const, state: "already_pre_checked_in" as const, checkedInAt: existing.checked_in_at };
+  }
+
+  const { data: inserted, error } = await admin
+    .from("pre_check_ins")
+    .insert({ event_id: input.eventId, student_id: input.studentId, check_in_method: input.method })
+    .select("id, checked_in_at")
+    .single();
+
+  if (error) {
+    // Race with a parallel tap from the same student.
+    if (isUniqueViolation(error, "pre_check_ins_event_id_student_id_key")) {
+      const { data: raced } = await admin
+        .from("pre_check_ins")
+        .select("id, checked_in_at")
+        .eq("event_id", input.eventId)
+        .eq("student_id", input.studentId)
+        .maybeSingle();
+      if (raced) {
+        return { ok: false as const, state: "already_pre_checked_in" as const, checkedInAt: raced.checked_in_at };
+      }
+    }
+    throw new Error(safeMessage(error, "Unable to record early check-in"));
+  }
+  if (!inserted) throw new Error(safeMessage(null, "Unable to record early check-in"));
+  return { ok: true as const, preCheckIn: inserted };
+}
+
+/** Public: first-time (or unknown-to-this-device) early check-in. */
+export const submitPreCheckIn = createServerFn({ method: "POST" })
+  .inputValidator(preCheckInRegistrationInputSchema)
+  .handler(async ({ data }) => {
+    await rateLimit("register", data.preToken);
+    const resolved = await getEventForPreCheckIn(data.preToken);
+    if (!resolved.ok) {
+      return { ok: false as const, state: resolved.state as PreCheckInBlockedState };
+    }
+
+    const admin = await getSupabaseAdmin();
+    const universityId = await requireEventUniversityId(resolved.event);
+
+    const { data: existingStudent, error: existingError } = await admin
+      .from("students")
+      .select("id, first_name, last_name, student_email")
+      .eq("nine_hundred_number", data.nineHundredNumber)
+      .eq("university_id", universityId)
+      .maybeSingle();
+    if (existingError) throw new Error(safeMessage(existingError, "Unable to look up student."));
+
+    let studentId = existingStudent?.id ?? null;
+    let studentRow = existingStudent ?? null;
+
+    if (!studentId) {
+      await assertUniversityEmailAllowed(universityId, data.studentEmail);
+      const { data: student, error: studentError } = await admin
+        .from("students")
+        .insert({
+          first_name: data.firstName.trim(),
+          last_name: data.lastName.trim(),
+          student_email: data.studentEmail,
+          nine_hundred_number: data.nineHundredNumber,
+          university_id: universityId,
+        })
+        .select("id, first_name, last_name, student_email")
+        .single();
+
+      if (studentError || !student) {
+        if (isStudentNineHundredUniqueViolation(studentError)) {
+          const { data: raced } = await admin
+            .from("students")
+            .select("id, first_name, last_name, student_email")
+            .eq("nine_hundred_number", data.nineHundredNumber)
+            .eq("university_id", universityId)
+            .maybeSingle();
+          if (raced) {
+            studentId = raced.id;
+            studentRow = raced;
+          }
+        }
+        if (!studentId) throw new Error(safeMessage(studentError, "Unable to save student"));
+      } else {
+        studentId = student.id;
+        studentRow = student;
+      }
+    }
+
+    const result = await insertPreCheckIn({
+      eventId: resolved.event.id,
+      studentId: studentId!,
+      method: existingStudent ? "returning_lookup" : "qr_scan",
+    });
+    if (!result.ok) {
+      return { ok: false as const, state: result.state, checkedInAt: result.checkedInAt };
+    }
+
+    let deviceToken: string | null = null;
+    if (data.rememberDevice) {
+      deviceToken = createDeviceToken();
+      const { error: sessionError } = await admin
+        .from("student_device_sessions")
+        .insert({ student_id: studentId!, device_token: deviceToken });
+      if (sessionError) deviceToken = null;
+    }
+
+    return {
+      ok: true as const,
+      preCheckIn: result.preCheckIn,
+      deviceToken,
+      student: studentRow ? buildStudentPreview(studentRow) : null,
+    };
+  });
+
+/** Public: returning student — 900 number only, no re-typing name/email. */
+export const submitReturningPreCheckIn = createServerFn({ method: "POST" })
+  .inputValidator(preCheckInReturningInputSchema)
+  .handler(async ({ data }) => {
+    await rateLimit("lookup", data.preToken);
+    const resolved = await getEventForPreCheckIn(data.preToken);
+    if (!resolved.ok) {
+      return { ok: false as const, state: resolved.state as PreCheckInBlockedState };
+    }
+
+    const universityId = await requireEventUniversityId(resolved.event);
+    const { data: student, error } = await (await getSupabaseAdmin())
+      .from("students")
+      .select("id, first_name, last_name, student_email")
+      .eq("nine_hundred_number", data.nineHundredNumber)
+      .eq("university_id", universityId)
+      .maybeSingle();
+    if (error) throw new Error(safeMessage(error, "Unable to look up student."));
+    if (!student) return { ok: false as const, state: "student_not_found" as const };
+
+    const result = await insertPreCheckIn({
+      eventId: resolved.event.id,
+      studentId: student.id,
+      method: "returning_lookup",
+    });
+    if (!result.ok) {
+      return { ok: false as const, state: result.state, checkedInAt: result.checkedInAt };
+    }
+
+    return { ok: true as const, preCheckIn: result.preCheckIn, student: buildStudentPreview(student) };
+  });
+
+/** Host: read the early head count roster for an event. */
+export const getEventPreCheckIns = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(eventIdInputSchema)
+  .handler(async ({ data, context }) => {
+    await requireOwnedEvent(context.supabase, context.userId, data.eventId);
+    const { data: rows, error } = await context.supabase
+      .from("pre_check_ins")
+      .select("id, checked_in_at, check_in_method, students(id, first_name, last_name, student_email, nine_hundred_number)")
+      .eq("event_id", data.eventId)
+      .order("checked_in_at", { ascending: false });
+    if (error) throw new Error(safeMessage(error));
+
+    return ((rows ?? []) as Array<{
+      id: string;
+      checked_in_at: string;
+      check_in_method: string;
+      students: { id: string; first_name: string; last_name: string; student_email: string; nine_hundred_number: string } | null;
+    }>).map((row) => ({
+      id: row.id,
+      checkedInAt: row.checked_in_at,
+      method: row.check_in_method,
+      student: row.students
+        ? {
+            id: row.students.id,
+            firstName: row.students.first_name,
+            lastName: row.students.last_name,
+            studentEmail: row.students.student_email,
+            nineHundredNumber: row.students.nine_hundred_number,
+          }
+        : null,
+    })) as PreCheckInRow[];
+  });
+
+/** Host: turn the early head count on/off without touching the event form. */
+export const togglePreCheckIn = createServerFn({ method: "POST" })
+  .middleware([requireHostActive])
+  .inputValidator(togglePreCheckInSchema)
+  .handler(async ({ data, context }) => {
+    const existing = await requireOwnedEvent(context.supabase, context.userId, data.eventId);
+    const admin = await getSupabaseAdmin();
+
+    if (!data.enabled) {
+      const { error } = await admin
+        .from("events")
+        .update({ pre_check_in_enabled: false, updated_at: new Date().toISOString() })
+        .eq("id", data.eventId);
+      if (error) throw new Error(safeMessage(error, "Unable to update early check-in."));
+      return { ok: true as const, enabled: false, preCheckInToken: null };
+    }
+
+    // Reuse an existing window when the host already configured one; otherwise
+    // default to "opens 7 days before day-of check-in, closes when it opens".
+    const window = existing.pre_check_in_opens_at && existing.pre_check_in_closes_at
+      ? { preCheckInOpensAt: existing.pre_check_in_opens_at, preCheckInClosesAt: existing.pre_check_in_closes_at }
+      : buildDefaultPreCheckInWindow(existing.check_in_opens_at);
+
+    const token = existing.pre_check_in_token ?? createQrToken();
+    const { error } = await admin
+      .from("events")
+      .update({
+        pre_check_in_enabled: true,
+        pre_check_in_opens_at: window.preCheckInOpensAt,
+        pre_check_in_closes_at: window.preCheckInClosesAt,
+        pre_check_in_token: token,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", data.eventId);
+    if (error) throw new Error(safeMessage(error, "Unable to update early check-in."));
+    return { ok: true as const, enabled: true, preCheckInToken: token };
+  });
+
+/** Host: rotate the marketing link if it leaks. */
+export const regeneratePreCheckInToken = createServerFn({ method: "POST" })
+  .middleware([requireHostActive])
+  .inputValidator(regeneratePreCheckInTokenSchema)
+  .handler(async ({ data, context }) => {
+    const existing = await requireOwnedEvent(context.supabase, context.userId, data.eventId);
+    if (!existing.pre_check_in_enabled) {
+      throw new Error("Early check-in is not enabled for this event.");
+    }
+    const admin = await getSupabaseAdmin();
+
+    let lastError: { code?: string; message?: string } | null = null;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const candidate = createQrToken();
+      const { data: updated, error } = await admin
+        .from("events")
+        .update({ pre_check_in_token: candidate, updated_at: new Date().toISOString() })
+        .eq("id", data.eventId)
+        .select("pre_check_in_token")
+        .single();
+      if (!error && updated?.pre_check_in_token) {
+        return { ok: true as const, preCheckInToken: updated.pre_check_in_token };
+      }
+      lastError = error;
+      if (!error || error.code !== "23505") break;
+    }
+    throw new Error(safeMessage(lastError, "Unable to regenerate early check-in link."));
+  });
