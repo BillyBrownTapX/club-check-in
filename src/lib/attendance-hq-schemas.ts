@@ -121,12 +121,18 @@ export const preCheckInTokenSchema = z
   .min(16, "Invalid early check-in link")
   .max(128, "Invalid early check-in link");
 
-export const preCheckInRegistrationInputSchema = studentRegistrationSchema
-  .omit({ rememberDevice: true })
-  .extend({
-    preToken: preCheckInTokenSchema,
-    rememberDevice: z.boolean().default(true),
-  });
+export const preCheckInRegistrationInputSchema = z.object({
+  preToken: preCheckInTokenSchema,
+  firstName: z.string().trim().min(1, "Enter first name").max(80, "Too long"),
+  lastName: z.string().trim().min(1, "Enter last name").max(80, "Too long"),
+  studentEmail: emailSchema,
+  nineHundredNumber: z
+    .string()
+    .trim()
+    .refine(isValidNineHundredNumber, "Enter a valid 9-digit 900 number"),
+  rememberDevice: z.boolean().default(true),
+});
+
 
 export const preCheckInReturningInputSchema = z.object({
   preToken: preCheckInTokenSchema,
