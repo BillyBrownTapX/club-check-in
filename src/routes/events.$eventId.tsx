@@ -830,15 +830,38 @@ function EventDetailRoute() {
                     Copy link
                   </SecondaryButton>
                 </div>
-                <div className="mt-2 grid grid-cols-2 gap-2">
-                  <SecondaryButton type="button" disabled={preCheckInBusy} onClick={() => void handleRegeneratePreToken()}>
-                    <ShieldAlert className="h-4 w-4" />
-                    New link
-                  </SecondaryButton>
-                  <SecondaryButton type="button" disabled={preCheckInBusy} onClick={() => void handleTogglePreCheckIn(false)}>
-                    <X className="h-4 w-4" />
-                    Turn off
-                  </SecondaryButton>
+                <div className="mt-4 border-t border-border/60 pt-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Who pre-checked in
+                  </p>
+                  {preCheckIns.length === 0 ? (
+                    <p className="mt-2 text-[12.5px] leading-snug text-muted-foreground">
+                      No one on the early head count yet.
+                    </p>
+                  ) : (
+                    <ul className="mt-2 divide-y divide-border/60">
+                      {preCheckIns.map((row) => (
+                        <li key={row.id} className="flex items-start justify-between gap-3 py-2">
+                          <div className="min-w-0">
+                            <p className="truncate text-[13.5px] font-semibold text-foreground">
+                              {row.student ? `${row.student.firstName} ${row.student.lastName}` : "Unknown student"}
+                            </p>
+                            <p className="truncate text-[11.5px] text-muted-foreground">
+                              {row.student
+                                ? `${maskEmail(row.student.studentEmail)} · ${row.student.nineHundredNumber}`
+                                : "Details unavailable"}
+                            </p>
+                            <p className="text-[11px] text-muted-foreground">
+                              Joined {formatTimestamp(row.checkedInAt)}
+                            </p>
+                          </div>
+                          <Chip tone={row.converted ? "success" : "muted"}>
+                            {row.converted ? "Checked in" : "Not yet"}
+                          </Chip>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </>
             )}
