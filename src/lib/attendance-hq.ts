@@ -112,6 +112,22 @@ export type EventAttendanceSummary = {
   };
 };
 
+// One row of the early head count roster shown on event ops. `converted`
+// means the student also checked in on the day of the event.
+export type PreCheckInListRow = {
+  id: string;
+  checkedInAt: string;
+  method: string;
+  converted: boolean;
+  student: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    studentEmail: string;
+    nineHundredNumber: string;
+  } | null;
+};
+
 export type EventOperationsPayload = {
   event: EventWithClub;
   attendance: AttendanceRow[];
@@ -122,6 +138,8 @@ export type EventOperationsPayload = {
   preCheckInCount: number;
   // How many of the early head count have actually checked in on the day.
   preCheckInConvertedCount: number;
+  // Full early head count roster, newest first.
+  preCheckIns: PreCheckInListRow[];
 };
 
 

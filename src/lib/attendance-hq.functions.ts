@@ -44,6 +44,7 @@ import {
   buildDefaultPreCheckInWindow,
   getPreCheckInStatus,
   type PreCheckInRow,
+  type PreCheckInListRow,
   type PublicStudentPreview,
   shiftPreCheckInWindowByDays,
   type University,
@@ -1388,8 +1389,11 @@ export const getEventOperations = createServerFn({ method: "GET" })
     // attendance numbers stay clean.
     const { data: preRows, error: preError } = await context.supabase
       .from("pre_check_ins")
-      .select("student_id")
-      .eq("event_id", data.eventId);
+      .select(
+        "id, student_id, checked_in_at, check_in_method, students(id, first_name, last_name, student_email, nine_hundred_number)",
+      )
+      .eq("event_id", data.eventId)
+      .order("checked_in_at", { ascending: false });
     if (preError) throw new Error(safeMessage(preError));
     const preStudentIds = new Set((preRows ?? []).map((row) => row.student_id));
     const attendedStudentIds = new Set(
@@ -1397,6 +1401,40 @@ export const getEventOperations = createServerFn({ method: "GET" })
     );
     let preCheckInConvertedCount = 0;
     for (const id of preStudentIds) if (attendedStudentIds.has(id)) preCheckInConvertedCount += 1;
+
+    const preCheckIns: PreCheckInListRow[] = (preRows ?? []).map((row) => {
+      const raw = row as unknown as {
+        id: string;
+        student_id: string;
+        checked_in_at: string;
+        check_in_method: string;
+        students:
+          | {
+              id: string;
+              first_name: string;
+              last_name: string;
+              student_email: string;
+              nine_hundred_number: string;
+            }
+          | null;
+      };
+      const student = Array.isArray(raw.students) ? raw.students[0] ?? null : raw.students;
+      return {
+        id: raw.id,
+        checkedInAt: raw.checked_in_at,
+        method: raw.check_in_method,
+        converted: attendedStudentIds.has(raw.student_id),
+        student: student
+          ? {
+              id: student.id,
+              firstName: student.first_name,
+              lastName: student.last_name,
+              studentEmail: student.student_email,
+              nineHundredNumber: student.nine_hundred_number,
+            }
+          : null,
+      };
+    });
 
     return {
       event,
@@ -1406,6 +1444,7 @@ export const getEventOperations = createServerFn({ method: "GET" })
       summary: buildEventAttendanceSummary(normalizedAttendance, removedAttendanceMap.size, recentActions),
       preCheckInCount: preStudentIds.size,
       preCheckInConvertedCount,
+      preCheckIns,
     } as EventOperationsPayload;
   });
 
