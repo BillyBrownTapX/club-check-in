@@ -351,6 +351,7 @@ function EventDetailRoute() {
   const preStatus = getPreCheckInStatus(event);
   const preCheckInCount = data?.preCheckInCount ?? 0;
   const preCheckInConvertedCount = data?.preCheckInConvertedCount ?? 0;
+  const preCheckIns = data?.preCheckIns ?? [];
 
   const handleCopyPreLink = async () => {
     try {
