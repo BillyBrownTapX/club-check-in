@@ -89,6 +89,7 @@ import {
   formatEventDate,
   formatEventTime,
   formatTimestamp,
+  maskEmail,
   getCheckInMethodLabel,
   getCheckInStatus,
   getPreCheckInStatus,
