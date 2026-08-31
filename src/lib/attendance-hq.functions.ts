@@ -44,6 +44,7 @@ import {
   buildDefaultPreCheckInWindow,
   getPreCheckInStatus,
   type PreCheckInRow,
+  type PreCheckInListRow,
   type PublicStudentPreview,
   shiftPreCheckInWindowByDays,
   type University,
