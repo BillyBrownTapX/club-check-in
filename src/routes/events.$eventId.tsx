@@ -376,20 +376,6 @@ function EventDetailRoute() {
       setPreCheckInBusy(false);
     }
   };
-
-  const handleRegeneratePreToken = async () => {
-    if (preCheckInBusy) return;
-    setPreCheckInBusy(true);
-    try {
-      await regeneratePreTokenMutation({ data: { eventId } });
-      toast.success("New early check-in link created", { description: "Re-share the link — the old one no longer works." });
-      await refresh();
-    } catch (error) {
-      toast.error(getManagementErrorMessage(error, "Unable to regenerate the early check-in link."));
-    } finally {
-      setPreCheckInBusy(false);
-    }
-  };
   const opensAt = new Date(event.check_in_opens_at);
   const closesAt = new Date(event.check_in_closes_at);
   const statusBanner = status === "open"
