@@ -77,7 +77,7 @@ import {
   duplicateEvent,
   getEventOperations,
   regenerateEventQrToken,
-  regeneratePreCheckInToken,
+  
   togglePreCheckIn,
   manualCheckIn,
   removeAttendance,
@@ -198,7 +198,7 @@ function EventDetailRoute() {
   const toggleArchiveMutation = useAuthorizedServerFn(toggleEventArchive);
   const regenerateQrTokenMutation = useAuthorizedServerFn(regenerateEventQrToken);
   const togglePreCheckInMutation = useAuthorizedServerFn(togglePreCheckIn);
-  const regeneratePreTokenMutation = useAuthorizedServerFn(regeneratePreCheckInToken);
+  
   const saveAsTemplateMutation = useAuthorizedServerFn(saveEventAsTemplate);
 
   // Single source of truth: the events.detail query. Realtime invalidates
