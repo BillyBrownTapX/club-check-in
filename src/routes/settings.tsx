@@ -55,7 +55,7 @@ function SettingsRoute() {
 
       <SectionLabel className="mt-6">Preferences</SectionLabel>
       <GroupedList>
-        <ListRow icon={Bot} label="AI assistants" detail="Connect ChatGPT, Claude, or Cursor" to="/agents" />
+        <ListRow icon={Bot} label="AI assistants" detail="Connect ChatGPT, Claude, or MANUS" to="/agents" />
         <ListRow icon={Bell} label="Notifications" detail="Activity and milestones" to="/notifications" />
         <ListRow icon={Mail} label="Email" value={auth.user?.email} chevron={false} />
       </GroupedList>

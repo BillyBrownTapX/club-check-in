@@ -14,12 +14,12 @@ export const AgentSetupLinkEmail = ({
   setupUrl = DEFAULT_SETUP_URL,
 }: AgentSetupLinkEmailProps) => (
   <EmailShell
-    preview="Connect ChatGPT, Claude, or Cursor to your Attendance HQ account"
+    preview="Connect ChatGPT, Claude, or MANUS to your Attendance HQ account"
     heading="Connect your AI assistant"
   >
     <Text style={bodyText}>
       {hostName ? `Hi ${hostName} — ` : ''}here&apos;s your setup link. Open it on the device where
-      you use ChatGPT, Claude, Cursor, or Lovable, and follow the short steps to connect Attendance
+      you use ChatGPT, Claude, or MANUS, and follow the short steps to connect Attendance
       HQ.
     </Text>
     <Text style={bodyText}>

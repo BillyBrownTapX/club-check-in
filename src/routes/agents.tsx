@@ -41,7 +41,7 @@ export const Route = createFileRoute("/agents")({
       {
         name: "description",
         content:
-          "Connect ChatGPT, Claude, Cursor, or Lovable to Attendance HQ so your assistant can pull head counts, rosters, and schedule events as you.",
+          "Connect ChatGPT, Claude, or MANUS to Attendance HQ so your assistant can pull head counts, rosters, and schedule events as you.",
       },
       { property: "og:title", content: "Connect an AI assistant — Attendance HQ" },
       {
@@ -99,7 +99,7 @@ function AgentsRoute() {
       <LargeTitleHeader
         eyebrow="Agent integrations"
         title="Connect an AI assistant"
-        subtitle="Ask ChatGPT, Claude, Cursor, or Lovable about your events — it works as you, with your access."
+        subtitle="Ask ChatGPT, Claude, or MANUS about your events — it works as you, with your access."
       />
 
       <SectionLabel className="mt-6">Server address</SectionLabel>
