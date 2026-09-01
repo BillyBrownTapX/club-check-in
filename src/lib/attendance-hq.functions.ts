@@ -144,6 +144,10 @@ function logCheckInError(op: PublicCheckInOp, qrToken: string | undefined | null
 // Wraps a public check-in server-fn handler so any thrown error is
 // logged (once, tagged, PII-free) before being re-thrown. Business
 // outcomes returned as `{ ok: false, state }` pass through untouched.
+//
+// The same catch also records a PII-free telemetry row so the Owner Admin
+// system-health view reflects real failures. Telemetry is fire-and-forget and
+// can never change the check-in outcome.
 function withCheckInLog<A extends { data: { qrToken?: string } }, R>(
   op: PublicCheckInOp,
   fn: (args: A) => Promise<R>,
@@ -153,10 +157,23 @@ function withCheckInLog<A extends { data: { qrToken?: string } }, R>(
       return await fn(args);
     } catch (err) {
       logCheckInError(op, args?.data?.qrToken, err);
+      const code = (err as { code?: string } | null)?.code;
+      void (async () => {
+        try {
+          const { recordPlatformEvent } = await import("@/lib/owner-analytics.server");
+          await recordPlatformEvent({
+            type: code === "rate_limited" ? "rate_limited" : op === "getPublicEventByQr" || op === "getPublicEventDisplay" ? "server_error" : "check_in_failed",
+            metadata: { op, code: code ?? null },
+          });
+        } catch {
+          /* telemetry is best-effort */
+        }
+      })();
       throw err;
     }
   };
 }
+
 
 
 
@@ -1802,19 +1819,36 @@ async function recordCheckInClosed(eventId: string): Promise<void> {
   }
 }
 
+// Fire-and-forget duplicate-scan telemetry (no student identifiers recorded).
+async function recordDuplicateAttempt(eventId: string, method: string): Promise<void> {
+  try {
+    const { recordPlatformEvent } = await import("@/lib/owner-analytics.server");
+    await recordPlatformEvent({
+      type: "duplicate_check_in_attempt",
+      eventId,
+      metadata: { method },
+    });
+  } catch {
+    /* best-effort */
+  }
+}
+
 async function createAttendanceRecord(input: {
+
   event: { id: string };
   studentId: string;
   method: "qr_scan" | "returning_lookup" | "remembered_device";
 }) {
   const existingAttendance = await getExistingAttendance(input.event.id, input.studentId);
   if (existingAttendance) {
+    void recordDuplicateAttempt(input.event.id, input.method);
     return {
       ok: false as const,
       state: "already_checked_in" as const,
       checkedInAt: existingAttendance.checked_in_at,
     };
   }
+
 
   const { data: attendance, error } = await (await getSupabaseAdmin())
     .from("attendance_records")

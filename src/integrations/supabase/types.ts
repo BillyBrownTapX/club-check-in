@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      analytics_events: {
+        Row: {
+          club_id: string | null
+          created_at: string
+          event_id: string | null
+          event_type: string
+          id: string
+          metadata: Json
+          student_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          club_id?: string | null
+          created_at?: string
+          event_id?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json
+          student_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          club_id?: string | null
+          created_at?: string
+          event_id?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json
+          student_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       attendance_actions: {
         Row: {
           action_type: Database["public"]["Enums"]["attendance_action_type"]
@@ -642,9 +675,99 @@ export type Database = {
       is_club_member: { Args: { _club_id: string }; Returns: boolean }
       is_club_owner: { Args: { _club_id: string }; Returns: boolean }
       is_event_host: { Args: { _event_id: string }; Returns: boolean }
+      is_owner_admin: { Args: never; Returns: boolean }
       is_student_visible_to_host: {
         Args: { _student_id: string }
         Returns: boolean
+      }
+      owner_admin_activation: { Args: never; Returns: Json }
+      owner_admin_attendance: {
+        Args: { _from: string; _to: string }
+        Returns: Json
+      }
+      owner_admin_club_stats: {
+        Args: never
+        Returns: {
+          admin_count: number
+          checkins_30d: number
+          checkins_total: number
+          club_id: string
+          club_name: string
+          club_slug: string
+          created_at: string
+          days_since_activity: number
+          event_count: number
+          events_30d: number
+          feature_count: number
+          first_checkin_at: string
+          first_event_created_at: string
+          is_active: boolean
+          last_activity: string
+          last_admin_sign_in: string
+          last_checkin_at: string
+          last_event_date: string
+          member_count: number
+          members_attended: number
+          members_new_30d: number
+          next_event_date: string
+          owner_email: string
+          owner_id: string
+          owner_name: string
+          repeat_attendees: number
+          score_admin: number
+          score_event_frequency: number
+          score_features: number
+          score_recency: number
+          score_volume: number
+          second_event_created_at: string
+          unique_attendees: number
+          university_id: string
+          university_name: string
+        }[]
+      }
+      owner_admin_events: {
+        Args: {
+          _club_id?: string
+          _from?: string
+          _limit?: number
+          _offset?: number
+          _q?: string
+          _to?: string
+        }
+        Returns: Json
+      }
+      owner_admin_guard: { Args: never; Returns: undefined }
+      owner_admin_members: {
+        Args: { _limit?: number; _offset?: number; _q?: string }
+        Returns: Json
+      }
+      owner_admin_organization_detail: {
+        Args: { _club_id: string }
+        Returns: Json
+      }
+      owner_admin_organizations: {
+        Args: {
+          _dir?: string
+          _limit?: number
+          _offset?: number
+          _q?: string
+          _sort?: string
+          _status?: string
+          _university_id?: string
+        }
+        Returns: Json
+      }
+      owner_admin_overview: { Args: never; Returns: Json }
+      owner_admin_product_usage: { Args: never; Returns: Json }
+      owner_admin_retention: { Args: never; Returns: Json }
+      owner_admin_series: {
+        Args: { _bucket?: string; _from: string; _to: string }
+        Returns: Json
+      }
+      owner_admin_system_health: { Args: { _limit?: number }; Returns: Json }
+      owner_admin_users: {
+        Args: { _limit?: number; _offset?: number; _q?: string }
+        Returns: Json
       }
     }
     Enums: {

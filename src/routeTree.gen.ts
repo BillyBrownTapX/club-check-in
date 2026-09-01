@@ -19,6 +19,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as QrCodeAttendanceRouteImport } from './routes/qr-code-attendance'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PreEventHeadcountRouteImport } from './routes/pre-event-headcount'
+import { Route as OwnerAdminRouteImport } from './routes/owner-admin'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as LiveRouteImport } from './routes/live'
 import { Route as HomeRouteImport } from './routes/home'
@@ -32,9 +33,16 @@ import { Route as CampusDepartmentAttendanceRouteImport } from './routes/campus-
 import { Route as AttendanceReportsRouteImport } from './routes/attendance-reports'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as OwnerAdminIndexRouteImport } from './routes/owner-admin.index'
 import { Route as EventsIndexRouteImport } from './routes/events.index'
 import { Route as ClubsIndexRouteImport } from './routes/clubs.index'
 import { Route as PreCheckInPreTokenRouteImport } from './routes/pre-check-in.$preToken'
+import { Route as OwnerAdminUsersRouteImport } from './routes/owner-admin.users'
+import { Route as OwnerAdminProductRouteImport } from './routes/owner-admin.product'
+import { Route as OwnerAdminMembersRouteImport } from './routes/owner-admin.members'
+import { Route as OwnerAdminGrowthRouteImport } from './routes/owner-admin.growth'
+import { Route as OwnerAdminEventsRouteImport } from './routes/owner-admin.events'
+import { Route as OwnerAdminAttendanceRouteImport } from './routes/owner-admin.attendance'
 import { Route as OnboardingEventRouteImport } from './routes/onboarding.event'
 import { Route as OnboardingClubRouteImport } from './routes/onboarding.club'
 import { Route as EventsNewRouteImport } from './routes/events.new'
@@ -43,6 +51,8 @@ import { Route as DisplayQrTokenRouteImport } from './routes/display.$qrToken'
 import { Route as ClubsClubIdRouteImport } from './routes/clubs.$clubId'
 import { Route as CheckInQrTokenRouteImport } from './routes/check-in.$qrToken'
 import { Route as ApiHealthRouteImport } from './routes/api.health'
+import { Route as OwnerAdminOrganizationsIndexRouteImport } from './routes/owner-admin.organizations.index'
+import { Route as OwnerAdminOrganizationsClubIdRouteImport } from './routes/owner-admin.organizations.$clubId'
 import { Route as EventsEventIdEditRouteImport } from './routes/events.$eventId_.edit'
 import { Route as EventsEventIdDisplayRouteImport } from './routes/events.$eventId_.display'
 import { Route as ApiPublicStudentCheckInRouteImport } from './routes/api.public.student-check-in'
@@ -99,6 +109,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const PreEventHeadcountRoute = PreEventHeadcountRouteImport.update({
   id: '/pre-event-headcount',
   path: '/pre-event-headcount',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OwnerAdminRoute = OwnerAdminRouteImport.update({
+  id: '/owner-admin',
+  path: '/owner-admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NotificationsRoute = NotificationsRouteImport.update({
@@ -167,6 +182,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OwnerAdminIndexRoute = OwnerAdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => OwnerAdminRoute,
+} as any)
 const EventsIndexRoute = EventsIndexRouteImport.update({
   id: '/events/',
   path: '/events/',
@@ -181,6 +201,36 @@ const PreCheckInPreTokenRoute = PreCheckInPreTokenRouteImport.update({
   id: '/pre-check-in/$preToken',
   path: '/pre-check-in/$preToken',
   getParentRoute: () => rootRouteImport,
+} as any)
+const OwnerAdminUsersRoute = OwnerAdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => OwnerAdminRoute,
+} as any)
+const OwnerAdminProductRoute = OwnerAdminProductRouteImport.update({
+  id: '/product',
+  path: '/product',
+  getParentRoute: () => OwnerAdminRoute,
+} as any)
+const OwnerAdminMembersRoute = OwnerAdminMembersRouteImport.update({
+  id: '/members',
+  path: '/members',
+  getParentRoute: () => OwnerAdminRoute,
+} as any)
+const OwnerAdminGrowthRoute = OwnerAdminGrowthRouteImport.update({
+  id: '/growth',
+  path: '/growth',
+  getParentRoute: () => OwnerAdminRoute,
+} as any)
+const OwnerAdminEventsRoute = OwnerAdminEventsRouteImport.update({
+  id: '/events',
+  path: '/events',
+  getParentRoute: () => OwnerAdminRoute,
+} as any)
+const OwnerAdminAttendanceRoute = OwnerAdminAttendanceRouteImport.update({
+  id: '/attendance',
+  path: '/attendance',
+  getParentRoute: () => OwnerAdminRoute,
 } as any)
 const OnboardingEventRoute = OnboardingEventRouteImport.update({
   id: '/onboarding/event',
@@ -222,6 +272,18 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OwnerAdminOrganizationsIndexRoute =
+  OwnerAdminOrganizationsIndexRouteImport.update({
+    id: '/organizations/',
+    path: '/organizations/',
+    getParentRoute: () => OwnerAdminRoute,
+  } as any)
+const OwnerAdminOrganizationsClubIdRoute =
+  OwnerAdminOrganizationsClubIdRouteImport.update({
+    id: '/organizations/$clubId',
+    path: '/organizations/$clubId',
+    getParentRoute: () => OwnerAdminRoute,
+  } as any)
 const EventsEventIdEditRoute = EventsEventIdEditRouteImport.update({
   id: '/events/$eventId_/edit',
   path: '/events/$eventId/edit',
@@ -274,6 +336,7 @@ export interface FileRoutesByFullPath {
   '/home': typeof HomeRoute
   '/live': typeof LiveRoute
   '/notifications': typeof NotificationsRoute
+  '/owner-admin': typeof OwnerAdminRouteWithChildren
   '/pre-event-headcount': typeof PreEventHeadcountRoute
   '/privacy': typeof PrivacyRoute
   '/qr-code-attendance': typeof QrCodeAttendanceRoute
@@ -292,14 +355,23 @@ export interface FileRoutesByFullPath {
   '/events/new': typeof EventsNewRoute
   '/onboarding/club': typeof OnboardingClubRoute
   '/onboarding/event': typeof OnboardingEventRoute
+  '/owner-admin/attendance': typeof OwnerAdminAttendanceRoute
+  '/owner-admin/events': typeof OwnerAdminEventsRoute
+  '/owner-admin/growth': typeof OwnerAdminGrowthRoute
+  '/owner-admin/members': typeof OwnerAdminMembersRoute
+  '/owner-admin/product': typeof OwnerAdminProductRoute
+  '/owner-admin/users': typeof OwnerAdminUsersRoute
   '/pre-check-in/$preToken': typeof PreCheckInPreTokenRoute
   '/clubs/': typeof ClubsIndexRoute
   '/events/': typeof EventsIndexRoute
+  '/owner-admin/': typeof OwnerAdminIndexRoute
   '/api/health/check-in': typeof ApiHealthCheckInRoute
   '/api/health/ready': typeof ApiHealthReadyRoute
   '/api/public/student-check-in': typeof ApiPublicStudentCheckInRoute
   '/events/$eventId/display': typeof EventsEventIdDisplayRoute
   '/events/$eventId/edit': typeof EventsEventIdEditRoute
+  '/owner-admin/organizations/$clubId': typeof OwnerAdminOrganizationsClubIdRoute
+  '/owner-admin/organizations/': typeof OwnerAdminOrganizationsIndexRoute
   '/api/host/clubs/$clubId/semester-attendance.csv': typeof ApiHostClubsClubIdSemesterAttendanceDotcsvRoute
   '/api/host/events/$eventId/attendance.csv': typeof ApiHostEventsEventIdAttendanceDotcsvRoute
 }
@@ -335,14 +407,23 @@ export interface FileRoutesByTo {
   '/events/new': typeof EventsNewRoute
   '/onboarding/club': typeof OnboardingClubRoute
   '/onboarding/event': typeof OnboardingEventRoute
+  '/owner-admin/attendance': typeof OwnerAdminAttendanceRoute
+  '/owner-admin/events': typeof OwnerAdminEventsRoute
+  '/owner-admin/growth': typeof OwnerAdminGrowthRoute
+  '/owner-admin/members': typeof OwnerAdminMembersRoute
+  '/owner-admin/product': typeof OwnerAdminProductRoute
+  '/owner-admin/users': typeof OwnerAdminUsersRoute
   '/pre-check-in/$preToken': typeof PreCheckInPreTokenRoute
   '/clubs': typeof ClubsIndexRoute
   '/events': typeof EventsIndexRoute
+  '/owner-admin': typeof OwnerAdminIndexRoute
   '/api/health/check-in': typeof ApiHealthCheckInRoute
   '/api/health/ready': typeof ApiHealthReadyRoute
   '/api/public/student-check-in': typeof ApiPublicStudentCheckInRoute
   '/events/$eventId/display': typeof EventsEventIdDisplayRoute
   '/events/$eventId/edit': typeof EventsEventIdEditRoute
+  '/owner-admin/organizations/$clubId': typeof OwnerAdminOrganizationsClubIdRoute
+  '/owner-admin/organizations': typeof OwnerAdminOrganizationsIndexRoute
   '/api/host/clubs/$clubId/semester-attendance.csv': typeof ApiHostClubsClubIdSemesterAttendanceDotcsvRoute
   '/api/host/events/$eventId/attendance.csv': typeof ApiHostEventsEventIdAttendanceDotcsvRoute
 }
@@ -361,6 +442,7 @@ export interface FileRoutesById {
   '/home': typeof HomeRoute
   '/live': typeof LiveRoute
   '/notifications': typeof NotificationsRoute
+  '/owner-admin': typeof OwnerAdminRouteWithChildren
   '/pre-event-headcount': typeof PreEventHeadcountRoute
   '/privacy': typeof PrivacyRoute
   '/qr-code-attendance': typeof QrCodeAttendanceRoute
@@ -379,14 +461,23 @@ export interface FileRoutesById {
   '/events/new': typeof EventsNewRoute
   '/onboarding/club': typeof OnboardingClubRoute
   '/onboarding/event': typeof OnboardingEventRoute
+  '/owner-admin/attendance': typeof OwnerAdminAttendanceRoute
+  '/owner-admin/events': typeof OwnerAdminEventsRoute
+  '/owner-admin/growth': typeof OwnerAdminGrowthRoute
+  '/owner-admin/members': typeof OwnerAdminMembersRoute
+  '/owner-admin/product': typeof OwnerAdminProductRoute
+  '/owner-admin/users': typeof OwnerAdminUsersRoute
   '/pre-check-in/$preToken': typeof PreCheckInPreTokenRoute
   '/clubs/': typeof ClubsIndexRoute
   '/events/': typeof EventsIndexRoute
+  '/owner-admin/': typeof OwnerAdminIndexRoute
   '/api/health/check-in': typeof ApiHealthCheckInRoute
   '/api/health/ready': typeof ApiHealthReadyRoute
   '/api/public/student-check-in': typeof ApiPublicStudentCheckInRoute
   '/events/$eventId_/display': typeof EventsEventIdDisplayRoute
   '/events/$eventId_/edit': typeof EventsEventIdEditRoute
+  '/owner-admin/organizations/$clubId': typeof OwnerAdminOrganizationsClubIdRoute
+  '/owner-admin/organizations/': typeof OwnerAdminOrganizationsIndexRoute
   '/api/host/clubs/$clubId/semester-attendance.csv': typeof ApiHostClubsClubIdSemesterAttendanceDotcsvRoute
   '/api/host/events/$eventId/attendance.csv': typeof ApiHostEventsEventIdAttendanceDotcsvRoute
 }
@@ -406,6 +497,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/live'
     | '/notifications'
+    | '/owner-admin'
     | '/pre-event-headcount'
     | '/privacy'
     | '/qr-code-attendance'
@@ -424,14 +516,23 @@ export interface FileRouteTypes {
     | '/events/new'
     | '/onboarding/club'
     | '/onboarding/event'
+    | '/owner-admin/attendance'
+    | '/owner-admin/events'
+    | '/owner-admin/growth'
+    | '/owner-admin/members'
+    | '/owner-admin/product'
+    | '/owner-admin/users'
     | '/pre-check-in/$preToken'
     | '/clubs/'
     | '/events/'
+    | '/owner-admin/'
     | '/api/health/check-in'
     | '/api/health/ready'
     | '/api/public/student-check-in'
     | '/events/$eventId/display'
     | '/events/$eventId/edit'
+    | '/owner-admin/organizations/$clubId'
+    | '/owner-admin/organizations/'
     | '/api/host/clubs/$clubId/semester-attendance.csv'
     | '/api/host/events/$eventId/attendance.csv'
   fileRoutesByTo: FileRoutesByTo
@@ -467,14 +568,23 @@ export interface FileRouteTypes {
     | '/events/new'
     | '/onboarding/club'
     | '/onboarding/event'
+    | '/owner-admin/attendance'
+    | '/owner-admin/events'
+    | '/owner-admin/growth'
+    | '/owner-admin/members'
+    | '/owner-admin/product'
+    | '/owner-admin/users'
     | '/pre-check-in/$preToken'
     | '/clubs'
     | '/events'
+    | '/owner-admin'
     | '/api/health/check-in'
     | '/api/health/ready'
     | '/api/public/student-check-in'
     | '/events/$eventId/display'
     | '/events/$eventId/edit'
+    | '/owner-admin/organizations/$clubId'
+    | '/owner-admin/organizations'
     | '/api/host/clubs/$clubId/semester-attendance.csv'
     | '/api/host/events/$eventId/attendance.csv'
   id:
@@ -492,6 +602,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/live'
     | '/notifications'
+    | '/owner-admin'
     | '/pre-event-headcount'
     | '/privacy'
     | '/qr-code-attendance'
@@ -510,14 +621,23 @@ export interface FileRouteTypes {
     | '/events/new'
     | '/onboarding/club'
     | '/onboarding/event'
+    | '/owner-admin/attendance'
+    | '/owner-admin/events'
+    | '/owner-admin/growth'
+    | '/owner-admin/members'
+    | '/owner-admin/product'
+    | '/owner-admin/users'
     | '/pre-check-in/$preToken'
     | '/clubs/'
     | '/events/'
+    | '/owner-admin/'
     | '/api/health/check-in'
     | '/api/health/ready'
     | '/api/public/student-check-in'
     | '/events/$eventId_/display'
     | '/events/$eventId_/edit'
+    | '/owner-admin/organizations/$clubId'
+    | '/owner-admin/organizations/'
     | '/api/host/clubs/$clubId/semester-attendance.csv'
     | '/api/host/events/$eventId/attendance.csv'
   fileRoutesById: FileRoutesById
@@ -536,6 +656,7 @@ export interface RootRouteChildren {
   HomeRoute: typeof HomeRoute
   LiveRoute: typeof LiveRoute
   NotificationsRoute: typeof NotificationsRoute
+  OwnerAdminRoute: typeof OwnerAdminRouteWithChildren
   PreEventHeadcountRoute: typeof PreEventHeadcountRoute
   PrivacyRoute: typeof PrivacyRoute
   QrCodeAttendanceRoute: typeof QrCodeAttendanceRoute
@@ -636,6 +757,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PreEventHeadcountRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/owner-admin': {
+      id: '/owner-admin'
+      path: '/owner-admin'
+      fullPath: '/owner-admin'
+      preLoaderRoute: typeof OwnerAdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/notifications': {
       id: '/notifications'
       path: '/notifications'
@@ -727,6 +855,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/owner-admin/': {
+      id: '/owner-admin/'
+      path: '/'
+      fullPath: '/owner-admin/'
+      preLoaderRoute: typeof OwnerAdminIndexRouteImport
+      parentRoute: typeof OwnerAdminRoute
+    }
     '/events/': {
       id: '/events/'
       path: '/events'
@@ -747,6 +882,48 @@ declare module '@tanstack/react-router' {
       fullPath: '/pre-check-in/$preToken'
       preLoaderRoute: typeof PreCheckInPreTokenRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/owner-admin/users': {
+      id: '/owner-admin/users'
+      path: '/users'
+      fullPath: '/owner-admin/users'
+      preLoaderRoute: typeof OwnerAdminUsersRouteImport
+      parentRoute: typeof OwnerAdminRoute
+    }
+    '/owner-admin/product': {
+      id: '/owner-admin/product'
+      path: '/product'
+      fullPath: '/owner-admin/product'
+      preLoaderRoute: typeof OwnerAdminProductRouteImport
+      parentRoute: typeof OwnerAdminRoute
+    }
+    '/owner-admin/members': {
+      id: '/owner-admin/members'
+      path: '/members'
+      fullPath: '/owner-admin/members'
+      preLoaderRoute: typeof OwnerAdminMembersRouteImport
+      parentRoute: typeof OwnerAdminRoute
+    }
+    '/owner-admin/growth': {
+      id: '/owner-admin/growth'
+      path: '/growth'
+      fullPath: '/owner-admin/growth'
+      preLoaderRoute: typeof OwnerAdminGrowthRouteImport
+      parentRoute: typeof OwnerAdminRoute
+    }
+    '/owner-admin/events': {
+      id: '/owner-admin/events'
+      path: '/events'
+      fullPath: '/owner-admin/events'
+      preLoaderRoute: typeof OwnerAdminEventsRouteImport
+      parentRoute: typeof OwnerAdminRoute
+    }
+    '/owner-admin/attendance': {
+      id: '/owner-admin/attendance'
+      path: '/attendance'
+      fullPath: '/owner-admin/attendance'
+      preLoaderRoute: typeof OwnerAdminAttendanceRouteImport
+      parentRoute: typeof OwnerAdminRoute
     }
     '/onboarding/event': {
       id: '/onboarding/event'
@@ -804,6 +981,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/owner-admin/organizations/': {
+      id: '/owner-admin/organizations/'
+      path: '/organizations'
+      fullPath: '/owner-admin/organizations/'
+      preLoaderRoute: typeof OwnerAdminOrganizationsIndexRouteImport
+      parentRoute: typeof OwnerAdminRoute
+    }
+    '/owner-admin/organizations/$clubId': {
+      id: '/owner-admin/organizations/$clubId'
+      path: '/organizations/$clubId'
+      fullPath: '/owner-admin/organizations/$clubId'
+      preLoaderRoute: typeof OwnerAdminOrganizationsClubIdRouteImport
+      parentRoute: typeof OwnerAdminRoute
+    }
     '/events/$eventId_/edit': {
       id: '/events/$eventId_/edit'
       path: '/events/$eventId/edit'
@@ -856,6 +1047,34 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface OwnerAdminRouteChildren {
+  OwnerAdminAttendanceRoute: typeof OwnerAdminAttendanceRoute
+  OwnerAdminEventsRoute: typeof OwnerAdminEventsRoute
+  OwnerAdminGrowthRoute: typeof OwnerAdminGrowthRoute
+  OwnerAdminMembersRoute: typeof OwnerAdminMembersRoute
+  OwnerAdminProductRoute: typeof OwnerAdminProductRoute
+  OwnerAdminUsersRoute: typeof OwnerAdminUsersRoute
+  OwnerAdminIndexRoute: typeof OwnerAdminIndexRoute
+  OwnerAdminOrganizationsClubIdRoute: typeof OwnerAdminOrganizationsClubIdRoute
+  OwnerAdminOrganizationsIndexRoute: typeof OwnerAdminOrganizationsIndexRoute
+}
+
+const OwnerAdminRouteChildren: OwnerAdminRouteChildren = {
+  OwnerAdminAttendanceRoute: OwnerAdminAttendanceRoute,
+  OwnerAdminEventsRoute: OwnerAdminEventsRoute,
+  OwnerAdminGrowthRoute: OwnerAdminGrowthRoute,
+  OwnerAdminMembersRoute: OwnerAdminMembersRoute,
+  OwnerAdminProductRoute: OwnerAdminProductRoute,
+  OwnerAdminUsersRoute: OwnerAdminUsersRoute,
+  OwnerAdminIndexRoute: OwnerAdminIndexRoute,
+  OwnerAdminOrganizationsClubIdRoute: OwnerAdminOrganizationsClubIdRoute,
+  OwnerAdminOrganizationsIndexRoute: OwnerAdminOrganizationsIndexRoute,
+}
+
+const OwnerAdminRouteWithChildren = OwnerAdminRoute._addFileChildren(
+  OwnerAdminRouteChildren,
+)
+
 interface ApiHealthRouteChildren {
   ApiHealthCheckInRoute: typeof ApiHealthCheckInRoute
   ApiHealthReadyRoute: typeof ApiHealthReadyRoute
@@ -884,6 +1103,7 @@ const rootRouteChildren: RootRouteChildren = {
   HomeRoute: HomeRoute,
   LiveRoute: LiveRoute,
   NotificationsRoute: NotificationsRoute,
+  OwnerAdminRoute: OwnerAdminRouteWithChildren,
   PreEventHeadcountRoute: PreEventHeadcountRoute,
   PrivacyRoute: PrivacyRoute,
   QrCodeAttendanceRoute: QrCodeAttendanceRoute,
