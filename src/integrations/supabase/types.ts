@@ -680,6 +680,11 @@ export type Database = {
         Args: { _student_id: string }
         Returns: boolean
       }
+      owner_admin_activation: { Args: never; Returns: Json }
+      owner_admin_attendance: {
+        Args: { _from: string; _to: string }
+        Returns: Json
+      }
       owner_admin_club_stats: {
         Args: never
         Returns: {
@@ -720,7 +725,22 @@ export type Database = {
           university_name: string
         }[]
       }
+      owner_admin_events: {
+        Args: {
+          _club_id?: string
+          _from?: string
+          _limit?: number
+          _offset?: number
+          _q?: string
+          _to?: string
+        }
+        Returns: Json
+      }
       owner_admin_guard: { Args: never; Returns: undefined }
+      owner_admin_members: {
+        Args: { _limit?: number; _offset?: number; _q?: string }
+        Returns: Json
+      }
       owner_admin_organization_detail: {
         Args: { _club_id: string }
         Returns: Json
@@ -738,8 +758,15 @@ export type Database = {
         Returns: Json
       }
       owner_admin_overview: { Args: never; Returns: Json }
+      owner_admin_product_usage: { Args: never; Returns: Json }
+      owner_admin_retention: { Args: never; Returns: Json }
       owner_admin_series: {
         Args: { _bucket?: string; _from: string; _to: string }
+        Returns: Json
+      }
+      owner_admin_system_health: { Args: { _limit?: number }; Returns: Json }
+      owner_admin_users: {
+        Args: { _limit?: number; _offset?: number; _q?: string }
         Returns: Json
       }
     }
