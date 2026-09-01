@@ -14,6 +14,7 @@ import {
   Ellipsis,
   ChevronRight,
   Gauge,
+  Search,
   LineChart as LineChartIcon,
   LogOut,
   RefreshCw,
@@ -711,12 +712,15 @@ export function SearchField({
   placeholder: string;
 }) {
   return (
-    <Input
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      className="h-9 w-full sm:w-72"
-    />
+    <label className="flex w-full items-center gap-2 rounded-2xl bg-muted px-3 sm:w-72 sm:rounded-md sm:bg-transparent sm:px-0">
+      <Search className="size-4 shrink-0 text-muted-foreground sm:hidden" />
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="h-10 w-full min-w-0 border-0 bg-transparent px-0 text-[15px] shadow-none focus-visible:ring-0 sm:h-9 sm:border sm:bg-background sm:px-3 sm:text-sm sm:shadow-xs sm:focus-visible:ring-[3px]"
+      />
+    </label>
   );
 }
 
@@ -734,20 +738,27 @@ export function Pager({
   const from = total === 0 ? 0 : offset + 1;
   const to = Math.min(total, offset + limit);
   return (
-    <div className="mt-3 flex items-center justify-between gap-3">
-      <p className="text-xs text-muted-foreground">
+    <div className="mt-3 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+      <p className="text-center text-xs text-muted-foreground sm:text-left">
         {fmtNumber(from)}–{fmtNumber(to)} of {fmtNumber(total)}
       </p>
-      <div className="flex gap-1">
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-1">
         <Button
           variant="outline"
-          size="sm"
+          className="ios-press h-11 rounded-2xl text-[15px] sm:h-8 sm:rounded-md sm:px-3 sm:text-sm"
           disabled={offset <= 0}
           onClick={() => onOffset(Math.max(0, offset - limit))}
         >
           <ChevronLeft className="size-4" />
+          <span className="sm:hidden">Previous</span>
         </Button>
-        <Button variant="outline" size="sm" disabled={to >= total} onClick={() => onOffset(offset + limit)}>
+        <Button
+          variant="outline"
+          className="ios-press h-11 rounded-2xl text-[15px] sm:h-8 sm:rounded-md sm:px-3 sm:text-sm"
+          disabled={to >= total}
+          onClick={() => onOffset(offset + limit)}
+        >
+          <span className="sm:hidden">Next</span>
           <ChevronRight className="size-4" />
         </Button>
       </div>
