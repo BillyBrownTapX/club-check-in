@@ -11,6 +11,8 @@ import {
 } from "@/components/attendance-hq/host-management";
 import { createEvent, duplicateEvent, getEventFormPayload } from "@/lib/attendance-hq.functions";
 import { queryKeys } from "@/lib/query-keys";
+import { clearFirstRun, isFirstRunActive } from "@/lib/host-first-run";
+
 
 function EventCreateError({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
