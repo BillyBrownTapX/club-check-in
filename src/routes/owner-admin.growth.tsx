@@ -189,9 +189,9 @@ function OwnerGrowthRoute() {
                             className={cn(
                               "inline-block w-full rounded px-1.5 py-1 text-xs tabular-nums",
                               cell.retained >= 70
-                                ? "bg-emerald-500/20 text-emerald-500"
+                                ? "bg-success/20 text-success"
                                 : cell.retained >= 35
-                                  ? "bg-amber-500/18 text-amber-500"
+                                  ? "bg-warning/18 text-warning"
                                   : "bg-destructive/12 text-destructive",
                             )}
                           >
