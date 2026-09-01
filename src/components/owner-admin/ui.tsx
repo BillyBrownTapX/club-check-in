@@ -496,27 +496,29 @@ export function Pager({
 export function DataTable<T>({
   rows,
   columns,
-  empty = "No rows.",
+  empty = "No rows recorded yet.",
   rowKey,
+  minWidth = 760,
 }: {
   rows: T[];
   columns: { key: string; header: string; align?: "left" | "right"; render: (row: T) => React.ReactNode }[];
   empty?: string;
   rowKey: (row: T, index: number) => string;
+  minWidth?: number;
 }) {
   if (!rows.length) {
-    return <p className="py-8 text-center text-sm text-muted-foreground">{empty}</p>;
+    return <EmptyState title={empty} hint="This table reads live application records — nothing matches yet." />;
   }
   return (
-    <div className="-mx-4 overflow-x-auto px-4">
-      <table className="w-full min-w-[720px] border-collapse text-sm">
-        <thead>
-          <tr className="border-b border-border/60 text-left">
+    <div className="-mx-4 max-h-[70vh] overflow-auto px-4">
+      <table className="w-full border-collapse text-sm" style={{ minWidth }}>
+        <thead className="sticky top-0 z-10">
+          <tr className="text-left">
             {columns.map((col) => (
               <th
                 key={col.key}
                 className={cn(
-                  "px-2 py-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground",
+                  "border-b border-border/60 bg-card px-2 py-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground",
                   col.align === "right" && "text-right",
                 )}
               >
@@ -527,7 +529,10 @@ export function DataTable<T>({
         </thead>
         <tbody>
           {rows.map((row, index) => (
-            <tr key={rowKey(row, index)} className="border-b border-border/40 last:border-0 hover:bg-muted/40">
+            <tr
+              key={rowKey(row, index)}
+              className="border-b border-border/40 transition-colors last:border-0 hover:bg-primary/[0.04]"
+            >
               {columns.map((col) => (
                 <td key={col.key} className={cn("px-2 py-2.5 align-middle", col.align === "right" && "text-right tabular-nums")}>
                   {col.render(row)}
@@ -541,20 +546,33 @@ export function DataTable<T>({
   );
 }
 
-export function LoadingBlock({ label = "Loading…" }: { label?: string }) {
+export function LoadingBlock({ label = "Loading live data…" }: { label?: string }) {
   return <div className="py-16 text-center text-sm text-muted-foreground">{label}</div>;
 }
 
 export function ErrorBlock({ message }: { message?: string }) {
   return (
-    <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+    <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
       {message ?? "Unable to load this report."}
     </div>
   );
 }
 
 // ── Charts ──────────────────────────────────────────────────────────────────
+/**
+ * Series palette. These are the project's design-system chart tokens, so charts
+ * follow light/dark theming instead of hardcoded hex.
+ */
+export const CHART_COLORS = [
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+] as const;
+
 const CHART_MARGIN = { top: 6, right: 8, bottom: 0, left: -18 };
+
 
 function tooltipStyle() {
   return {
