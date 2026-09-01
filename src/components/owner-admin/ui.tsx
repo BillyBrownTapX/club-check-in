@@ -225,16 +225,29 @@ export function OwnerAdminShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="min-w-0 flex-1">
-        {/* Command bar */}
-        <header className="sticky top-0 z-30 border-b border-border/60 bg-background/85 backdrop-blur">
+        {/* Mobile: iOS frosted navigation bar */}
+        <header className="sticky top-0 z-30 px-3 pt-safe-1 pb-2 lg:hidden">
+          <div className="ios-glass flex items-center gap-2 rounded-2xl px-3 py-2">
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/12 text-primary">
+              <ShieldCheck className="size-3.5" />
+            </span>
+            <p className="min-w-0 flex-1 truncate font-display text-[15px] font-bold tracking-tight">{current.label}</p>
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              aria-label="Refresh live data"
+              className="ios-press flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"
+            >
+              <RefreshCw className={cn("size-4", refreshing && "animate-spin")} />
+            </button>
+          </div>
+        </header>
+
+        {/* Desktop command bar */}
+        <header className="sticky top-0 z-30 hidden border-b border-border/60 bg-background/85 backdrop-blur lg:block">
           <div className="flex flex-wrap items-center gap-3 px-4 py-3 lg:px-6">
-            <div className="flex items-center gap-2 lg:hidden">
-              <span className="flex size-8 items-center justify-center rounded-lg bg-primary/12 text-primary">
-                <ShieldCheck className="size-4" />
-              </span>
-              <p className="text-sm font-semibold">Owner console</p>
-            </div>
-            <div className="hidden leading-tight lg:block">
+            <div className="leading-tight">
               <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 {current.group}
               </p>
@@ -242,48 +255,152 @@ export function OwnerAdminShell({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="ml-auto flex items-center gap-2">
-              <span className="hidden text-[11px] text-muted-foreground sm:inline">
+              <span className="text-[11px] text-muted-foreground">
                 Live data as of {loadedAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
               </span>
               <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
                 <RefreshCw className={cn("mr-1.5 size-3.5", refreshing && "animate-spin")} />
                 {refreshing ? "Refreshing…" : "Refresh"}
               </Button>
-              <Button variant="ghost" size="sm" className="lg:hidden" onClick={handleSignOut} disabled={signingOut}>
-                <LogOut className="size-3.5" />
-              </Button>
             </div>
           </div>
-
-          {/* Mobile / tablet nav strip */}
-          <nav className="flex gap-1 overflow-x-auto px-4 pb-2 lg:hidden">
-            {NAV.map((item) => {
-              const active = isActive(pathname, item);
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={cn(
-                    "flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
-                    active
-                      ? "bg-primary/12 text-primary"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                  )}
-                >
-                  <Icon className="size-3.5" />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
         </header>
 
-        <main className="mx-auto w-full max-w-[1500px] px-4 py-6 lg:px-6 lg:py-8">{children}</main>
+        <main className="mx-auto w-full max-w-[1500px] px-4 pb-28 pt-1 lg:px-6 lg:py-8 lg:pb-10">{children}</main>
+
+        {/* Mobile: iOS bottom tab bar */}
+        <OwnerTabBar
+          pathname={pathname}
+          email={user?.email ?? null}
+          loadedAt={loadedAt}
+          signingOut={signingOut}
+          onSignOut={handleSignOut}
+        />
       </div>
     </div>
   );
 }
+
+const PRIMARY_TABS: { to: string; label: string; icon: typeof Gauge; exact?: boolean }[] = [
+  { to: "/owner-admin", label: "Overview", icon: Gauge, exact: true },
+  { to: "/owner-admin/organizations", label: "Orgs", icon: Building2 },
+  { to: "/owner-admin/members", label: "People", icon: Users },
+  { to: "/owner-admin/events", label: "Events", icon: CalendarRange },
+];
+
+const MORE_ITEMS = NAV.filter((item) => !PRIMARY_TABS.some((tab) => tab.to === item.to));
+
+function OwnerTabBar({
+  pathname,
+  email,
+  loadedAt,
+  signingOut,
+  onSignOut,
+}: {
+  pathname: string;
+  email: string | null;
+  loadedAt: Date;
+  signingOut: boolean;
+  onSignOut: () => void;
+}) {
+  const [moreOpen, setMoreOpen] = React.useState(false);
+  const moreActive = MORE_ITEMS.some((item) => isActive(pathname, item));
+
+  return (
+    <>
+      {moreOpen ? (
+        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true">
+          <button
+            type="button"
+            aria-label="Close menu"
+            className="absolute inset-0 bg-foreground/25 backdrop-blur-[2px]"
+            onClick={() => setMoreOpen(false)}
+          />
+          <div className="absolute inset-x-0 bottom-0 rounded-t-[26px] border-t border-border/60 bg-card px-4 pb-safe-1 pt-3 shadow-[0_-20px_50px_-24px_rgba(0,0,0,0.4)]">
+            <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-muted-foreground/30" aria-hidden="true" />
+            <p className="ios-section-label px-3 mb-2">More reports</p>
+            <div className="ios-grouped">
+              {MORE_ITEMS.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    onClick={() => setMoreOpen(false)}
+                    className="ios-list-row"
+                  >
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <Icon className="size-[18px]" />
+                    </span>
+                    <span className="min-w-0 flex-1 text-[15px] font-medium">{item.label}</span>
+                    <ChevronRight className="size-4 shrink-0 text-muted-foreground/70" />
+                  </Link>
+                );
+              })}
+            </div>
+
+            <p className="ios-section-label px-3 mb-2 mt-5">Account</p>
+            <div className="ios-grouped mb-4">
+              {email ? (
+                <div className="ios-list-row">
+                  <span className="min-w-0 flex-1 truncate text-[15px] font-medium">{email}</span>
+                </div>
+              ) : null}
+              <div className="ios-list-row">
+                <span className="min-w-0 flex-1 text-[15px] font-medium">Live data as of</span>
+                <span className="shrink-0 text-[14px] text-muted-foreground">
+                  {loadedAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                </span>
+              </div>
+              <button type="button" className="ios-list-row" onClick={onSignOut} disabled={signingOut}>
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
+                  <LogOut className="size-[18px]" />
+                </span>
+                <span className="min-w-0 flex-1 text-left text-[15px] font-medium text-destructive">
+                  {signingOut ? "Signing out…" : "Sign out"}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <nav className="fixed inset-x-0 bottom-0 z-30 px-3 pb-safe-1 pt-2 lg:hidden">
+        <div className="ios-glass grid grid-cols-5 gap-1 rounded-[22px] px-1.5 py-1.5">
+          {PRIMARY_TABS.map((tab) => {
+            const active = isActive(pathname, tab);
+            const Icon = tab.icon;
+            return (
+              <Link
+                key={tab.to}
+                to={tab.to}
+                className={cn(
+                  "ios-press flex min-w-0 flex-col items-center gap-1 rounded-2xl px-1 py-1.5 transition-colors",
+                  active ? "text-primary" : "text-muted-foreground",
+                )}
+              >
+                <Icon className="size-[21px] shrink-0" />
+                <span className="w-full truncate text-center text-[10px] font-semibold">{tab.label}</span>
+              </Link>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => setMoreOpen((v) => !v)}
+            className={cn(
+              "ios-press flex min-w-0 flex-col items-center gap-1 rounded-2xl px-1 py-1.5 transition-colors",
+              moreActive || moreOpen ? "text-primary" : "text-muted-foreground",
+            )}
+          >
+            <Ellipsis className="size-[21px] shrink-0" />
+            <span className="w-full truncate text-center text-[10px] font-semibold">More</span>
+          </button>
+        </div>
+      </nav>
+    </>
+  );
+}
+
 
 
 export function PageHeading({
