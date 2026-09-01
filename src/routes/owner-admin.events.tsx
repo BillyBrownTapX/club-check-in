@@ -59,6 +59,7 @@ function OwnerEventsRoute() {
   return (
     <>
       <PageHeading
+        eyebrow="Activity"
         title="Events"
         description="Meeting cadence and turnout across every organization, including zero-attendance events worth a nudge."
       />

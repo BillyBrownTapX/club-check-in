@@ -60,6 +60,7 @@ function OwnerGrowthRoute() {
   return (
     <>
       <PageHeading
+        eyebrow="Platform"
         title="Activation &amp; retention"
         description="How quickly new accounts reach real value — and whether they keep coming back."
       />

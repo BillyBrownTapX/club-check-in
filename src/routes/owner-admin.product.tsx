@@ -59,6 +59,7 @@ function OwnerProductRoute() {
   return (
     <>
       <PageHeading
+        eyebrow="Activity"
         title="Product &amp; health"
         description="Which capabilities organizations actually adopt, and whether the platform is behaving."
       />

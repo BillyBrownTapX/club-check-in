@@ -63,6 +63,7 @@ function OwnerUsersRoute() {
   return (
     <>
       <PageHeading
+        eyebrow="Accounts"
         title="Users"
         description="Everyone who has created an Attendance HQ account, with sign-in recency and organization coverage."
       />

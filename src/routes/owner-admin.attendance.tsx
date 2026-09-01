@@ -67,6 +67,7 @@ function OwnerAttendanceRoute() {
   return (
     <>
       <PageHeading
+        eyebrow="Activity"
         title="Attendance activity"
         description="Where and how members actually check in — the strongest signal of real product usage."
         actions={

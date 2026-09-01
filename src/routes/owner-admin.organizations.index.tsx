@@ -115,6 +115,7 @@ function OwnerOrganizationsRoute() {
   return (
     <>
       <PageHeading
+        eyebrow="Accounts"
         title="Organizations"
         description="Clubs and departments using Attendance HQ, scored on recency, event cadence, volume, admin engagement and feature adoption."
       />

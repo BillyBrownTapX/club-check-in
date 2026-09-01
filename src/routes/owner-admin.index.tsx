@@ -79,6 +79,7 @@ function OwnerOverviewRoute() {
   return (
     <>
       <PageHeading
+        eyebrow="Platform"
         title="Platform overview"
         description="Every organization, host, member, event and check-in across Attendance HQ."
         actions={
