@@ -80,8 +80,14 @@ function ClubsRoute() {
 
   const clubs = clubsQuery.data ?? [];
   const universities = universitiesQuery.data ?? [];
-  const fetching = clubsQuery.isLoading || universitiesQuery.isLoading;
-  const error = clubsQuery.error ?? universitiesQuery.error;
+  const gateLoading = loading || !user;
+  // Only treat this as "loading" while we have nothing to show. Background
+  // refetches keep the existing rows mounted so a tap in flight never lands
+  // on a node that gets swapped out mid-gesture.
+  const fetching =
+    gateLoading ||
+    ((clubsQuery.isLoading || universitiesQuery.isLoading) && clubs.length === 0);
+  const error = gateLoading ? null : (clubsQuery.error ?? universitiesQuery.error);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -89,15 +95,13 @@ function ClubsRoute() {
     return clubs.filter((c) => [c.club_name, c.universities?.name, c.description].filter(Boolean).join(" ").toLowerCase().includes(q));
   }, [clubs, query]);
 
-  if (loading || !user) return <HostAppShell><div className="py-16 text-center text-sm text-muted-foreground">Loading…</div></HostAppShell>;
-
   return (
     <HostAppShell>
       <LargeTitleHeader
         title="Clubs"
         subtitle="Your organizations and university chapters."
         trailing={
-          <Button variant="hero" size="sm" className="rounded-full" onClick={() => setOpen(true)}>
+          <Button variant="hero" size="sm" className="rounded-full" onClick={() => setOpen(true)} disabled={gateLoading}>
             <Plus className="h-4 w-4" /> New
           </Button>
         }
@@ -109,7 +113,21 @@ function ClubsRoute() {
 
       <div className="mt-5">
         {fetching ? (
-          <div className="ios-card rounded-3xl p-6 text-center text-sm text-muted-foreground">Loading…</div>
+          <>
+            <SectionLabel>Loading…</SectionLabel>
+            <div className="space-y-3" aria-hidden>
+              {[0, 1, 2].map((i) => (
+                <div key={i} className="ios-card flex items-center gap-4 rounded-2xl p-4">
+                  <div className="h-12 w-12 shrink-0 animate-pulse rounded-2xl bg-muted" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="h-4 w-2/5 animate-pulse rounded-full bg-muted" />
+                    <div className="h-3 w-3/5 animate-pulse rounded-full bg-muted" />
+                    <div className="h-3 w-1/3 animate-pulse rounded-full bg-muted" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         ) : error ? (
           <div className="ios-card rounded-3xl p-6 text-center text-sm text-muted-foreground">{getManagementErrorMessage(error, "Unable to load clubs.")}</div>
         ) : filtered.length === 0 ? (
@@ -127,6 +145,7 @@ function ClubsRoute() {
           </>
         )}
       </div>
+
 
       <ClubDialog
         open={open}
