@@ -5,6 +5,7 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 
 import { useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
 import {
+  CHART_COLORS,
   DataTable,
   ErrorBlock,
   KpiCard,
