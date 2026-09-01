@@ -1826,12 +1826,14 @@ async function createAttendanceRecord(input: {
 }) {
   const existingAttendance = await getExistingAttendance(input.event.id, input.studentId);
   if (existingAttendance) {
+    void recordDuplicateAttempt(input.event.id, input.method);
     return {
       ok: false as const,
       state: "already_checked_in" as const,
       checkedInAt: existingAttendance.checked_in_at,
     };
   }
+
 
   const { data: attendance, error } = await (await getSupabaseAdmin())
     .from("attendance_records")
