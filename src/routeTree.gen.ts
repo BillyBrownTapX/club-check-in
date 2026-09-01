@@ -39,6 +39,7 @@ import { Route as ClubsIndexRouteImport } from './routes/clubs.index'
 import { Route as PreCheckInPreTokenRouteImport } from './routes/pre-check-in.$preToken'
 import { Route as OwnerAdminUsersRouteImport } from './routes/owner-admin.users'
 import { Route as OwnerAdminMembersRouteImport } from './routes/owner-admin.members'
+import { Route as OwnerAdminEventsRouteImport } from './routes/owner-admin.events'
 import { Route as OnboardingEventRouteImport } from './routes/onboarding.event'
 import { Route as OnboardingClubRouteImport } from './routes/onboarding.club'
 import { Route as EventsNewRouteImport } from './routes/events.new'
@@ -208,6 +209,11 @@ const OwnerAdminMembersRoute = OwnerAdminMembersRouteImport.update({
   path: '/members',
   getParentRoute: () => OwnerAdminRoute,
 } as any)
+const OwnerAdminEventsRoute = OwnerAdminEventsRouteImport.update({
+  id: '/events',
+  path: '/events',
+  getParentRoute: () => OwnerAdminRoute,
+} as any)
 const OnboardingEventRoute = OnboardingEventRouteImport.update({
   id: '/onboarding/event',
   path: '/onboarding/event',
@@ -331,6 +337,7 @@ export interface FileRoutesByFullPath {
   '/events/new': typeof EventsNewRoute
   '/onboarding/club': typeof OnboardingClubRoute
   '/onboarding/event': typeof OnboardingEventRoute
+  '/owner-admin/events': typeof OwnerAdminEventsRoute
   '/owner-admin/members': typeof OwnerAdminMembersRoute
   '/owner-admin/users': typeof OwnerAdminUsersRoute
   '/pre-check-in/$preToken': typeof PreCheckInPreTokenRoute
@@ -379,6 +386,7 @@ export interface FileRoutesByTo {
   '/events/new': typeof EventsNewRoute
   '/onboarding/club': typeof OnboardingClubRoute
   '/onboarding/event': typeof OnboardingEventRoute
+  '/owner-admin/events': typeof OwnerAdminEventsRoute
   '/owner-admin/members': typeof OwnerAdminMembersRoute
   '/owner-admin/users': typeof OwnerAdminUsersRoute
   '/pre-check-in/$preToken': typeof PreCheckInPreTokenRoute
@@ -429,6 +437,7 @@ export interface FileRoutesById {
   '/events/new': typeof EventsNewRoute
   '/onboarding/club': typeof OnboardingClubRoute
   '/onboarding/event': typeof OnboardingEventRoute
+  '/owner-admin/events': typeof OwnerAdminEventsRoute
   '/owner-admin/members': typeof OwnerAdminMembersRoute
   '/owner-admin/users': typeof OwnerAdminUsersRoute
   '/pre-check-in/$preToken': typeof PreCheckInPreTokenRoute
@@ -480,6 +489,7 @@ export interface FileRouteTypes {
     | '/events/new'
     | '/onboarding/club'
     | '/onboarding/event'
+    | '/owner-admin/events'
     | '/owner-admin/members'
     | '/owner-admin/users'
     | '/pre-check-in/$preToken'
@@ -528,6 +538,7 @@ export interface FileRouteTypes {
     | '/events/new'
     | '/onboarding/club'
     | '/onboarding/event'
+    | '/owner-admin/events'
     | '/owner-admin/members'
     | '/owner-admin/users'
     | '/pre-check-in/$preToken'
@@ -577,6 +588,7 @@ export interface FileRouteTypes {
     | '/events/new'
     | '/onboarding/club'
     | '/onboarding/event'
+    | '/owner-admin/events'
     | '/owner-admin/members'
     | '/owner-admin/users'
     | '/pre-check-in/$preToken'
@@ -849,6 +861,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OwnerAdminMembersRouteImport
       parentRoute: typeof OwnerAdminRoute
     }
+    '/owner-admin/events': {
+      id: '/owner-admin/events'
+      path: '/events'
+      fullPath: '/owner-admin/events'
+      preLoaderRoute: typeof OwnerAdminEventsRouteImport
+      parentRoute: typeof OwnerAdminRoute
+    }
     '/onboarding/event': {
       id: '/onboarding/event'
       path: '/onboarding/event'
@@ -972,6 +991,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface OwnerAdminRouteChildren {
+  OwnerAdminEventsRoute: typeof OwnerAdminEventsRoute
   OwnerAdminMembersRoute: typeof OwnerAdminMembersRoute
   OwnerAdminUsersRoute: typeof OwnerAdminUsersRoute
   OwnerAdminIndexRoute: typeof OwnerAdminIndexRoute
@@ -980,6 +1000,7 @@ interface OwnerAdminRouteChildren {
 }
 
 const OwnerAdminRouteChildren: OwnerAdminRouteChildren = {
+  OwnerAdminEventsRoute: OwnerAdminEventsRoute,
   OwnerAdminMembersRoute: OwnerAdminMembersRoute,
   OwnerAdminUsersRoute: OwnerAdminUsersRoute,
   OwnerAdminIndexRoute: OwnerAdminIndexRoute,
