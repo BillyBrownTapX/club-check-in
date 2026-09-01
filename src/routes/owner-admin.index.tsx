@@ -5,6 +5,7 @@ import { createFileRoute } from "@tanstack/react-router";
 
 import { useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
 import {
+  CHART_COLORS,
   ErrorBlock,
   KpiCard,
   KpiGrid,
@@ -155,7 +156,7 @@ function OwnerOverviewRoute() {
             <TrendArea
               data={chartData}
               xKey="label"
-              series={[{ key: "checkIns", label: "Check-ins", color: "hsl(var(--primary))" }]}
+              series={[{ key: "checkIns", label: "Check-ins", color: CHART_COLORS[0] }]}
             />
           )}
         </SectionCard>
@@ -167,8 +168,8 @@ function OwnerOverviewRoute() {
               data={chartData}
               xKey="label"
               series={[
-                { key: "totalOrganizations", label: "Total organizations", color: "hsl(var(--primary))" },
-                { key: "newOrganizations", label: "New", color: "#22c55e" },
+                { key: "totalOrganizations", label: "Total organizations", color: CHART_COLORS[0] },
+                { key: "newOrganizations", label: "New", color: CHART_COLORS[2] },
               ]}
             />
           )}
@@ -180,7 +181,7 @@ function OwnerOverviewRoute() {
             <TrendArea
               data={chartData}
               xKey="label"
-              series={[{ key: "eventsCreated", label: "Events", color: "#38bdf8" }]}
+              series={[{ key: "eventsCreated", label: "Events", color: CHART_COLORS[3] }]}
             />
           )}
         </SectionCard>
@@ -192,8 +193,8 @@ function OwnerOverviewRoute() {
               data={chartData}
               xKey="label"
               series={[
-                { key: "activeOrganizations", label: "Active organizations", color: "#f59e0b" },
-                { key: "newMembers", label: "New members", color: "#a78bfa" },
+                { key: "activeOrganizations", label: "Active organizations", color: CHART_COLORS[1] },
+                { key: "newMembers", label: "New members", color: CHART_COLORS[4] },
               ]}
             />
           )}

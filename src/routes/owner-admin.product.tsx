@@ -138,7 +138,7 @@ function OwnerProductRoute() {
               xKey="label"
               valueKey="errors"
               label="Errors"
-              color="hsl(var(--destructive))"
+              color="var(--destructive)"
             />
           )}
         </SectionCard>

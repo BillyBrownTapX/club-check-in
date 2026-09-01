@@ -106,7 +106,7 @@ function OwnerAttendanceRoute() {
             xKey="label"
             valueKey="checkIns"
             label="Check-ins"
-            color="#38bdf8"
+            color={CHART_COLORS[3]}
           />
         </SectionCard>
       </div>
