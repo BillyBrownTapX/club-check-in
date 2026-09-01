@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Link, createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { Activity, CalendarPlus, ChevronRight, ListChecks, Plus, QrCode } from "lucide-react";
 import { useAttendanceAuth, useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
@@ -10,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { getHostClubSummaries, getHostEvents } from "@/lib/attendance-hq.functions";
 import { formatEventDate, formatEventTime } from "@/lib/attendance-hq";
 import { queryKeys } from "@/lib/query-keys";
+
 
 function HomeError({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
