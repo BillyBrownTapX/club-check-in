@@ -20,7 +20,7 @@ export type VerticalPageProps = {
       | "/club-attendance-tracker"
       | "/greek-life-attendance"
       | "/church-attendance-app"
-      | "/vs-google-forms"
+      | "/vs-google-forms" | "/campus-department-attendance"
       | "/pre-event-headcount"
       | "/attendance-reports"
       | "/club-officer-roles";
