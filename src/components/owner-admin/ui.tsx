@@ -394,6 +394,145 @@ export function KpiGrid({ children }: { children: React.ReactNode }) {
   return <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{children}</div>;
 }
 
+// ── Plain-language, at-a-glance pieces (Apple-inspired) ─────────────────────
+/**
+ * Oversized headline number with a full-sentence caption. Used for the three
+ * "how many people are on the app" figures at the top of the overview.
+ */
+export function HeroStat({
+  value,
+  label,
+  caption,
+  emphasis = false,
+}: {
+  value: React.ReactNode;
+  label: string;
+  caption?: string;
+  emphasis?: boolean;
+}) {
+  return (
+    <div className="min-w-0 py-1">
+      <p
+        className={cn(
+          "font-display text-[clamp(2.5rem,7vw,4rem)] font-semibold leading-[0.95] tracking-[-0.03em] tabular-nums",
+          emphasis ? "text-primary" : "text-foreground",
+        )}
+      >
+        {value}
+      </p>
+      <p className="mt-2 text-[15px] font-medium text-foreground">{label}</p>
+      {caption ? <p className="mt-0.5 text-[13px] text-muted-foreground">{caption}</p> : null}
+    </div>
+  );
+}
+
+/** Soft, roomy panel for the simplified screens. */
+export function GlanceCard({
+  title,
+  question,
+  children,
+  footnote,
+  className,
+}: {
+  title: string;
+  question?: string;
+  children: React.ReactNode;
+  footnote?: string;
+  className?: string;
+}) {
+  return (
+    <section
+      className={cn(
+        "rounded-[26px] border border-border/50 bg-card/90 p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_24px_48px_-32px_rgba(0,0,0,0.28)] backdrop-blur",
+        className,
+      )}
+    >
+      <header className="mb-5">
+        <h2 className="text-[17px] font-semibold tracking-tight">{title}</h2>
+        {question ? <p className="mt-1 text-[13px] text-muted-foreground">{question}</p> : null}
+      </header>
+      {children}
+      {footnote ? <p className="mt-5 border-t border-border/50 pt-3 text-[12px] text-muted-foreground">{footnote}</p> : null}
+    </section>
+  );
+}
+
+/**
+ * Single-value ring. Deliberately simple: one filled arc, the percentage in the
+ * middle, and a sentence underneath — readable at a glance with no legend.
+ */
+export function StatRing({
+  percent,
+  centerLabel,
+  size = 168,
+  tone = "var(--chart-1)",
+}: {
+  percent: number;
+  centerLabel?: string;
+  size?: number;
+  tone?: string;
+}) {
+  const safe = Math.max(0, Math.min(100, Number.isFinite(percent) ? percent : 0));
+  const stroke = 14;
+  const radius = (size - stroke) / 2;
+  const circumference = 2 * Math.PI * radius;
+  const dash = (safe / 100) * circumference;
+  return (
+    <div className="relative shrink-0" style={{ width: size, height: size }}>
+      <svg width={size} height={size} className="-rotate-90" role="presentation">
+        <circle cx={size / 2} cy={size / 2} r={radius} fill="none" stroke="var(--muted)" strokeWidth={stroke} />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={radius}
+          fill="none"
+          stroke={tone}
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={`${dash} ${circumference - dash}`}
+          className="transition-[stroke-dasharray] duration-700 ease-out"
+        />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span className="font-display text-[30px] font-semibold leading-none tabular-nums">{Math.round(safe)}%</span>
+        {centerLabel ? <span className="mt-1 px-4 text-center text-[11px] text-muted-foreground">{centerLabel}</span> : null}
+      </div>
+    </div>
+  );
+}
+
+/** Horizontal labelled bars — the simplest way to compare a few buckets. */
+export function PlainBars({
+  rows,
+  unit = "people",
+}: {
+  rows: { label: string; value: number }[];
+  unit?: string;
+}) {
+  const max = Math.max(1, ...rows.map((r) => r.value));
+  return (
+    <div className="space-y-3.5">
+      {rows.map((row) => (
+        <div key={row.label}>
+          <div className="mb-1.5 flex items-baseline justify-between gap-3">
+            <span className="text-[13px] text-foreground">{row.label}</span>
+            <span className="text-[13px] font-medium tabular-nums text-muted-foreground">
+              {fmtNumber(row.value)} {unit}
+            </span>
+          </div>
+          <div className="h-2.5 overflow-hidden rounded-full bg-muted">
+            <div
+              className="h-full rounded-full bg-primary/80 transition-[width] duration-700 ease-out"
+              style={{ width: `${Math.max(row.value > 0 ? 4 : 0, (row.value / max) * 100)}%` }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+
 /** Explicit "nothing recorded yet" state so a real zero never reads as a broken widget. */
 export function EmptyState({ title, hint }: { title: string; hint?: string }) {
   return (
