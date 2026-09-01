@@ -79,6 +79,18 @@ function SettingsRoute() {
         </>
       ) : null}
 
+      {/* Owner-only entry point. The probe returns a boolean and nothing else,
+          and the console itself re-verifies on the server. */}
+      {ownerMe.data?.isOwnerAdmin ? (
+        <>
+          <SectionLabel className="mt-6">Attendance HQ</SectionLabel>
+          <GroupedList>
+            <ListRow icon={Gauge} label="Owner console" detail="Platform analytics and health" to="/owner-admin" />
+          </GroupedList>
+        </>
+      ) : null}
+
+
       <SectionLabel className="mt-6">App</SectionLabel>
       <InstallButton />
 
