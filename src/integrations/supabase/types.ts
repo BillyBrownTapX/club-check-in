@@ -680,6 +680,68 @@ export type Database = {
         Args: { _student_id: string }
         Returns: boolean
       }
+      owner_admin_club_stats: {
+        Args: never
+        Returns: {
+          admin_count: number
+          checkins_30d: number
+          checkins_total: number
+          club_id: string
+          club_name: string
+          club_slug: string
+          created_at: string
+          days_since_activity: number
+          event_count: number
+          events_30d: number
+          feature_count: number
+          first_checkin_at: string
+          first_event_created_at: string
+          is_active: boolean
+          last_activity: string
+          last_admin_sign_in: string
+          last_checkin_at: string
+          last_event_date: string
+          member_count: number
+          members_attended: number
+          members_new_30d: number
+          next_event_date: string
+          owner_email: string
+          owner_id: string
+          owner_name: string
+          repeat_attendees: number
+          score_admin: number
+          score_event_frequency: number
+          score_features: number
+          score_recency: number
+          score_volume: number
+          second_event_created_at: string
+          unique_attendees: number
+          university_id: string
+          university_name: string
+        }[]
+      }
+      owner_admin_guard: { Args: never; Returns: undefined }
+      owner_admin_organization_detail: {
+        Args: { _club_id: string }
+        Returns: Json
+      }
+      owner_admin_organizations: {
+        Args: {
+          _dir?: string
+          _limit?: number
+          _offset?: number
+          _q?: string
+          _sort?: string
+          _status?: string
+          _university_id?: string
+        }
+        Returns: Json
+      }
+      owner_admin_overview: { Args: never; Returns: Json }
+      owner_admin_series: {
+        Args: { _bucket?: string; _from: string; _to: string }
+        Returns: Json
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
