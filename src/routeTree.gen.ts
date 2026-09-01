@@ -37,6 +37,7 @@ import { Route as OwnerAdminIndexRouteImport } from './routes/owner-admin.index'
 import { Route as EventsIndexRouteImport } from './routes/events.index'
 import { Route as ClubsIndexRouteImport } from './routes/clubs.index'
 import { Route as PreCheckInPreTokenRouteImport } from './routes/pre-check-in.$preToken'
+import { Route as OwnerAdminUsersRouteImport } from './routes/owner-admin.users'
 import { Route as OnboardingEventRouteImport } from './routes/onboarding.event'
 import { Route as OnboardingClubRouteImport } from './routes/onboarding.club'
 import { Route as EventsNewRouteImport } from './routes/events.new'
@@ -196,6 +197,11 @@ const PreCheckInPreTokenRoute = PreCheckInPreTokenRouteImport.update({
   path: '/pre-check-in/$preToken',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OwnerAdminUsersRoute = OwnerAdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => OwnerAdminRoute,
+} as any)
 const OnboardingEventRoute = OnboardingEventRouteImport.update({
   id: '/onboarding/event',
   path: '/onboarding/event',
@@ -319,6 +325,7 @@ export interface FileRoutesByFullPath {
   '/events/new': typeof EventsNewRoute
   '/onboarding/club': typeof OnboardingClubRoute
   '/onboarding/event': typeof OnboardingEventRoute
+  '/owner-admin/users': typeof OwnerAdminUsersRoute
   '/pre-check-in/$preToken': typeof PreCheckInPreTokenRoute
   '/clubs/': typeof ClubsIndexRoute
   '/events/': typeof EventsIndexRoute
@@ -365,6 +372,7 @@ export interface FileRoutesByTo {
   '/events/new': typeof EventsNewRoute
   '/onboarding/club': typeof OnboardingClubRoute
   '/onboarding/event': typeof OnboardingEventRoute
+  '/owner-admin/users': typeof OwnerAdminUsersRoute
   '/pre-check-in/$preToken': typeof PreCheckInPreTokenRoute
   '/clubs': typeof ClubsIndexRoute
   '/events': typeof EventsIndexRoute
@@ -413,6 +421,7 @@ export interface FileRoutesById {
   '/events/new': typeof EventsNewRoute
   '/onboarding/club': typeof OnboardingClubRoute
   '/onboarding/event': typeof OnboardingEventRoute
+  '/owner-admin/users': typeof OwnerAdminUsersRoute
   '/pre-check-in/$preToken': typeof PreCheckInPreTokenRoute
   '/clubs/': typeof ClubsIndexRoute
   '/events/': typeof EventsIndexRoute
@@ -462,6 +471,7 @@ export interface FileRouteTypes {
     | '/events/new'
     | '/onboarding/club'
     | '/onboarding/event'
+    | '/owner-admin/users'
     | '/pre-check-in/$preToken'
     | '/clubs/'
     | '/events/'
@@ -508,6 +518,7 @@ export interface FileRouteTypes {
     | '/events/new'
     | '/onboarding/club'
     | '/onboarding/event'
+    | '/owner-admin/users'
     | '/pre-check-in/$preToken'
     | '/clubs'
     | '/events'
@@ -555,6 +566,7 @@ export interface FileRouteTypes {
     | '/events/new'
     | '/onboarding/club'
     | '/onboarding/event'
+    | '/owner-admin/users'
     | '/pre-check-in/$preToken'
     | '/clubs/'
     | '/events/'
@@ -811,6 +823,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PreCheckInPreTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/owner-admin/users': {
+      id: '/owner-admin/users'
+      path: '/users'
+      fullPath: '/owner-admin/users'
+      preLoaderRoute: typeof OwnerAdminUsersRouteImport
+      parentRoute: typeof OwnerAdminRoute
+    }
     '/onboarding/event': {
       id: '/onboarding/event'
       path: '/onboarding/event'
@@ -934,12 +953,14 @@ declare module '@tanstack/react-router' {
 }
 
 interface OwnerAdminRouteChildren {
+  OwnerAdminUsersRoute: typeof OwnerAdminUsersRoute
   OwnerAdminIndexRoute: typeof OwnerAdminIndexRoute
   OwnerAdminOrganizationsClubIdRoute: typeof OwnerAdminOrganizationsClubIdRoute
   OwnerAdminOrganizationsIndexRoute: typeof OwnerAdminOrganizationsIndexRoute
 }
 
 const OwnerAdminRouteChildren: OwnerAdminRouteChildren = {
+  OwnerAdminUsersRoute: OwnerAdminUsersRoute,
   OwnerAdminIndexRoute: OwnerAdminIndexRoute,
   OwnerAdminOrganizationsClubIdRoute: OwnerAdminOrganizationsClubIdRoute,
   OwnerAdminOrganizationsIndexRoute: OwnerAdminOrganizationsIndexRoute,
