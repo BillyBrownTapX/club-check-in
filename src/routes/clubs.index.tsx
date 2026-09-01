@@ -48,6 +48,19 @@ function ClubsRoute() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  const [guided, setGuided] = useState(false);
+  const createdRef = useRef(false);
+
+  // Brand-new accounts arrive here from sign-up with the create sheet open.
+  useEffect(() => {
+    if (loading || !user) return;
+    if (isFirstRunActive(user.id)) {
+      setGuided(true);
+      setOpen(true);
+    }
+  }, [loading, user]);
+
+
 
   const clubsQuery = useAuthorizedQuery(
     queryKeys.clubs.summaries(),
