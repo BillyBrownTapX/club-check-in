@@ -32,6 +32,7 @@ import { Route as ClubAttendanceTrackerRouteImport } from './routes/club-attenda
 import { Route as ChurchAttendanceAppRouteImport } from './routes/church-attendance-app'
 import { Route as CampusDepartmentAttendanceRouteImport } from './routes/campus-department-attendance'
 import { Route as AttendanceReportsRouteImport } from './routes/attendance-reports'
+import { Route as AgentsRouteImport } from './routes/agents'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OwnerAdminIndexRouteImport } from './routes/owner-admin.index'
@@ -183,6 +184,11 @@ const CampusDepartmentAttendanceRoute =
 const AttendanceReportsRoute = AttendanceReportsRouteImport.update({
   id: '/attendance-reports',
   path: '/attendance-reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentsRoute = AgentsRouteImport.update({
+  id: '/agents',
+  path: '/agents',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -377,6 +383,7 @@ const ApiHostClubsClubIdSemesterAttendanceDotcsvRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/agents': typeof AgentsRoute
   '/attendance-reports': typeof AttendanceReportsRoute
   '/campus-department-attendance': typeof CampusDepartmentAttendanceRoute
   '/church-attendance-app': typeof ChurchAttendanceAppRoute
@@ -438,6 +445,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/agents': typeof AgentsRoute
   '/attendance-reports': typeof AttendanceReportsRoute
   '/campus-department-attendance': typeof CampusDepartmentAttendanceRoute
   '/church-attendance-app': typeof ChurchAttendanceAppRoute
@@ -499,6 +507,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/agents': typeof AgentsRoute
   '/attendance-reports': typeof AttendanceReportsRoute
   '/campus-department-attendance': typeof CampusDepartmentAttendanceRoute
   '/church-attendance-app': typeof ChurchAttendanceAppRoute
@@ -562,6 +571,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/agents'
     | '/attendance-reports'
     | '/campus-department-attendance'
     | '/church-attendance-app'
@@ -623,6 +633,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin'
+    | '/agents'
     | '/attendance-reports'
     | '/campus-department-attendance'
     | '/church-attendance-app'
@@ -683,6 +694,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/agents'
     | '/attendance-reports'
     | '/campus-department-attendance'
     | '/church-attendance-app'
@@ -745,6 +757,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  AgentsRoute: typeof AgentsRoute
   AttendanceReportsRoute: typeof AttendanceReportsRoute
   CampusDepartmentAttendanceRoute: typeof CampusDepartmentAttendanceRoute
   ChurchAttendanceAppRoute: typeof ChurchAttendanceAppRoute
@@ -954,6 +967,13 @@ declare module '@tanstack/react-router' {
       path: '/attendance-reports'
       fullPath: '/attendance-reports'
       preLoaderRoute: typeof AttendanceReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agents': {
+      id: '/agents'
+      path: '/agents'
+      fullPath: '/agents'
+      preLoaderRoute: typeof AgentsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -1256,6 +1276,7 @@ const ApiHealthRouteWithChildren = ApiHealthRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  AgentsRoute: AgentsRoute,
   AttendanceReportsRoute: AttendanceReportsRoute,
   CampusDepartmentAttendanceRoute: CampusDepartmentAttendanceRoute,
   ChurchAttendanceAppRoute: ChurchAttendanceAppRoute,
