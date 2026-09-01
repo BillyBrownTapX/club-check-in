@@ -1,4 +1,5 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { Link, createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { Activity, CalendarPlus, ChevronRight, ListChecks, Plus, QrCode } from "lucide-react";
 import { useAttendanceAuth, useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
@@ -10,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { getHostClubSummaries, getHostEvents } from "@/lib/attendance-hq.functions";
 import { formatEventDate, formatEventTime } from "@/lib/attendance-hq";
 import { queryKeys } from "@/lib/query-keys";
+
 
 function HomeError({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
@@ -43,6 +45,37 @@ function HomeRoute() {
   const { loading, user } = useRequireHostRedirect();
   const auth = useAttendanceAuth();
   const navigate = useNavigate();
+  const [exporting, setExporting] = useState(false);
+
+  // Full member export: every student who checked in or pre-checked in to
+  // any event across all of this host's clubs. The CSV comes from a
+  // streaming server route, so we hand the browser an anchor click and let
+  // native download machinery take over (auth rides on a short-lived
+  // ?token= because <a> clicks can't set an Authorization header).
+  const handleExportMembers = async () => {
+    if (exporting) return;
+    setExporting(true);
+    try {
+      const accessToken = auth.session?.access_token;
+      if (!accessToken) {
+        toast.error("Your session expired. Please sign in again.");
+        return;
+      }
+      const a = document.createElement("a");
+      a.href = `/api/host/members.csv?token=${encodeURIComponent(accessToken)}`;
+      a.rel = "noopener";
+      a.download = "";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      toast.success("Member export started", { description: "Check your downloads." });
+    } catch {
+      toast.error("Export failed. Please try again.");
+    } finally {
+      setExporting(false);
+    }
+  };
+
 
   const clubsQuery = useAuthorizedQuery(
     queryKeys.clubs.summaries(),
@@ -169,7 +202,7 @@ function HomeRoute() {
             <ActionTile icon={CalendarPlus} label="Create event" hint="Start a new meeting" tone="default" to="/events/new" search={{ clubId: "", templateId: "", duplicateFrom: "" }} />
             <ActionTile icon={QrCode} label="Show QR" hint={featuredEvent ? "Open display" : "Pick an event"} tone="gold" onClick={() => featuredEvent ? navigate({ to: "/events/$eventId/display", params: { eventId: featuredEvent.id }, search: { created: "" } }) : navigate({ to: "/events", search: { clubId: "", status: "all", query: "" } })} />
             <ActionTile icon={Activity} label="Go live" hint="Live ops view" tone="blue" to="/live" />
-            <ActionTile icon={ListChecks} label="View roster" hint={liveEvent ? "Active event" : "Recent event"} onClick={() => featuredEvent ? navigate({ to: "/events/$eventId", params: { eventId: featuredEvent.id }, search: { created: "" } }) : navigate({ to: "/events", search: { clubId: "", status: "all", query: "" } })} />
+            <ActionTile icon={ListChecks} label="View roster" hint={exporting ? "Preparing…" : "Export all members"} onClick={handleExportMembers} />
           </div>
 
           <SectionLabel className="mt-7">Recent events</SectionLabel>

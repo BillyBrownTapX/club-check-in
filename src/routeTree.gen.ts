@@ -60,6 +60,7 @@ import { Route as OwnerAdminOrganizationsClubIdRouteImport } from './routes/owne
 import { Route as EventsEventIdEditRouteImport } from './routes/events.$eventId_.edit'
 import { Route as EventsEventIdDisplayRouteImport } from './routes/events.$eventId_.display'
 import { Route as ApiPublicStudentCheckInRouteImport } from './routes/api.public.student-check-in'
+import { Route as ApiHostMembersDotcsvRouteImport } from './routes/api.host.members[.]csv'
 import { Route as ApiHealthReadyRouteImport } from './routes/api.health.ready'
 import { Route as ApiHealthCheckInRouteImport } from './routes/api.health.check-in'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
@@ -330,6 +331,11 @@ const ApiPublicStudentCheckInRoute = ApiPublicStudentCheckInRouteImport.update({
   path: '/api/public/student-check-in',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiHostMembersDotcsvRoute = ApiHostMembersDotcsvRouteImport.update({
+  id: '/api/host/members.csv',
+  path: '/api/host/members.csv',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiHealthReadyRoute = ApiHealthReadyRouteImport.update({
   id: '/ready',
   path: '/ready',
@@ -431,6 +437,7 @@ export interface FileRoutesByFullPath {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/health/check-in': typeof ApiHealthCheckInRoute
   '/api/health/ready': typeof ApiHealthReadyRoute
+  '/api/host/members.csv': typeof ApiHostMembersDotcsvRoute
   '/api/public/student-check-in': typeof ApiPublicStudentCheckInRoute
   '/events/$eventId/display': typeof EventsEventIdDisplayRoute
   '/events/$eventId/edit': typeof EventsEventIdEditRoute
@@ -492,6 +499,7 @@ export interface FileRoutesByTo {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/health/check-in': typeof ApiHealthCheckInRoute
   '/api/health/ready': typeof ApiHealthReadyRoute
+  '/api/host/members.csv': typeof ApiHostMembersDotcsvRoute
   '/api/public/student-check-in': typeof ApiPublicStudentCheckInRoute
   '/events/$eventId/display': typeof EventsEventIdDisplayRoute
   '/events/$eventId/edit': typeof EventsEventIdEditRoute
@@ -555,6 +563,7 @@ export interface FileRoutesById {
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/health/check-in': typeof ApiHealthCheckInRoute
   '/api/health/ready': typeof ApiHealthReadyRoute
+  '/api/host/members.csv': typeof ApiHostMembersDotcsvRoute
   '/api/public/student-check-in': typeof ApiPublicStudentCheckInRoute
   '/events/$eventId_/display': typeof EventsEventIdDisplayRoute
   '/events/$eventId_/edit': typeof EventsEventIdEditRoute
@@ -619,6 +628,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/api/health/check-in'
     | '/api/health/ready'
+    | '/api/host/members.csv'
     | '/api/public/student-check-in'
     | '/events/$eventId/display'
     | '/events/$eventId/edit'
@@ -680,6 +690,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/api/health/check-in'
     | '/api/health/ready'
+    | '/api/host/members.csv'
     | '/api/public/student-check-in'
     | '/events/$eventId/display'
     | '/events/$eventId/edit'
@@ -742,6 +753,7 @@ export interface FileRouteTypes {
     | '/.mcp/invoke-tool/$tool'
     | '/api/health/check-in'
     | '/api/health/ready'
+    | '/api/host/members.csv'
     | '/api/public/student-check-in'
     | '/events/$eventId_/display'
     | '/events/$eventId_/edit'
@@ -796,6 +808,7 @@ export interface RootRouteChildren {
   EventsIndexRoute: typeof EventsIndexRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
+  ApiHostMembersDotcsvRoute: typeof ApiHostMembersDotcsvRoute
   ApiPublicStudentCheckInRoute: typeof ApiPublicStudentCheckInRoute
   EventsEventIdDisplayRoute: typeof EventsEventIdDisplayRoute
   EventsEventIdEditRoute: typeof EventsEventIdEditRoute
@@ -1165,6 +1178,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicStudentCheckInRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/host/members.csv': {
+      id: '/api/host/members.csv'
+      path: '/api/host/members.csv'
+      fullPath: '/api/host/members.csv'
+      preLoaderRoute: typeof ApiHostMembersDotcsvRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/health/ready': {
       id: '/api/health/ready'
       path: '/ready'
@@ -1316,6 +1336,7 @@ const rootRouteChildren: RootRouteChildren = {
   EventsIndexRoute: EventsIndexRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
+  ApiHostMembersDotcsvRoute: ApiHostMembersDotcsvRoute,
   ApiPublicStudentCheckInRoute: ApiPublicStudentCheckInRoute,
   EventsEventIdDisplayRoute: EventsEventIdDisplayRoute,
   EventsEventIdEditRoute: EventsEventIdEditRoute,
