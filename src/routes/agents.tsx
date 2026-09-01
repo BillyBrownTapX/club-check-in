@@ -29,12 +29,8 @@ const CLIENTS = [
     steps: ["Settings → Connectors → Add custom connector", "Paste the server URL", "Sign in and approve"],
   },
   {
-    name: "Cursor",
-    steps: ["Settings → MCP → Add server", "Paste the server URL", "Sign in and approve"],
-  },
-  {
-    name: "Lovable",
-    steps: ["Open Connectors", "Add this app's connector", "Sign in and approve"],
+    name: "MANUS",
+    steps: ["Open MANUS → Add MCP server", "Paste the server URL", "Sign in and approve"],
   },
 ];
 
