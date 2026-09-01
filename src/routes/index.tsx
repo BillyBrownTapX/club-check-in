@@ -8,7 +8,6 @@ import {
   ClipboardList,
   Clock3,
   Crown,
-  Download,
   FileSpreadsheet,
   Landmark,
   Megaphone,
@@ -604,8 +603,3 @@ function Feature({ icon: Icon, title, body }: { icon: React.ComponentType<{ clas
     </div>
   );
 }
-
-function _unusedIconGuard() {
-  return [Download] as const;
-}
-void _unusedIconGuard;
