@@ -91,6 +91,11 @@ function OwnerUsersRoute() {
               rows={users.data?.rows ?? []}
               rowKey={(row) => row.id}
               empty="No users match this search."
+              mobile={{
+                title: (row) => row.name,
+                subtitle: (row) => row.email,
+                stats: ["orgs", "roles", "events", "signin"],
+              }}
               columns={[
                 {
                   key: "name",
