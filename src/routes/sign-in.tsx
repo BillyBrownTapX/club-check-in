@@ -13,8 +13,9 @@ const formSchema = signInSchema;
 type FormValues = z.infer<typeof formSchema>;
 
 export const Route = createFileRoute("/sign-in")({
-  validateSearch: (search: Record<string, unknown>): { reason?: string } => ({
+  validateSearch: (search: Record<string, unknown>): { reason?: string; next?: string } => ({
     reason: typeof search.reason === "string" ? search.reason : undefined,
+    next: typeof search.next === "string" ? search.next : undefined,
   }),
   head: () => ({
     meta: [
@@ -30,8 +31,8 @@ export const Route = createFileRoute("/sign-in")({
 });
 
 function SignInRoute() {
-  const { loading: guardLoading } = useRequireGuestRedirect();
-  const { reason } = Route.useSearch();
+  const { reason, next } = Route.useSearch();
+  const { loading: guardLoading } = useRequireGuestRedirect(next);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [authSettling, setAuthSettling] = useState(false);
   const form = useForm<FormValues>({

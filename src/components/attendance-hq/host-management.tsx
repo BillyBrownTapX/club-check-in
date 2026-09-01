@@ -578,25 +578,33 @@ export function useResolvePostAuthRedirect() {
 // lands on /sign-in or /sign-up, push them into wherever the server says
 // they should be. Fires exactly once per mount so a slow redirect can't
 // race with itself.
-export function useRequireGuestRedirect() {
+export function useRequireGuestRedirect(nextPath?: string) {
   const { user, session, loading } = useAttendanceAuth();
   const resolveRedirect = useResolvePostAuthRedirect();
   const fired = useRef(false);
   const authLoading = loading || (!!user && !session);
+  // Only same-origin relative paths are honored, so an attacker can't use
+  // ?next= to bounce a freshly signed-in host to another host.
+  const safeNext = nextPath && nextPath.startsWith("/") && !nextPath.startsWith("//") ? nextPath : null;
 
   useEffect(() => {
     if (authLoading || !user || !session || fired.current) return;
     fired.current = true;
+    if (safeNext) {
+      window.location.replace(safeNext);
+      return;
+    }
     void resolveRedirect().catch(() => {
       // If the server probe fails (network, transient 5xx) we fall back to
       // the safest workspace entry point. The user can still navigate from
       // there; they're not stranded on an auth page they're already past.
       fired.current = false;
     });
-  }, [authLoading, user, session, resolveRedirect]);
+  }, [authLoading, user, session, resolveRedirect, safeNext]);
 
   return { loading: authLoading };
 }
+
 
 type ClubCreateValues = z.infer<typeof clubSchema>;
 type ClubUpdateValues = z.infer<typeof clubUpdateSchema>;

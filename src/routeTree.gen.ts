@@ -21,6 +21,7 @@ import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PreEventHeadcountRouteImport } from './routes/pre-event-headcount'
 import { Route as OwnerAdminRouteImport } from './routes/owner-admin'
 import { Route as NotificationsRouteImport } from './routes/notifications'
+import { Route as McpRouteImport } from './routes/mcp'
 import { Route as LiveRouteImport } from './routes/live'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as HelpRouteImport } from './routes/help'
@@ -51,6 +52,8 @@ import { Route as DisplayQrTokenRouteImport } from './routes/display.$qrToken'
 import { Route as ClubsClubIdRouteImport } from './routes/clubs.$clubId'
 import { Route as CheckInQrTokenRouteImport } from './routes/check-in.$qrToken'
 import { Route as ApiHealthRouteImport } from './routes/api.health'
+import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as OwnerAdminOrganizationsIndexRouteImport } from './routes/owner-admin.organizations.index'
 import { Route as OwnerAdminOrganizationsClubIdRouteImport } from './routes/owner-admin.organizations.$clubId'
 import { Route as EventsEventIdEditRouteImport } from './routes/events.$eventId_.edit'
@@ -58,6 +61,8 @@ import { Route as EventsEventIdDisplayRouteImport } from './routes/events.$event
 import { Route as ApiPublicStudentCheckInRouteImport } from './routes/api.public.student-check-in'
 import { Route as ApiHealthReadyRouteImport } from './routes/api.health.ready'
 import { Route as ApiHealthCheckInRouteImport } from './routes/api.health.check-in'
+import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiHostEventsEventIdAttendanceDotcsvRouteImport } from './routes/api.host.events.$eventId.attendance[.]csv'
 import { Route as ApiHostClubsClubIdSemesterAttendanceDotcsvRouteImport } from './routes/api.host.clubs.$clubId.semester-attendance[.]csv'
 
@@ -119,6 +124,11 @@ const OwnerAdminRoute = OwnerAdminRouteImport.update({
 const NotificationsRoute = NotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const McpRoute = McpRouteImport.update({
+  id: '/mcp',
+  path: '/mcp',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LiveRoute = LiveRouteImport.update({
@@ -272,6 +282,18 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
 } as any)
+const Char91DotwellKnownChar93OauthProtectedResourceRoute =
+  Char91DotwellKnownChar93OauthProtectedResourceRouteImport.update({
+    id: '/.well-known/oauth-protected-resource',
+    path: '/.well-known/oauth-protected-resource',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const Char91DotmcpChar93ListToolsRoute =
+  Char91DotmcpChar93ListToolsRouteImport.update({
+    id: '/.mcp/list-tools',
+    path: '/.mcp/list-tools',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const OwnerAdminOrganizationsIndexRoute =
   OwnerAdminOrganizationsIndexRouteImport.update({
     id: '/organizations/',
@@ -309,6 +331,17 @@ const ApiHealthCheckInRoute = ApiHealthCheckInRouteImport.update({
   path: '/check-in',
   getParentRoute: () => ApiHealthRoute,
 } as any)
+const Char91DotmcpChar93InvokeToolToolRoute =
+  Char91DotmcpChar93InvokeToolToolRouteImport.update({
+    id: '/.mcp/invoke-tool/$tool',
+    path: '/.mcp/invoke-tool/$tool',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiHostEventsEventIdAttendanceDotcsvRoute =
   ApiHostEventsEventIdAttendanceDotcsvRouteImport.update({
     id: '/api/host/events/$eventId/attendance.csv',
@@ -335,6 +368,7 @@ export interface FileRoutesByFullPath {
   '/help': typeof HelpRoute
   '/home': typeof HomeRoute
   '/live': typeof LiveRoute
+  '/mcp': typeof McpRoute
   '/notifications': typeof NotificationsRoute
   '/owner-admin': typeof OwnerAdminRouteWithChildren
   '/pre-event-headcount': typeof PreEventHeadcountRoute
@@ -347,6 +381,8 @@ export interface FileRoutesByFullPath {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/vs-google-forms': typeof VsGoogleFormsRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/api/health': typeof ApiHealthRouteWithChildren
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
@@ -365,6 +401,8 @@ export interface FileRoutesByFullPath {
   '/clubs/': typeof ClubsIndexRoute
   '/events/': typeof EventsIndexRoute
   '/owner-admin/': typeof OwnerAdminIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/health/check-in': typeof ApiHealthCheckInRoute
   '/api/health/ready': typeof ApiHealthReadyRoute
   '/api/public/student-check-in': typeof ApiPublicStudentCheckInRoute
@@ -388,6 +426,7 @@ export interface FileRoutesByTo {
   '/help': typeof HelpRoute
   '/home': typeof HomeRoute
   '/live': typeof LiveRoute
+  '/mcp': typeof McpRoute
   '/notifications': typeof NotificationsRoute
   '/pre-event-headcount': typeof PreEventHeadcountRoute
   '/privacy': typeof PrivacyRoute
@@ -399,6 +438,8 @@ export interface FileRoutesByTo {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/vs-google-forms': typeof VsGoogleFormsRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/api/health': typeof ApiHealthRouteWithChildren
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
@@ -417,6 +458,8 @@ export interface FileRoutesByTo {
   '/clubs': typeof ClubsIndexRoute
   '/events': typeof EventsIndexRoute
   '/owner-admin': typeof OwnerAdminIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/health/check-in': typeof ApiHealthCheckInRoute
   '/api/health/ready': typeof ApiHealthReadyRoute
   '/api/public/student-check-in': typeof ApiPublicStudentCheckInRoute
@@ -441,6 +484,7 @@ export interface FileRoutesById {
   '/help': typeof HelpRoute
   '/home': typeof HomeRoute
   '/live': typeof LiveRoute
+  '/mcp': typeof McpRoute
   '/notifications': typeof NotificationsRoute
   '/owner-admin': typeof OwnerAdminRouteWithChildren
   '/pre-event-headcount': typeof PreEventHeadcountRoute
@@ -453,6 +497,8 @@ export interface FileRoutesById {
   '/sitemap.xml': typeof SitemapDotxmlRoute
   '/terms': typeof TermsRoute
   '/vs-google-forms': typeof VsGoogleFormsRoute
+  '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
+  '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   '/api/health': typeof ApiHealthRouteWithChildren
   '/check-in/$qrToken': typeof CheckInQrTokenRoute
   '/clubs/$clubId': typeof ClubsClubIdRoute
@@ -471,6 +517,8 @@ export interface FileRoutesById {
   '/clubs/': typeof ClubsIndexRoute
   '/events/': typeof EventsIndexRoute
   '/owner-admin/': typeof OwnerAdminIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
+  '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/health/check-in': typeof ApiHealthCheckInRoute
   '/api/health/ready': typeof ApiHealthReadyRoute
   '/api/public/student-check-in': typeof ApiPublicStudentCheckInRoute
@@ -496,6 +544,7 @@ export interface FileRouteTypes {
     | '/help'
     | '/home'
     | '/live'
+    | '/mcp'
     | '/notifications'
     | '/owner-admin'
     | '/pre-event-headcount'
@@ -508,6 +557,8 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/terms'
     | '/vs-google-forms'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/api/health'
     | '/check-in/$qrToken'
     | '/clubs/$clubId'
@@ -526,6 +577,8 @@ export interface FileRouteTypes {
     | '/clubs/'
     | '/events/'
     | '/owner-admin/'
+    | '/.lovable/oauth/consent'
+    | '/.mcp/invoke-tool/$tool'
     | '/api/health/check-in'
     | '/api/health/ready'
     | '/api/public/student-check-in'
@@ -549,6 +602,7 @@ export interface FileRouteTypes {
     | '/help'
     | '/home'
     | '/live'
+    | '/mcp'
     | '/notifications'
     | '/pre-event-headcount'
     | '/privacy'
@@ -560,6 +614,8 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/terms'
     | '/vs-google-forms'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/api/health'
     | '/check-in/$qrToken'
     | '/clubs/$clubId'
@@ -578,6 +634,8 @@ export interface FileRouteTypes {
     | '/clubs'
     | '/events'
     | '/owner-admin'
+    | '/.lovable/oauth/consent'
+    | '/.mcp/invoke-tool/$tool'
     | '/api/health/check-in'
     | '/api/health/ready'
     | '/api/public/student-check-in'
@@ -601,6 +659,7 @@ export interface FileRouteTypes {
     | '/help'
     | '/home'
     | '/live'
+    | '/mcp'
     | '/notifications'
     | '/owner-admin'
     | '/pre-event-headcount'
@@ -613,6 +672,8 @@ export interface FileRouteTypes {
     | '/sitemap.xml'
     | '/terms'
     | '/vs-google-forms'
+    | '/.mcp/list-tools'
+    | '/.well-known/oauth-protected-resource'
     | '/api/health'
     | '/check-in/$qrToken'
     | '/clubs/$clubId'
@@ -631,6 +692,8 @@ export interface FileRouteTypes {
     | '/clubs/'
     | '/events/'
     | '/owner-admin/'
+    | '/.lovable/oauth/consent'
+    | '/.mcp/invoke-tool/$tool'
     | '/api/health/check-in'
     | '/api/health/ready'
     | '/api/public/student-check-in'
@@ -655,6 +718,7 @@ export interface RootRouteChildren {
   HelpRoute: typeof HelpRoute
   HomeRoute: typeof HomeRoute
   LiveRoute: typeof LiveRoute
+  McpRoute: typeof McpRoute
   NotificationsRoute: typeof NotificationsRoute
   OwnerAdminRoute: typeof OwnerAdminRouteWithChildren
   PreEventHeadcountRoute: typeof PreEventHeadcountRoute
@@ -667,6 +731,8 @@ export interface RootRouteChildren {
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
   TermsRoute: typeof TermsRoute
   VsGoogleFormsRoute: typeof VsGoogleFormsRoute
+  Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
+  Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
   ApiHealthRoute: typeof ApiHealthRouteWithChildren
   CheckInQrTokenRoute: typeof CheckInQrTokenRoute
   ClubsClubIdRoute: typeof ClubsClubIdRoute
@@ -678,6 +744,8 @@ export interface RootRouteChildren {
   PreCheckInPreTokenRoute: typeof PreCheckInPreTokenRoute
   ClubsIndexRoute: typeof ClubsIndexRoute
   EventsIndexRoute: typeof EventsIndexRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
+  Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicStudentCheckInRoute: typeof ApiPublicStudentCheckInRoute
   EventsEventIdDisplayRoute: typeof EventsEventIdDisplayRoute
   EventsEventIdEditRoute: typeof EventsEventIdEditRoute
@@ -769,6 +837,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/notifications'
       preLoaderRoute: typeof NotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/mcp': {
+      id: '/mcp'
+      path: '/mcp'
+      fullPath: '/mcp'
+      preLoaderRoute: typeof McpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/live': {
@@ -981,6 +1056,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/.well-known/oauth-protected-resource': {
+      id: '/.well-known/oauth-protected-resource'
+      path: '/.well-known/oauth-protected-resource'
+      fullPath: '/.well-known/oauth-protected-resource'
+      preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.mcp/list-tools': {
+      id: '/.mcp/list-tools'
+      path: '/.mcp/list-tools'
+      fullPath: '/.mcp/list-tools'
+      preLoaderRoute: typeof Char91DotmcpChar93ListToolsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/owner-admin/organizations/': {
       id: '/owner-admin/organizations/'
       path: '/organizations'
@@ -1029,6 +1118,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/health/check-in'
       preLoaderRoute: typeof ApiHealthCheckInRouteImport
       parentRoute: typeof ApiHealthRoute
+    }
+    '/.mcp/invoke-tool/$tool': {
+      id: '/.mcp/invoke-tool/$tool'
+      path: '/.mcp/invoke-tool/$tool'
+      fullPath: '/.mcp/invoke-tool/$tool'
+      preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/host/events/$eventId/attendance.csv': {
       id: '/api/host/events/$eventId/attendance.csv'
@@ -1102,6 +1205,7 @@ const rootRouteChildren: RootRouteChildren = {
   HelpRoute: HelpRoute,
   HomeRoute: HomeRoute,
   LiveRoute: LiveRoute,
+  McpRoute: McpRoute,
   NotificationsRoute: NotificationsRoute,
   OwnerAdminRoute: OwnerAdminRouteWithChildren,
   PreEventHeadcountRoute: PreEventHeadcountRoute,
@@ -1114,6 +1218,9 @@ const rootRouteChildren: RootRouteChildren = {
   SitemapDotxmlRoute: SitemapDotxmlRoute,
   TermsRoute: TermsRoute,
   VsGoogleFormsRoute: VsGoogleFormsRoute,
+  Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
+  Char91DotwellKnownChar93OauthProtectedResourceRoute:
+    Char91DotwellKnownChar93OauthProtectedResourceRoute,
   ApiHealthRoute: ApiHealthRouteWithChildren,
   CheckInQrTokenRoute: CheckInQrTokenRoute,
   ClubsClubIdRoute: ClubsClubIdRoute,
@@ -1125,6 +1232,8 @@ const rootRouteChildren: RootRouteChildren = {
   PreCheckInPreTokenRoute: PreCheckInPreTokenRoute,
   ClubsIndexRoute: ClubsIndexRoute,
   EventsIndexRoute: EventsIndexRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
+  Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicStudentCheckInRoute: ApiPublicStudentCheckInRoute,
   EventsEventIdDisplayRoute: EventsEventIdDisplayRoute,
   EventsEventIdEditRoute: EventsEventIdEditRoute,
