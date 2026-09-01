@@ -289,19 +289,24 @@ export function OwnerAdminShell({ children }: { children: React.ReactNode }) {
 export function PageHeading({
   title,
   description,
+  eyebrow,
   actions,
 }: {
   title: string;
   description?: string;
+  eyebrow?: string;
   actions?: React.ReactNode;
 }) {
   return (
-    <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+    <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        {description ? <p className="mt-1 max-w-2xl text-sm text-muted-foreground">{description}</p> : null}
+        {eyebrow ? (
+          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">{eyebrow}</p>
+        ) : null}
+        <h1 className="font-display text-[26px] font-extrabold tracking-tight">{title}</h1>
+        {description ? <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">{description}</p> : null}
       </div>
-      {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
     </div>
   );
 }
@@ -309,31 +314,58 @@ export function PageHeading({
 export function SectionCard({
   title,
   description,
+  source,
   actions,
   children,
   className,
 }: {
   title?: string;
   description?: string;
+  /** Short provenance note: which live records this panel counts. */
+  source?: string;
   actions?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
 }) {
   return (
-    <section className={cn("rounded-xl border border-border/60 bg-card shadow-sm", className)}>
+    <section
+      className={cn(
+        "overflow-hidden rounded-2xl border border-border/60 bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_12px_24px_-20px_rgba(0,0,0,0.25)]",
+        className,
+      )}
+    >
       {title ? (
-        <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 px-4 py-3">
-          <div>
-            <h2 className="text-sm font-semibold">{title}</h2>
-            {description ? <p className="text-xs text-muted-foreground">{description}</p> : null}
+        <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 bg-muted/25 px-4 py-3">
+          <div className="min-w-0">
+            <h2 className="text-[13px] font-semibold tracking-tight">{title}</h2>
+            {description ? <p className="mt-0.5 text-xs text-muted-foreground">{description}</p> : null}
           </div>
           {actions}
         </header>
       ) : null}
       <div className="p-4">{children}</div>
+      {source ? (
+        <p className="border-t border-border/50 bg-muted/15 px-4 py-2 text-[11px] text-muted-foreground">{source}</p>
+      ) : null}
     </section>
   );
 }
+
+const TONE_TEXT = {
+  default: "text-foreground",
+  good: "text-success",
+  warn: "text-warning",
+  bad: "text-destructive",
+} as const;
+
+const TONE_RAIL = {
+  default: "bg-primary/40",
+  good: "bg-success/60",
+  warn: "bg-warning/60",
+  bad: "bg-destructive/60",
+} as const;
+
+export type KpiTone = keyof typeof TONE_TEXT;
 
 export function KpiCard({
   label,
@@ -344,34 +376,39 @@ export function KpiCard({
   label: string;
   value: React.ReactNode;
   hint?: string;
-  tone?: "default" | "good" | "warn" | "bad";
+  tone?: KpiTone;
 }) {
-  const toneClass =
-    tone === "good"
-      ? "text-emerald-500"
-      : tone === "warn"
-        ? "text-amber-500"
-        : tone === "bad"
-          ? "text-destructive"
-          : "text-foreground";
   return (
-    <div className="rounded-xl border border-border/60 bg-card p-4 shadow-sm">
-      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className={cn("mt-1.5 text-2xl font-semibold tabular-nums", toneClass)}>{value}</p>
-      {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
+    <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+      <span className={cn("absolute inset-y-0 left-0 w-[3px]", TONE_RAIL[tone])} aria-hidden="true" />
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
+      <p className={cn("mt-2 font-display text-[26px] font-extrabold leading-none tabular-nums", TONE_TEXT[tone])}>
+        {value}
+      </p>
+      {hint ? <p className="mt-1.5 text-xs leading-snug text-muted-foreground">{hint}</p> : null}
     </div>
   );
 }
 
 export function KpiGrid({ children }: { children: React.ReactNode }) {
-  return <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{children}</div>;
+  return <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{children}</div>;
+}
+
+/** Explicit "nothing recorded yet" state so a real zero never reads as a broken widget. */
+export function EmptyState({ title, hint }: { title: string; hint?: string }) {
+  return (
+    <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 px-4 py-10 text-center">
+      <p className="text-sm font-medium text-foreground">{title}</p>
+      {hint ? <p className="mt-1 text-xs text-muted-foreground">{hint}</p> : null}
+    </div>
+  );
 }
 
 const STATUS_TONES: Record<string, string> = {
-  power_user: "bg-emerald-500/12 text-emerald-500",
-  healthy: "bg-sky-500/12 text-sky-500",
-  at_risk: "bg-amber-500/12 text-amber-500",
-  churning: "bg-orange-500/14 text-orange-500",
+  power_user: "bg-success/12 text-success",
+  healthy: "bg-info/12 text-info",
+  at_risk: "bg-warning/14 text-warning",
+  churning: "bg-warning/18 text-warning",
   dormant: "bg-destructive/12 text-destructive",
   never_activated: "bg-muted text-muted-foreground",
 };
@@ -390,7 +427,7 @@ export function StatusPill({ status }: { status: string }) {
 }
 
 export function HealthBar({ score }: { score: number }) {
-  const tone = score >= 70 ? "bg-emerald-500" : score >= 45 ? "bg-amber-500" : "bg-destructive";
+  const tone = score >= 70 ? "bg-success" : score >= 45 ? "bg-warning" : "bg-destructive";
   return (
     <div className="flex items-center gap-2">
       <div className="h-1.5 w-16 overflow-hidden rounded-full bg-muted">
@@ -398,6 +435,7 @@ export function HealthBar({ score }: { score: number }) {
       </div>
       <span className="text-xs font-medium tabular-nums">{score}</span>
     </div>
+
   );
 }
 
