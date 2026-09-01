@@ -1,36 +1,39 @@
-// Owner Admin — platform overview, North Star metric, and growth trends.
+// Owner Admin — the at-a-glance answer to "how many people are on the app,
+// are they checking in, and do they come back?"
+//
+// Deliberately plain: three big numbers, then three cards that each ask one
+// question in a full sentence and answer it with one simple visual.
 
 import * as React from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
 import {
   CHART_COLORS,
   EmptyState,
   ErrorBlock,
-  KpiCard,
-  KpiGrid,
+  GlanceCard,
+  HeroStat,
   LoadingBlock,
-  PageHeading,
-  SectionCard,
+  PlainBars,
+  StatRing,
   TrendArea,
-  TrendLine,
   fmtNumber,
-  fmtPercent,
 } from "@/components/owner-admin/ui";
 import { Button } from "@/components/ui/button";
 import {
-  getOwnerOverview,
+  getOwnerPeople,
   getOwnerSeries,
-  type OwnerOverview,
+  type OwnerPeople,
   type OwnerSeriesPoint,
 } from "@/lib/owner-admin.functions";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/owner-admin/")({
   head: () => ({
     meta: [
       { title: "Owner overview — Attendance HQ" },
-      { name: "description", content: "Platform-wide adoption and attendance activity." },
+      { name: "description", content: "How many people are on Attendance HQ, and how many keep coming back." },
       { name: "robots", content: "noindex, nofollow" },
     ],
   }),
@@ -43,6 +46,11 @@ const RANGES = [
   { key: "365", label: "12 months", days: 365, bucket: "month" as const },
 ];
 
+function pct(part: number, whole: number): number {
+  if (!whole) return 0;
+  return (part / whole) * 100;
+}
+
 function OwnerOverviewRoute() {
   const [rangeKey, setRangeKey] = React.useState("30");
   const range = RANGES.find((r) => r.key === rangeKey) ?? RANGES[0]!;
@@ -53,7 +61,7 @@ function OwnerOverviewRoute() {
     return { from: from.toISOString(), to: to.toISOString(), bucket: range.bucket };
   }, [range]);
 
-  const overview = useAuthorizedQuery<OwnerOverview>(["owner-admin", "overview"], getOwnerOverview, undefined, {
+  const people = useAuthorizedQuery<OwnerPeople>(["owner-admin", "people"], getOwnerPeople, undefined, {
     staleTime: 60_000,
   });
   const series = useAuthorizedQuery<OwnerSeriesPoint[], typeof payload>(
@@ -63,13 +71,17 @@ function OwnerOverviewRoute() {
     { staleTime: 60_000 },
   );
 
-  if (overview.isLoading) return <LoadingBlock />;
-  if (overview.isError || !overview.data) return <ErrorBlock message={overview.error?.message} />;
+  if (people.isLoading) return <LoadingBlock />;
+  if (people.isError || !people.data) return <ErrorBlock message={people.error?.message} />;
 
-  const d = overview.data;
-  const nsDelta =
-    d.northStar.previousMonth > 0
-      ? ((d.northStar.currentMonth - d.northStar.previousMonth) / d.northStar.previousMonth) * 100
+  const d = people.data;
+  const totalPeople = d.members.total + d.hosts.total;
+  const checkedInPct = pct(d.members.checkedIn, d.members.total);
+  const repeatPct = pct(d.members.repeat, d.members.checkedIn);
+  const returningPct = pct(d.returning.returnedThisMonth, d.returning.lastMonthAttendees);
+  const monthDelta =
+    d.checkIns.previousMonth > 0
+      ? ((d.checkIns.thisMonth - d.checkIns.previousMonth) / d.checkIns.previousMonth) * 100
       : null;
 
   const chartData = (series.data ?? []).map((point) => ({
@@ -78,91 +90,130 @@ function OwnerOverviewRoute() {
   }));
 
   return (
-    <>
-      <PageHeading
-        eyebrow="Platform"
-        title="Platform overview"
-        description="Every organization, host, member, event and check-in across Attendance HQ."
-        actions={
-          <div className="flex gap-1 rounded-lg border border-border/60 p-1">
-            {RANGES.map((r) => (
-              <Button
-                key={r.key}
-                size="sm"
-                variant={r.key === rangeKey ? "secondary" : "ghost"}
-                onClick={() => setRangeKey(r.key)}
-              >
-                {r.label}
-              </Button>
-            ))}
-          </div>
-        }
-      />
+    <div className="mx-auto max-w-5xl animate-in fade-in duration-500">
+      {/* Hero — the whole point of this page */}
+      <section className="mb-6 rounded-[30px] border border-border/50 bg-gradient-to-b from-primary/[0.07] via-card to-card p-7 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_30px_60px_-40px_rgba(0,0,0,0.35)] sm:p-9">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">People on Attendance HQ</p>
+        <h1 className="mt-1.5 font-display text-[22px] font-semibold tracking-tight">
+          {fmtNumber(totalPeople)} people are on the app right now
+        </h1>
 
-      <SectionCard
-        title="North Star — check-ins recorded this month"
-        description="The single number that proves the product is doing its job."
-        source="Live count of attendance records created this calendar month, compared with last month."
-        className="mb-5 bg-gradient-to-br from-primary/[0.06] to-transparent"
-      >
-        <div className="flex flex-wrap items-end gap-8">
-          <div>
-            <p className="font-display text-[44px] font-extrabold leading-none tabular-nums text-primary">
-              {fmtNumber(d.northStar.currentMonth)}
-            </p>
-            <p className="mt-2 text-xs text-muted-foreground">{d.northStar.monthLabel}</p>
-          </div>
-          <div className="text-sm">
-            <p className="text-muted-foreground">Previous month</p>
-            <p className="font-medium tabular-nums">{fmtNumber(d.northStar.previousMonth)}</p>
-          </div>
-          <div className="text-sm">
-            <p className="text-muted-foreground">Change</p>
-            <p
-              className={
-                nsDelta === null
-                  ? "font-medium"
-                  : nsDelta >= 0
-                    ? "font-medium text-success"
-                    : "font-medium text-destructive"
-              }
-            >
-              {nsDelta === null ? "—" : `${nsDelta >= 0 ? "+" : ""}${nsDelta.toFixed(1)}%`}
-            </p>
-          </div>
+        <div className="mt-7 grid gap-7 sm:grid-cols-3 sm:gap-4">
+          <HeroStat
+            value={fmtNumber(d.members.total)}
+            label="Members"
+            caption={`${fmtNumber(d.members.newThisMonth)} added this month`}
+            emphasis
+          />
+          <HeroStat
+            value={fmtNumber(d.hosts.total)}
+            label="Host accounts"
+            caption={`Running ${fmtNumber(d.hosts.organizations)} ${d.hosts.organizations === 1 ? "club" : "clubs"}`}
+          />
+          <HeroStat
+            value={fmtNumber(d.checkIns.total)}
+            label="Check-ins, all time"
+            caption={`${fmtNumber(d.checkIns.thisMonth)} in ${d.checkIns.monthLabel}${
+              monthDelta === null ? "" : ` (${monthDelta >= 0 ? "+" : ""}${monthDelta.toFixed(0)}% vs last month)`
+            }`}
+          />
         </div>
-      </SectionCard>
 
-
-      <div className="mb-5 space-y-2.5">
-        <h2 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Organizations</h2>
-        <KpiGrid>
-          <KpiCard label="Total" value={fmtNumber(d.organizations.total)} hint={`+${d.organizations.newThisMonth} this month`} />
-          <KpiCard label="Active (30d)" value={fmtNumber(d.organizations.active30d)} hint={`${fmtNumber(d.organizations.active7d)} active in last 7 days`} tone="good" />
-          <KpiCard label="At risk" value={fmtNumber(d.organizations.atRisk)} hint="No activity 14–30 days" tone="warn" />
-          <KpiCard label="Dormant / never activated" value={`${fmtNumber(d.organizations.dormant)} / ${fmtNumber(d.organizations.neverActivated)}`} hint="Dormant = 60+ days idle" tone="bad" />
-        </KpiGrid>
-      </div>
-
-      <div className="mb-5 space-y-2.5">
-        <h2 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">People &amp; activity</h2>
-        <KpiGrid>
-          <KpiCard label="Members tracked" value={fmtNumber(d.members.total)} hint={`${fmtNumber(d.members.avgPerOrganization)} avg per organization`} />
-          <KpiCard label="Events created" value={fmtNumber(d.events.total)} hint={`${fmtNumber(d.events.thisMonth)} this month · ${fmtNumber(d.events.thisWeek)} this week`} />
-          <KpiCard label="Check-ins (lifetime)" value={fmtNumber(d.attendance.total)} hint={`${fmtNumber(d.attendance.avgPerEvent)} avg per event`} />
-          <KpiCard label="Unique attendees this month" value={fmtNumber(d.attendance.uniqueThisMonth)} hint={`${fmtNumber(d.attendance.today)} check-ins today`} />
-        </KpiGrid>
-        <p className="text-[11px] text-muted-foreground">
-          Counted live from organizations, students, events and attendance records — no sample or seeded data.
+        <p className="mt-7 border-t border-border/50 pt-3 text-[12px] text-muted-foreground">
+          Counted live from member, host account, club and check-in records — nothing is estimated or seeded.
         </p>
-      </div>
+      </section>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <SectionCard
-          title="Check-in volume"
-          description={`Per ${range.bucket}`}
-          source="Attendance records grouped by check-in timestamp."
+      <div className="grid gap-5 lg:grid-cols-2">
+        {/* 1. Have they checked in? */}
+        <GlanceCard
+          title="Have they checked in?"
+          question="Of everyone in the app, how many have actually scanned in at least once."
+          footnote="Members with one or more attendance records, out of all member records."
         >
+          <div className="flex flex-wrap items-center gap-6">
+            <StatRing
+              percent={checkedInPct}
+              centerLabel="have checked in"
+              tone={CHART_COLORS[0]}
+            />
+            <div className="min-w-[9rem] space-y-3">
+              <div>
+                <p className="font-display text-[26px] font-semibold leading-none tabular-nums">
+                  {fmtNumber(d.members.checkedIn)}
+                </p>
+                <p className="text-[13px] text-muted-foreground">members have checked in</p>
+              </div>
+              <div>
+                <p className="font-display text-[26px] font-semibold leading-none tabular-nums text-muted-foreground">
+                  {fmtNumber(Math.max(0, d.members.total - d.members.checkedIn))}
+                </p>
+                <p className="text-[13px] text-muted-foreground">have not checked in yet</p>
+              </div>
+            </div>
+          </div>
+        </GlanceCard>
+
+        {/* 2. Do they come back? */}
+        <GlanceCard
+          title="Do they come back?"
+          question="The share of people who checked in more than once — the sign the app is sticking."
+          footnote="Repeat = members with two or more check-ins. Returning = last month's attendees who also checked in this month."
+        >
+          <p className="font-display text-[clamp(2.75rem,6vw,3.5rem)] font-semibold leading-none tracking-[-0.03em] tabular-nums text-primary">
+            {Math.round(repeatPct)}%
+          </p>
+          <p className="mt-2 text-[14px] text-foreground">
+            {fmtNumber(d.members.repeat)} of {fmtNumber(d.members.checkedIn)} people came back for a second meeting
+          </p>
+          <p className="mt-1 text-[13px] text-muted-foreground">
+            {d.returning.lastMonthAttendees === 0
+              ? "No one checked in last month, so there is nothing to compare yet."
+              : `${fmtNumber(d.returning.returnedThisMonth)} of last month's ${fmtNumber(
+                  d.returning.lastMonthAttendees,
+                )} attendees (${Math.round(returningPct)}%) came back this month`}
+          </p>
+
+          <div className="mt-6">
+            <p className="mb-3 text-[13px] font-medium">How often people show up</p>
+            {d.members.checkedIn === 0 ? (
+              <EmptyState title="No check-ins recorded yet." />
+            ) : (
+              <PlainBars rows={d.frequency.map((f) => ({ label: f.label, value: f.people }))} />
+            )}
+          </div>
+        </GlanceCard>
+
+        {/* 3. Is it growing? */}
+        <GlanceCard
+          className="lg:col-span-2"
+          title="Is it growing?"
+          question="Check-ins recorded over time. Higher is better; flat means people stopped using it."
+          footnote="Attendance records grouped by the time each person checked in."
+        >
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <p className="text-[13px] text-muted-foreground">
+              {fmtNumber(chartData.reduce((sum, p) => sum + (p.checkIns ?? 0), 0))} check-ins in the last{" "}
+              {range.label.toLowerCase()}
+            </p>
+            <div className="flex gap-1 rounded-full border border-border/60 bg-muted/40 p-1">
+              {RANGES.map((r) => (
+                <Button
+                  key={r.key}
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setRangeKey(r.key)}
+                  className={cn(
+                    "h-7 rounded-full px-3 text-[12px]",
+                    r.key === rangeKey && "bg-card text-foreground shadow-sm",
+                  )}
+                >
+                  {r.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
           {series.isLoading ? (
             <LoadingBlock label="Loading trend…" />
           ) : chartData.length === 0 ? (
@@ -171,75 +222,28 @@ function OwnerOverviewRoute() {
             <TrendArea
               data={chartData}
               xKey="label"
+              height={260}
               series={[{ key: "checkIns", label: "Check-ins", color: CHART_COLORS[0] }]}
             />
           )}
-        </SectionCard>
-        <SectionCard
-          title="Organization growth"
-          description="New vs cumulative"
-          source="Organization records grouped by creation date."
-        >
-          {series.isLoading ? (
-            <LoadingBlock label="Loading trend…" />
-          ) : chartData.length === 0 ? (
-            <EmptyState title="No organizations created in this window." />
-          ) : (
-            <TrendLine
-              data={chartData}
-              xKey="label"
-              series={[
-                { key: "totalOrganizations", label: "Total organizations", color: CHART_COLORS[0] },
-                { key: "newOrganizations", label: "New", color: CHART_COLORS[2] },
-              ]}
-            />
-          )}
-        </SectionCard>
-        <SectionCard
-          title="Events created"
-          description={`Per ${range.bucket}`}
-          source="Event records grouped by creation date."
-        >
-          {series.isLoading ? (
-            <LoadingBlock label="Loading trend…" />
-          ) : chartData.length === 0 ? (
-            <EmptyState title="No events created in this window." />
-          ) : (
-            <TrendArea
-              data={chartData}
-              xKey="label"
-              series={[{ key: "eventsCreated", label: "Events", color: CHART_COLORS[3] }]}
-            />
-          )}
-        </SectionCard>
-        <SectionCard
-          title="Active organizations"
-          description="Recorded at least one check-in in the bucket"
-          source="Distinct organizations appearing in attendance records, plus new member records."
-        >
-          {series.isLoading ? (
-            <LoadingBlock label="Loading trend…" />
-          ) : chartData.length === 0 ? (
-            <EmptyState title="No activity in this window yet." />
-          ) : (
-            <TrendLine
-              data={chartData}
-              xKey="label"
-              series={[
-                { key: "activeOrganizations", label: "Active organizations", color: CHART_COLORS[1] },
-                { key: "newMembers", label: "New members", color: CHART_COLORS[4] },
-              ]}
-            />
-          )}
-        </SectionCard>
+        </GlanceCard>
       </div>
 
-      <p className="mt-4 text-xs text-muted-foreground">
-        Member repeat coverage: {fmtPercent((d.members.withAttendance / Math.max(1, d.members.total)) * 100, 0)} of tracked
-        members have at least one check-in.
+      <p className="mt-6 text-center text-[12px] text-muted-foreground">
+        Need the detail?{" "}
+        <Link to="/owner-admin/organizations" className="text-primary underline-offset-4 hover:underline">
+          Organizations
+        </Link>
+        {" · "}
+        <Link to="/owner-admin/attendance" className="text-primary underline-offset-4 hover:underline">
+          Attendance
+        </Link>
+        {" · "}
+        <Link to="/owner-admin/growth" className="text-primary underline-offset-4 hover:underline">
+          Activation &amp; retention
+        </Link>
       </p>
-
-    </>
+    </div>
   );
 }
 

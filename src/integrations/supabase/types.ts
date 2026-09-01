@@ -758,6 +758,7 @@ export type Database = {
         Returns: Json
       }
       owner_admin_overview: { Args: never; Returns: Json }
+      owner_admin_people: { Args: never; Returns: Json }
       owner_admin_product_usage: { Args: never; Returns: Json }
       owner_admin_retention: { Args: never; Returns: Json }
       owner_admin_series: {
