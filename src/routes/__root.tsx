@@ -103,7 +103,7 @@ export const Route = createRootRouteWithContext<AppRouterContext>()({
           name: "Attendance-HQ",
           url: "https://attendance-hq.com",
           logo: "https://attendance-hq.com/favicon.png",
-          sameAs: ["https://checkin-swiftly.lovable.app"],
+          sameAs: ["https://attendance-hq.com"],
         }),
       },
     ],

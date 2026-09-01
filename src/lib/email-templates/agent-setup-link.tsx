@@ -7,7 +7,7 @@ interface AgentSetupLinkEmailProps {
   setupUrl?: string
 }
 
-const DEFAULT_SETUP_URL = 'https://checkin-swiftly.lovable.app/agents'
+const DEFAULT_SETUP_URL = 'https://attendance-hq.com/agents'
 
 export const AgentSetupLinkEmail = ({
   hostName,

@@ -366,7 +366,7 @@ export const DEVICE_TOKEN_KEY = "attendance-hq-device-token";
 // Lovable/Supabase dashboard) must include this origin. Code alone cannot
 // change the Auth Site URL; the redirect helpers below just tell Supabase
 // which URL to embed in the outgoing email.
-export const PRODUCTION_APP_ORIGIN = "https://checkin-swiftly.lovable.app";
+export const PRODUCTION_APP_ORIGIN = "https://attendance-hq.com";
 
 function normalizeOrigin(raw: string): string {
   return raw.trim().replace(/\/+$/, "");
