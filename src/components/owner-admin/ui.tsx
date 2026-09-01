@@ -453,17 +453,17 @@ export function SectionCard({
   return (
     <section
       className={cn(
-        "overflow-hidden rounded-2xl border border-border/60 bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_12px_24px_-20px_rgba(0,0,0,0.25)]",
+        "overflow-hidden rounded-[22px] border border-border/60 bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_12px_24px_-20px_rgba(0,0,0,0.25)] lg:rounded-2xl",
         className,
       )}
     >
       {title ? (
-        <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 bg-muted/25 px-4 py-3">
+        <header className="border-b border-border/60 bg-muted/25 px-4 py-3 sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-2">
           <div className="min-w-0">
-            <h2 className="text-[13px] font-semibold tracking-tight">{title}</h2>
+            <h2 className="text-[14px] font-semibold tracking-tight sm:text-[13px]">{title}</h2>
             {description ? <p className="mt-0.5 text-xs text-muted-foreground">{description}</p> : null}
           </div>
-          {actions}
+          {actions ? <div className="mt-2.5 sm:mt-0">{actions}</div> : null}
         </header>
       ) : null}
       <div className="p-4">{children}</div>
@@ -505,7 +505,7 @@ export function KpiCard({
     <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
       <span className={cn("absolute inset-y-0 left-0 w-[3px]", TONE_RAIL[tone])} aria-hidden="true" />
       <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
-      <p className={cn("mt-2 font-display text-[26px] font-extrabold leading-none tabular-nums", TONE_TEXT[tone])}>
+      <p className={cn("mt-2 font-display text-[22px] font-extrabold leading-none tabular-nums sm:text-[26px]", TONE_TEXT[tone])}>
         {value}
       </p>
       {hint ? <p className="mt-1.5 text-xs leading-snug text-muted-foreground">{hint}</p> : null}
@@ -514,7 +514,7 @@ export function KpiCard({
 }
 
 export function KpiGrid({ children }: { children: React.ReactNode }) {
-  return <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{children}</div>;
+  return <div className="grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">{children}</div>;
 }
 
 // ── Plain-language, at-a-glance pieces (Apple-inspired) ─────────────────────
