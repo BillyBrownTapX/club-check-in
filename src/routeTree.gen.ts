@@ -27,6 +27,7 @@ import { Route as GreekLifeAttendanceRouteImport } from './routes/greek-life-att
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as ClubAttendanceTrackerRouteImport } from './routes/club-attendance-tracker'
 import { Route as ChurchAttendanceAppRouteImport } from './routes/church-attendance-app'
+import { Route as AttendanceReportsRouteImport } from './routes/attendance-reports'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EventsIndexRouteImport } from './routes/events.index'
@@ -138,6 +139,11 @@ const ChurchAttendanceAppRoute = ChurchAttendanceAppRouteImport.update({
   path: '/church-attendance-app',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AttendanceReportsRoute = AttendanceReportsRouteImport.update({
+  id: '/attendance-reports',
+  path: '/attendance-reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -244,6 +250,7 @@ const ApiHostClubsClubIdSemesterAttendanceDotcsvRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/attendance-reports': typeof AttendanceReportsRoute
   '/church-attendance-app': typeof ChurchAttendanceAppRoute
   '/club-attendance-tracker': typeof ClubAttendanceTrackerRoute
   '/forgot-password': typeof ForgotPasswordRoute
@@ -284,6 +291,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/attendance-reports': typeof AttendanceReportsRoute
   '/church-attendance-app': typeof ChurchAttendanceAppRoute
   '/club-attendance-tracker': typeof ClubAttendanceTrackerRoute
   '/forgot-password': typeof ForgotPasswordRoute
@@ -325,6 +333,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/attendance-reports': typeof AttendanceReportsRoute
   '/church-attendance-app': typeof ChurchAttendanceAppRoute
   '/club-attendance-tracker': typeof ClubAttendanceTrackerRoute
   '/forgot-password': typeof ForgotPasswordRoute
@@ -367,6 +376,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/attendance-reports'
     | '/church-attendance-app'
     | '/club-attendance-tracker'
     | '/forgot-password'
@@ -407,6 +417,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin'
+    | '/attendance-reports'
     | '/church-attendance-app'
     | '/club-attendance-tracker'
     | '/forgot-password'
@@ -447,6 +458,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/attendance-reports'
     | '/church-attendance-app'
     | '/club-attendance-tracker'
     | '/forgot-password'
@@ -488,6 +500,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  AttendanceReportsRoute: typeof AttendanceReportsRoute
   ChurchAttendanceAppRoute: typeof ChurchAttendanceAppRoute
   ClubAttendanceTrackerRoute: typeof ClubAttendanceTrackerRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
@@ -652,6 +665,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChurchAttendanceAppRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/attendance-reports': {
+      id: '/attendance-reports'
+      path: '/attendance-reports'
+      fullPath: '/attendance-reports'
+      preLoaderRoute: typeof AttendanceReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -812,6 +832,7 @@ const ApiHealthRouteWithChildren = ApiHealthRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  AttendanceReportsRoute: AttendanceReportsRoute,
   ChurchAttendanceAppRoute: ChurchAttendanceAppRoute,
   ClubAttendanceTrackerRoute: ClubAttendanceTrackerRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
