@@ -18,14 +18,17 @@ import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as QrCodeAttendanceRouteImport } from './routes/qr-code-attendance'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as PreEventHeadcountRouteImport } from './routes/pre-event-headcount'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as LiveRouteImport } from './routes/live'
 import { Route as HomeRouteImport } from './routes/home'
 import { Route as HelpRouteImport } from './routes/help'
 import { Route as GreekLifeAttendanceRouteImport } from './routes/greek-life-attendance'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as ClubOfficerRolesRouteImport } from './routes/club-officer-roles'
 import { Route as ClubAttendanceTrackerRouteImport } from './routes/club-attendance-tracker'
 import { Route as ChurchAttendanceAppRouteImport } from './routes/church-attendance-app'
+import { Route as AttendanceReportsRouteImport } from './routes/attendance-reports'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as EventsIndexRouteImport } from './routes/events.index'
@@ -92,6 +95,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
   path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PreEventHeadcountRoute = PreEventHeadcountRouteImport.update({
+  id: '/pre-event-headcount',
+  path: '/pre-event-headcount',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const NotificationsRoute = NotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
@@ -122,6 +130,11 @@ const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ClubOfficerRolesRoute = ClubOfficerRolesRouteImport.update({
+  id: '/club-officer-roles',
+  path: '/club-officer-roles',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ClubAttendanceTrackerRoute = ClubAttendanceTrackerRouteImport.update({
   id: '/club-attendance-tracker',
   path: '/club-attendance-tracker',
@@ -130,6 +143,11 @@ const ClubAttendanceTrackerRoute = ClubAttendanceTrackerRouteImport.update({
 const ChurchAttendanceAppRoute = ChurchAttendanceAppRouteImport.update({
   id: '/church-attendance-app',
   path: '/church-attendance-app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AttendanceReportsRoute = AttendanceReportsRouteImport.update({
+  id: '/attendance-reports',
+  path: '/attendance-reports',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -238,14 +256,17 @@ const ApiHostClubsClubIdSemesterAttendanceDotcsvRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/attendance-reports': typeof AttendanceReportsRoute
   '/church-attendance-app': typeof ChurchAttendanceAppRoute
   '/club-attendance-tracker': typeof ClubAttendanceTrackerRoute
+  '/club-officer-roles': typeof ClubOfficerRolesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/greek-life-attendance': typeof GreekLifeAttendanceRoute
   '/help': typeof HelpRoute
   '/home': typeof HomeRoute
   '/live': typeof LiveRoute
   '/notifications': typeof NotificationsRoute
+  '/pre-event-headcount': typeof PreEventHeadcountRoute
   '/privacy': typeof PrivacyRoute
   '/qr-code-attendance': typeof QrCodeAttendanceRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -277,14 +298,17 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/attendance-reports': typeof AttendanceReportsRoute
   '/church-attendance-app': typeof ChurchAttendanceAppRoute
   '/club-attendance-tracker': typeof ClubAttendanceTrackerRoute
+  '/club-officer-roles': typeof ClubOfficerRolesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/greek-life-attendance': typeof GreekLifeAttendanceRoute
   '/help': typeof HelpRoute
   '/home': typeof HomeRoute
   '/live': typeof LiveRoute
   '/notifications': typeof NotificationsRoute
+  '/pre-event-headcount': typeof PreEventHeadcountRoute
   '/privacy': typeof PrivacyRoute
   '/qr-code-attendance': typeof QrCodeAttendanceRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -317,14 +341,17 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/attendance-reports': typeof AttendanceReportsRoute
   '/church-attendance-app': typeof ChurchAttendanceAppRoute
   '/club-attendance-tracker': typeof ClubAttendanceTrackerRoute
+  '/club-officer-roles': typeof ClubOfficerRolesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/greek-life-attendance': typeof GreekLifeAttendanceRoute
   '/help': typeof HelpRoute
   '/home': typeof HomeRoute
   '/live': typeof LiveRoute
   '/notifications': typeof NotificationsRoute
+  '/pre-event-headcount': typeof PreEventHeadcountRoute
   '/privacy': typeof PrivacyRoute
   '/qr-code-attendance': typeof QrCodeAttendanceRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -358,14 +385,17 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/attendance-reports'
     | '/church-attendance-app'
     | '/club-attendance-tracker'
+    | '/club-officer-roles'
     | '/forgot-password'
     | '/greek-life-attendance'
     | '/help'
     | '/home'
     | '/live'
     | '/notifications'
+    | '/pre-event-headcount'
     | '/privacy'
     | '/qr-code-attendance'
     | '/reset-password'
@@ -397,14 +427,17 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/admin'
+    | '/attendance-reports'
     | '/church-attendance-app'
     | '/club-attendance-tracker'
+    | '/club-officer-roles'
     | '/forgot-password'
     | '/greek-life-attendance'
     | '/help'
     | '/home'
     | '/live'
     | '/notifications'
+    | '/pre-event-headcount'
     | '/privacy'
     | '/qr-code-attendance'
     | '/reset-password'
@@ -436,14 +469,17 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/admin'
+    | '/attendance-reports'
     | '/church-attendance-app'
     | '/club-attendance-tracker'
+    | '/club-officer-roles'
     | '/forgot-password'
     | '/greek-life-attendance'
     | '/help'
     | '/home'
     | '/live'
     | '/notifications'
+    | '/pre-event-headcount'
     | '/privacy'
     | '/qr-code-attendance'
     | '/reset-password'
@@ -476,14 +512,17 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  AttendanceReportsRoute: typeof AttendanceReportsRoute
   ChurchAttendanceAppRoute: typeof ChurchAttendanceAppRoute
   ClubAttendanceTrackerRoute: typeof ClubAttendanceTrackerRoute
+  ClubOfficerRolesRoute: typeof ClubOfficerRolesRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   GreekLifeAttendanceRoute: typeof GreekLifeAttendanceRoute
   HelpRoute: typeof HelpRoute
   HomeRoute: typeof HomeRoute
   LiveRoute: typeof LiveRoute
   NotificationsRoute: typeof NotificationsRoute
+  PreEventHeadcountRoute: typeof PreEventHeadcountRoute
   PrivacyRoute: typeof PrivacyRoute
   QrCodeAttendanceRoute: typeof QrCodeAttendanceRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -576,6 +615,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pre-event-headcount': {
+      id: '/pre-event-headcount'
+      path: '/pre-event-headcount'
+      fullPath: '/pre-event-headcount'
+      preLoaderRoute: typeof PreEventHeadcountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/notifications': {
       id: '/notifications'
       path: '/notifications'
@@ -618,6 +664,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/club-officer-roles': {
+      id: '/club-officer-roles'
+      path: '/club-officer-roles'
+      fullPath: '/club-officer-roles'
+      preLoaderRoute: typeof ClubOfficerRolesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/club-attendance-tracker': {
       id: '/club-attendance-tracker'
       path: '/club-attendance-tracker'
@@ -630,6 +683,13 @@ declare module '@tanstack/react-router' {
       path: '/church-attendance-app'
       fullPath: '/church-attendance-app'
       preLoaderRoute: typeof ChurchAttendanceAppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/attendance-reports': {
+      id: '/attendance-reports'
+      path: '/attendance-reports'
+      fullPath: '/attendance-reports'
+      preLoaderRoute: typeof AttendanceReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -792,14 +852,17 @@ const ApiHealthRouteWithChildren = ApiHealthRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  AttendanceReportsRoute: AttendanceReportsRoute,
   ChurchAttendanceAppRoute: ChurchAttendanceAppRoute,
   ClubAttendanceTrackerRoute: ClubAttendanceTrackerRoute,
+  ClubOfficerRolesRoute: ClubOfficerRolesRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   GreekLifeAttendanceRoute: GreekLifeAttendanceRoute,
   HelpRoute: HelpRoute,
   HomeRoute: HomeRoute,
   LiveRoute: LiveRoute,
   NotificationsRoute: NotificationsRoute,
+  PreEventHeadcountRoute: PreEventHeadcountRoute,
   PrivacyRoute: PrivacyRoute,
   QrCodeAttendanceRoute: QrCodeAttendanceRoute,
   ResetPasswordRoute: ResetPasswordRoute,

@@ -13,10 +13,12 @@ export function absoluteUrl(path: string): string {
 
 const NAV: { label: string; to: string }[] = [
   { label: "QR check-in", to: "/qr-code-attendance" },
+  { label: "Head count", to: "/pre-event-headcount" },
+  { label: "Reports", to: "/attendance-reports" },
   { label: "For clubs", to: "/club-attendance-tracker" },
   { label: "Greek life", to: "/greek-life-attendance" },
-  { label: "Churches & orgs", to: "/church-attendance-app" },
-  { label: "vs Google Forms", to: "/vs-google-forms" },
+  { label: "Churches", to: "/church-attendance-app" },
+  { label: "vs Forms", to: "/vs-google-forms" },
 ];
 
 export function MarketingShell({ children }: { children: ReactNode }) {
@@ -65,7 +67,7 @@ function MarketingFooter() {
   return (
     <footer className="border-t border-border/60 bg-secondary/40">
       <div className="mx-auto grid w-full max-w-6xl gap-10 px-4 py-12 sm:px-6 md:grid-cols-4">
-        <div className="md:col-span-2">
+        <div>
           <BrandMark size="md" />
           <p className="mt-3 max-w-sm text-[14px] leading-6 text-muted-foreground">
             Attendance-HQ is the QR-code attendance app for college clubs, Greek chapters, campus departments,
@@ -76,10 +78,20 @@ function MarketingFooter() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Product</p>
           <ul className="mt-3 space-y-2 text-[14px]">
             <li><Link to="/qr-code-attendance" className="text-foreground hover:text-primary">QR code attendance</Link></li>
-            <li><Link to="/club-attendance-tracker" className="text-foreground hover:text-primary">Club attendance tracker</Link></li>
-            <li><Link to="/greek-life-attendance" className="text-foreground hover:text-primary">Greek life attendance</Link></li>
-            <li><Link to="/church-attendance-app" className="text-foreground hover:text-primary">Church &amp; org attendance</Link></li>
+            <li><Link to="/pre-event-headcount" className="text-foreground hover:text-primary">Pre-event head count</Link></li>
+            <li><Link to="/attendance-reports" className="text-foreground hover:text-primary">Attendance reports &amp; CSV</Link></li>
+            <li><Link to="/club-officer-roles" className="text-foreground hover:text-primary">Officers &amp; roster privacy</Link></li>
             <li><Link to="/vs-google-forms" className="text-foreground hover:text-primary">vs Google Forms</Link></li>
+          </ul>
+        </nav>
+        <nav aria-label="Solutions">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Solutions</p>
+          <ul className="mt-3 space-y-2 text-[14px]">
+            <li><Link to="/club-attendance-tracker" className="text-foreground hover:text-primary">College clubs</Link></li>
+            <li><Link to="/greek-life-attendance" className="text-foreground hover:text-primary">Fraternities &amp; sororities</Link></li>
+            <li><Link to="/church-attendance-app" className="text-foreground hover:text-primary">Churches &amp; small groups</Link></li>
+            <li><Link to="/church-attendance-app" className="text-foreground hover:text-primary">Nonprofits &amp; community orgs</Link></li>
+            <li><Link to="/qr-code-attendance" className="text-foreground hover:text-primary">Campus departments</Link></li>
           </ul>
         </nav>
         <nav aria-label="Company">
@@ -87,12 +99,12 @@ function MarketingFooter() {
           <ul className="mt-3 space-y-2 text-[14px]">
             <li><Link to="/sign-in" className="text-foreground hover:text-primary">Host sign in</Link></li>
             <li><Link to="/sign-up" className="text-foreground hover:text-primary">Create an account</Link></li>
-            <li><Link to="/help" className="text-foreground hover:text-primary">Help center</Link></li>
             <li><Link to="/privacy" className="text-foreground hover:text-primary">Privacy</Link></li>
             <li><Link to="/terms" className="text-foreground hover:text-primary">Terms</Link></li>
           </ul>
         </nav>
       </div>
+
       <div className="border-t border-border/60">
         <div className="mx-auto flex w-full max-w-6xl flex-col items-start justify-between gap-2 px-4 py-6 text-[12.5px] text-muted-foreground sm:flex-row sm:items-center sm:px-6">
           <p>© {new Date().getFullYear()} Attendance-HQ. All rights reserved.</p>
@@ -182,6 +194,32 @@ export function softwareAppSchema() {
     publisher: { "@type": "Organization", name: "Attendance-HQ", url: CANONICAL_ORIGIN },
   };
 }
+
+export function howToSchema({
+  name,
+  description,
+  steps,
+}: {
+  name: string;
+  description: string;
+  steps: { name: string; text: string }[];
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    name,
+    description,
+    totalTime: "PT1M",
+    step: steps.map((s, i) => ({
+      "@type": "HowToStep",
+      position: i + 1,
+      name: s.name,
+      text: s.text,
+    })),
+  };
+}
+
+
 
 export function buildPageMeta({
   title,
