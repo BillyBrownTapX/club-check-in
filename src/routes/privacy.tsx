@@ -13,7 +13,7 @@ export const Route = createFileRoute("/privacy")({
       { name: "twitter:title", content: "Privacy Policy — Attendance HQ" },
       { name: "twitter:description", content: "How Attendance HQ handles host account and student check-in data, including retention and FERPA framing." },
     ],
-    links: [{ rel: "canonical", href: "https://checkin-swiftly.lovable.app/privacy" }],
+    links: [{ rel: "canonical", href: "https://attendance-hq.com/privacy" }],
   }),
   component: PrivacyRoute,
 });

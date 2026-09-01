@@ -12,7 +12,7 @@ export const Route = createFileRoute("/terms")({
       { name: "twitter:title", content: "Terms of Use — Attendance HQ" },
       { name: "twitter:description", content: "Terms of use for Attendance HQ host accounts and event check-in." },
     ],
-    links: [{ rel: "canonical", href: "https://checkin-swiftly.lovable.app/terms" }],
+    links: [{ rel: "canonical", href: "https://attendance-hq.com/terms" }],
   }),
   component: TermsRoute,
 });
