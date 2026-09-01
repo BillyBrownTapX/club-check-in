@@ -19,6 +19,7 @@ import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as QrCodeAttendanceRouteImport } from './routes/qr-code-attendance'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as PreEventHeadcountRouteImport } from './routes/pre-event-headcount'
+import { Route as OwnerAdminRouteImport } from './routes/owner-admin'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as LiveRouteImport } from './routes/live'
 import { Route as HomeRouteImport } from './routes/home'
@@ -99,6 +100,11 @@ const PrivacyRoute = PrivacyRouteImport.update({
 const PreEventHeadcountRoute = PreEventHeadcountRouteImport.update({
   id: '/pre-event-headcount',
   path: '/pre-event-headcount',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OwnerAdminRoute = OwnerAdminRouteImport.update({
+  id: '/owner-admin',
+  path: '/owner-admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NotificationsRoute = NotificationsRouteImport.update({
@@ -274,6 +280,7 @@ export interface FileRoutesByFullPath {
   '/home': typeof HomeRoute
   '/live': typeof LiveRoute
   '/notifications': typeof NotificationsRoute
+  '/owner-admin': typeof OwnerAdminRoute
   '/pre-event-headcount': typeof PreEventHeadcountRoute
   '/privacy': typeof PrivacyRoute
   '/qr-code-attendance': typeof QrCodeAttendanceRoute
@@ -317,6 +324,7 @@ export interface FileRoutesByTo {
   '/home': typeof HomeRoute
   '/live': typeof LiveRoute
   '/notifications': typeof NotificationsRoute
+  '/owner-admin': typeof OwnerAdminRoute
   '/pre-event-headcount': typeof PreEventHeadcountRoute
   '/privacy': typeof PrivacyRoute
   '/qr-code-attendance': typeof QrCodeAttendanceRoute
@@ -361,6 +369,7 @@ export interface FileRoutesById {
   '/home': typeof HomeRoute
   '/live': typeof LiveRoute
   '/notifications': typeof NotificationsRoute
+  '/owner-admin': typeof OwnerAdminRoute
   '/pre-event-headcount': typeof PreEventHeadcountRoute
   '/privacy': typeof PrivacyRoute
   '/qr-code-attendance': typeof QrCodeAttendanceRoute
@@ -406,6 +415,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/live'
     | '/notifications'
+    | '/owner-admin'
     | '/pre-event-headcount'
     | '/privacy'
     | '/qr-code-attendance'
@@ -449,6 +459,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/live'
     | '/notifications'
+    | '/owner-admin'
     | '/pre-event-headcount'
     | '/privacy'
     | '/qr-code-attendance'
@@ -492,6 +503,7 @@ export interface FileRouteTypes {
     | '/home'
     | '/live'
     | '/notifications'
+    | '/owner-admin'
     | '/pre-event-headcount'
     | '/privacy'
     | '/qr-code-attendance'
@@ -536,6 +548,7 @@ export interface RootRouteChildren {
   HomeRoute: typeof HomeRoute
   LiveRoute: typeof LiveRoute
   NotificationsRoute: typeof NotificationsRoute
+  OwnerAdminRoute: typeof OwnerAdminRoute
   PreEventHeadcountRoute: typeof PreEventHeadcountRoute
   PrivacyRoute: typeof PrivacyRoute
   QrCodeAttendanceRoute: typeof QrCodeAttendanceRoute
@@ -634,6 +647,13 @@ declare module '@tanstack/react-router' {
       path: '/pre-event-headcount'
       fullPath: '/pre-event-headcount'
       preLoaderRoute: typeof PreEventHeadcountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/owner-admin': {
+      id: '/owner-admin'
+      path: '/owner-admin'
+      fullPath: '/owner-admin'
+      preLoaderRoute: typeof OwnerAdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/notifications': {
@@ -884,6 +904,7 @@ const rootRouteChildren: RootRouteChildren = {
   HomeRoute: HomeRoute,
   LiveRoute: LiveRoute,
   NotificationsRoute: NotificationsRoute,
+  OwnerAdminRoute: OwnerAdminRoute,
   PreEventHeadcountRoute: PreEventHeadcountRoute,
   PrivacyRoute: PrivacyRoute,
   QrCodeAttendanceRoute: QrCodeAttendanceRoute,
