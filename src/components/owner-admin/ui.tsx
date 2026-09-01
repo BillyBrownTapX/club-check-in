@@ -367,36 +367,43 @@ function OwnerTabBar({
         </div>
       ) : null}
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 px-3 pb-safe-1 pt-2 lg:hidden">
-        <div className="ios-glass grid grid-cols-5 gap-1 rounded-[22px] px-1.5 py-1.5">
-          {PRIMARY_TABS.map((tab) => {
-            const active = isActive(pathname, tab);
-            const Icon = tab.icon;
-            return (
-              <Link
-                key={tab.to}
-                to={tab.to}
-                className={cn(
-                  "ios-press flex min-w-0 flex-col items-center gap-1 rounded-2xl px-1 py-1.5 transition-colors",
-                  active ? "text-primary" : "text-muted-foreground",
-                )}
-              >
-                <Icon className="size-[21px] shrink-0" />
-                <span className="w-full truncate text-center text-[10px] font-semibold">{tab.label}</span>
-              </Link>
-            );
-          })}
-          <button
-            type="button"
-            onClick={() => setMoreOpen((v) => !v)}
-            className={cn(
-              "ios-press flex min-w-0 flex-col items-center gap-1 rounded-2xl px-1 py-1.5 transition-colors",
-              moreActive || moreOpen ? "text-primary" : "text-muted-foreground",
-            )}
-          >
-            <Ellipsis className="size-[21px] shrink-0" />
-            <span className="w-full truncate text-center text-[10px] font-semibold">More</span>
-          </button>
+      <nav
+        className="ios-tabbar-shell px-3 pt-2 lg:hidden"
+        style={{ paddingBottom: `max(0.6rem, var(--tabbar-bottom-offset))` }}
+      >
+        <div className="pointer-events-auto">
+          <div className="ios-tabbar grid grid-cols-5 gap-1 rounded-[22px] px-1.5 py-1.5">
+            {PRIMARY_TABS.map((tab) => {
+              const active = isActive(pathname, tab);
+              const Icon = tab.icon;
+              return (
+                <Link
+                  key={tab.to}
+                  to={tab.to}
+                  style={{ touchAction: "manipulation" }}
+                  className={cn(
+                    "ios-press flex min-w-0 flex-col items-center gap-1 rounded-2xl px-1 py-1.5 transition-colors",
+                    active ? "text-primary" : "text-muted-foreground",
+                  )}
+                >
+                  <Icon className="size-[21px] shrink-0" />
+                  <span className="w-full truncate text-center text-[10px] font-semibold">{tab.label}</span>
+                </Link>
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => setMoreOpen((v) => !v)}
+              style={{ touchAction: "manipulation" }}
+              className={cn(
+                "ios-press flex min-w-0 flex-col items-center gap-1 rounded-2xl px-1 py-1.5 transition-colors",
+                moreActive || moreOpen ? "text-primary" : "text-muted-foreground",
+              )}
+            >
+              <Ellipsis className="size-[21px] shrink-0" />
+              <span className="w-full truncate text-center text-[10px] font-semibold">More</span>
+            </button>
+          </div>
         </div>
       </nav>
     </>
