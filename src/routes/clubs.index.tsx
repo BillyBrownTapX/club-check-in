@@ -130,20 +130,34 @@ function ClubsRoute() {
 
       <ClubDialog
         open={open}
-        onOpenChange={setOpen}
+        onOpenChange={(next) => {
+          setOpen(next);
+          // Closing the sheet without creating anything ends the guided run —
+          // nothing here is required.
+          if (!next && guided && !createdRef.current) {
+            clearFirstRun(user?.id);
+            setGuided(false);
+          }
+        }}
         universities={universities}
         title="Create Club"
-        description="Add a new club to your workspace."
+        description={guided ? "Step 1 of 2 — create your group, then your first event." : "Add a new club to your workspace."}
         onSubmit={async (values) => {
           try {
             const created = await createClub.mutateAsync(values as never);
             setQuery("");
+            createdRef.current = true;
             toast.success("Club created", { description: created.club_name });
+            if (guided) {
+              navigate({ to: "/events/new", search: { clubId: created.id, templateId: "", duplicateFrom: "" } });
+              return;
+            }
             navigate({ to: "/clubs/$clubId", params: { clubId: created.id } });
           } catch (error) {
             throw new Error(getManagementErrorMessage(error, "Unable to create club."));
           }
         }}
+
 
       />
     </HostAppShell>
