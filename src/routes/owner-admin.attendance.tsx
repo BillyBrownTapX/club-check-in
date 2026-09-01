@@ -94,7 +94,7 @@ function OwnerAttendanceRoute() {
       </KpiGrid>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <SectionCard title="Check-ins by day of week" description="When meetings actually happen">
+        <SectionCard title="Check-ins by day of week" description="When meetings actually happen" source="Attendance records in the selected range.">
           <SimpleBars
             data={report.data.byDayOfWeek.map((row) => ({ label: DAY_LABELS[row.day] ?? String(row.day), checkIns: row.checkIns }))}
             xKey="label"
@@ -114,7 +114,7 @@ function OwnerAttendanceRoute() {
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
-        <SectionCard title="Check-in methods" description="How members identified themselves">
+        <SectionCard title="Check-in methods" description="How members identified themselves" source="Recorded check-in method on each attendance record.">
           <div className="space-y-3">
             {methodRows.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">No check-ins yet.</p>

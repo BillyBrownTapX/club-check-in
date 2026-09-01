@@ -144,7 +144,7 @@ function OwnerProductRoute() {
           )}
         </SectionCard>
 
-        <SectionCard title="Recent incidents" description="Newest platform events (no member data recorded)">
+        <SectionCard title="Recent incidents" description="Newest platform events (no member data recorded)" source="Live platform telemetry rows; historical metrics above are derived from application records.">
           <DataTable
             rows={health.data.recent}
             rowKey={(row) => row.id}

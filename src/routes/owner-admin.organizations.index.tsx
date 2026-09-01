@@ -130,6 +130,7 @@ function OwnerOrganizationsRoute() {
       <SectionCard
         className="mt-4"
         title="All organizations"
+        source="Health scores computed live from each organization's events, check-ins, admins and feature use."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <SearchField value={search} onChange={setSearch} placeholder="Search name, owner, university…" />
