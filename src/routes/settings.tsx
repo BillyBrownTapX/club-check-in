@@ -1,11 +1,12 @@
 import { useNavigate, createFileRoute, Link } from "@tanstack/react-router";
-import { Bell, ChevronRight, LifeBuoy, Lock, LogOut, Mail, Shield, ShieldCheck, User as UserIcon } from "lucide-react";
+import { Bell, ChevronRight, Gauge, LifeBuoy, Lock, LogOut, Mail, Shield, ShieldCheck, User as UserIcon } from "lucide-react";
 import { useAttendanceAuth, useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
 import { HostAppShell } from "@/components/attendance-hq/host-shell";
 import { useRequireHostRedirect } from "@/components/attendance-hq/host-management";
 import { GroupedList, LargeTitleHeader, ListRow, SectionLabel } from "@/components/attendance-hq/ios";
 import { InstallButton } from "@/components/attendance-hq/install-cta";
 import { getAdminMe } from "@/lib/admin.functions";
+import { getOwnerAdminMe } from "@/lib/owner-admin.functions";
 
 export const Route = createFileRoute("/settings")({
   head: () => ({
@@ -28,6 +29,10 @@ function SettingsRoute() {
   const navigate = useNavigate();
 
   const adminMe = useAuthorizedQuery<{ isAdmin: boolean }>(["admin", "me"], getAdminMe, undefined, { staleTime: 60_000 });
+  const ownerMe = useAuthorizedQuery<{ isOwnerAdmin: boolean }>(["owner-admin", "me"], getOwnerAdminMe, undefined, {
+    staleTime: 300_000,
+    retry: false,
+  });
 
   if (loading || !user) return <HostAppShell><div className="py-16 text-center text-sm text-muted-foreground">Loading…</div></HostAppShell>;
 
@@ -78,6 +83,18 @@ function SettingsRoute() {
           </GroupedList>
         </>
       ) : null}
+
+      {/* Owner-only entry point. The probe returns a boolean and nothing else,
+          and the console itself re-verifies on the server. */}
+      {ownerMe.data?.isOwnerAdmin ? (
+        <>
+          <SectionLabel className="mt-6">Attendance HQ</SectionLabel>
+          <GroupedList>
+            <ListRow icon={Gauge} label="Owner console" detail="Platform analytics and health" to="/owner-admin" />
+          </GroupedList>
+        </>
+      ) : null}
+
 
       <SectionLabel className="mt-6">App</SectionLabel>
       <InstallButton />
