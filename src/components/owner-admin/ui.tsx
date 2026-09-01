@@ -772,52 +772,133 @@ export function DataTable<T>({
   empty = "No rows recorded yet.",
   rowKey,
   minWidth = 760,
+  mobile,
 }: {
   rows: T[];
   columns: { key: string; header: string; align?: "left" | "right"; render: (row: T) => React.ReactNode }[];
   empty?: string;
   rowKey: (row: T, index: number) => string;
   minWidth?: number;
+  /**
+   * Optional phone presentation. On mobile the table becomes a grouped list of
+   * cards, because a 760px-wide table can only be read by scrolling sideways.
+   * When omitted, the first column becomes the title and the rest become
+   * label/value pairs, so no page can break.
+   */
+  mobile?: {
+    /** Column keys shown as the row title / subtitle. */
+    title?: (row: T) => React.ReactNode;
+    subtitle?: (row: T) => React.ReactNode;
+    /** Column keys rendered as the compact stat grid under the title. */
+    stats?: string[];
+  };
 }) {
   if (!rows.length) {
     return <EmptyState title={empty} hint="This table reads live application records — nothing matches yet." />;
   }
+
+  const [firstColumn, ...restColumns] = columns;
+  const statColumns = mobile?.stats
+    ? columns.filter((col) => mobile.stats!.includes(col.key))
+    : restColumns.slice(0, 4);
+
   return (
-    <div className="-mx-4 max-h-[70vh] overflow-auto px-4">
-      <table className="w-full border-collapse text-sm" style={{ minWidth }}>
-        <thead className="sticky top-0 z-10">
-          <tr className="text-left">
-            {columns.map((col) => (
-              <th
-                key={col.key}
-                className={cn(
-                  "border-b border-border/60 bg-card px-2 py-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground",
-                  col.align === "right" && "text-right",
-                )}
-              >
-                {col.header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, index) => (
-            <tr
-              key={rowKey(row, index)}
-              className="border-b border-border/40 transition-colors last:border-0 hover:bg-primary/[0.04]"
-            >
+    <>
+      {/* Phone: grouped cards */}
+      <div className="space-y-2.5 sm:hidden">
+        {rows.map((row, index) => (
+          <article key={rowKey(row, index)} className="rounded-2xl border border-border/50 bg-card/80 p-3.5">
+            <div className="min-w-0 text-[15px] font-semibold leading-snug">
+              {mobile?.title ? mobile.title(row) : firstColumn ? firstColumn.render(row) : null}
+            </div>
+            {mobile?.subtitle ? (
+              <div className="mt-0.5 min-w-0 text-[13px] text-muted-foreground">{mobile.subtitle(row)}</div>
+            ) : null}
+            {statColumns.length ? (
+              <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2.5 border-t border-border/40 pt-3">
+                {statColumns.map((col) => (
+                  <div key={col.key} className="min-w-0">
+                    <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                      {col.header}
+                    </dt>
+                    <dd className="mt-0.5 truncate text-[14px] tabular-nums">{col.render(row)}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : null}
+          </article>
+        ))}
+      </div>
+
+      {/* Tablet and up: real table */}
+      <div className="-mx-4 hidden max-h-[70vh] overflow-auto px-4 sm:block">
+        <table className="w-full border-collapse text-sm" style={{ minWidth }}>
+          <thead className="sticky top-0 z-10">
+            <tr className="text-left">
               {columns.map((col) => (
-                <td key={col.key} className={cn("px-2 py-2.5 align-middle", col.align === "right" && "text-right tabular-nums")}>
-                  {col.render(row)}
-                </td>
+                <th
+                  key={col.key}
+                  className={cn(
+                    "border-b border-border/60 bg-card px-2 py-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground",
+                    col.align === "right" && "text-right",
+                  )}
+                >
+                  {col.header}
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => (
+              <tr
+                key={rowKey(row, index)}
+                className="border-b border-border/40 transition-colors last:border-0 hover:bg-primary/[0.04]"
+              >
+                {columns.map((col) => (
+                  <td key={col.key} className={cn("px-2 py-2.5 align-middle", col.align === "right" && "text-right tabular-nums")}>
+                    {col.render(row)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+/** iOS-style segmented control for the range switchers. */
+export function RangeSegmented<T extends string>({
+  value,
+  onChange,
+  options,
+}: {
+  value: T;
+  onChange: (next: T) => void;
+  options: { key: T; label: string }[];
+}) {
+  return (
+    <div className="inline-flex w-full rounded-2xl bg-muted p-1 sm:w-auto sm:rounded-xl">
+      {options.map((opt) => (
+        <button
+          key={opt.key}
+          type="button"
+          onClick={() => onChange(opt.key)}
+          className={cn(
+            "ios-press flex-1 whitespace-nowrap rounded-[0.9rem] px-3 py-2 text-[13px] font-semibold transition-colors sm:py-1.5 sm:text-[12px]",
+            opt.key === value
+              ? "bg-card text-foreground shadow-[0_2px_6px_rgba(15,23,42,0.08)]"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {opt.label}
+        </button>
+      ))}
     </div>
   );
 }
+
 
 export function LoadingBlock({ label = "Loading live data…" }: { label?: string }) {
   return <div className="py-16 text-center text-sm text-muted-foreground">{label}</div>;
