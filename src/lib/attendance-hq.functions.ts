@@ -1819,7 +1819,22 @@ async function recordCheckInClosed(eventId: string): Promise<void> {
   }
 }
 
+// Fire-and-forget duplicate-scan telemetry (no student identifiers recorded).
+async function recordDuplicateAttempt(eventId: string, method: string): Promise<void> {
+  try {
+    const { recordPlatformEvent } = await import("@/lib/owner-analytics.server");
+    await recordPlatformEvent({
+      type: "duplicate_check_in_attempt",
+      eventId,
+      metadata: { method },
+    });
+  } catch {
+    /* best-effort */
+  }
+}
+
 async function createAttendanceRecord(input: {
+
   event: { id: string };
   studentId: string;
   method: "qr_scan" | "returning_lookup" | "remembered_device";
