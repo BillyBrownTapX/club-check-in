@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Link, createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
@@ -10,8 +10,10 @@ import { Chip, IosSearchField, LargeTitleHeader, SectionLabel } from "@/componen
 import { Button } from "@/components/ui/button";
 import { getHostClubSummaries, createClubManagement, getUniversitiesForHost } from "@/lib/attendance-hq.functions";
 import { useSignedLogoUrl } from "@/hooks/use-signed-logo";
+import { clearFirstRun, isFirstRunActive } from "@/lib/host-first-run";
 import type { ClubSummary } from "@/lib/attendance-hq";
 import { queryKeys } from "@/lib/query-keys";
+
 
 function ClubsError({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
