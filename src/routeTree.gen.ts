@@ -40,6 +40,7 @@ import { Route as PreCheckInPreTokenRouteImport } from './routes/pre-check-in.$p
 import { Route as OwnerAdminUsersRouteImport } from './routes/owner-admin.users'
 import { Route as OwnerAdminMembersRouteImport } from './routes/owner-admin.members'
 import { Route as OwnerAdminEventsRouteImport } from './routes/owner-admin.events'
+import { Route as OwnerAdminAttendanceRouteImport } from './routes/owner-admin.attendance'
 import { Route as OnboardingEventRouteImport } from './routes/onboarding.event'
 import { Route as OnboardingClubRouteImport } from './routes/onboarding.club'
 import { Route as EventsNewRouteImport } from './routes/events.new'
@@ -214,6 +215,11 @@ const OwnerAdminEventsRoute = OwnerAdminEventsRouteImport.update({
   path: '/events',
   getParentRoute: () => OwnerAdminRoute,
 } as any)
+const OwnerAdminAttendanceRoute = OwnerAdminAttendanceRouteImport.update({
+  id: '/attendance',
+  path: '/attendance',
+  getParentRoute: () => OwnerAdminRoute,
+} as any)
 const OnboardingEventRoute = OnboardingEventRouteImport.update({
   id: '/onboarding/event',
   path: '/onboarding/event',
@@ -337,6 +343,7 @@ export interface FileRoutesByFullPath {
   '/events/new': typeof EventsNewRoute
   '/onboarding/club': typeof OnboardingClubRoute
   '/onboarding/event': typeof OnboardingEventRoute
+  '/owner-admin/attendance': typeof OwnerAdminAttendanceRoute
   '/owner-admin/events': typeof OwnerAdminEventsRoute
   '/owner-admin/members': typeof OwnerAdminMembersRoute
   '/owner-admin/users': typeof OwnerAdminUsersRoute
@@ -386,6 +393,7 @@ export interface FileRoutesByTo {
   '/events/new': typeof EventsNewRoute
   '/onboarding/club': typeof OnboardingClubRoute
   '/onboarding/event': typeof OnboardingEventRoute
+  '/owner-admin/attendance': typeof OwnerAdminAttendanceRoute
   '/owner-admin/events': typeof OwnerAdminEventsRoute
   '/owner-admin/members': typeof OwnerAdminMembersRoute
   '/owner-admin/users': typeof OwnerAdminUsersRoute
@@ -437,6 +445,7 @@ export interface FileRoutesById {
   '/events/new': typeof EventsNewRoute
   '/onboarding/club': typeof OnboardingClubRoute
   '/onboarding/event': typeof OnboardingEventRoute
+  '/owner-admin/attendance': typeof OwnerAdminAttendanceRoute
   '/owner-admin/events': typeof OwnerAdminEventsRoute
   '/owner-admin/members': typeof OwnerAdminMembersRoute
   '/owner-admin/users': typeof OwnerAdminUsersRoute
@@ -489,6 +498,7 @@ export interface FileRouteTypes {
     | '/events/new'
     | '/onboarding/club'
     | '/onboarding/event'
+    | '/owner-admin/attendance'
     | '/owner-admin/events'
     | '/owner-admin/members'
     | '/owner-admin/users'
@@ -538,6 +548,7 @@ export interface FileRouteTypes {
     | '/events/new'
     | '/onboarding/club'
     | '/onboarding/event'
+    | '/owner-admin/attendance'
     | '/owner-admin/events'
     | '/owner-admin/members'
     | '/owner-admin/users'
@@ -588,6 +599,7 @@ export interface FileRouteTypes {
     | '/events/new'
     | '/onboarding/club'
     | '/onboarding/event'
+    | '/owner-admin/attendance'
     | '/owner-admin/events'
     | '/owner-admin/members'
     | '/owner-admin/users'
@@ -868,6 +880,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OwnerAdminEventsRouteImport
       parentRoute: typeof OwnerAdminRoute
     }
+    '/owner-admin/attendance': {
+      id: '/owner-admin/attendance'
+      path: '/attendance'
+      fullPath: '/owner-admin/attendance'
+      preLoaderRoute: typeof OwnerAdminAttendanceRouteImport
+      parentRoute: typeof OwnerAdminRoute
+    }
     '/onboarding/event': {
       id: '/onboarding/event'
       path: '/onboarding/event'
@@ -991,6 +1010,7 @@ declare module '@tanstack/react-router' {
 }
 
 interface OwnerAdminRouteChildren {
+  OwnerAdminAttendanceRoute: typeof OwnerAdminAttendanceRoute
   OwnerAdminEventsRoute: typeof OwnerAdminEventsRoute
   OwnerAdminMembersRoute: typeof OwnerAdminMembersRoute
   OwnerAdminUsersRoute: typeof OwnerAdminUsersRoute
@@ -1000,6 +1020,7 @@ interface OwnerAdminRouteChildren {
 }
 
 const OwnerAdminRouteChildren: OwnerAdminRouteChildren = {
+  OwnerAdminAttendanceRoute: OwnerAdminAttendanceRoute,
   OwnerAdminEventsRoute: OwnerAdminEventsRoute,
   OwnerAdminMembersRoute: OwnerAdminMembersRoute,
   OwnerAdminUsersRoute: OwnerAdminUsersRoute,
