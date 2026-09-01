@@ -268,7 +268,7 @@ export function OwnerAdminShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-[1500px] px-4 pb-28 pt-1 lg:px-6 lg:py-8 lg:pb-10">{children}</main>
+        <main className="pb-tabbar mx-auto w-full max-w-[1500px] px-4 pt-1 lg:px-6 lg:py-8 lg:pb-10">{children}</main>
 
         {/* Mobile: iOS bottom tab bar */}
         <OwnerTabBar
