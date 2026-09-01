@@ -567,7 +567,7 @@ export function GlanceCard({
   return (
     <section
       className={cn(
-        "rounded-[26px] border border-border/50 bg-card/90 p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_24px_48px_-32px_rgba(0,0,0,0.28)] backdrop-blur",
+        "rounded-[26px] border border-border/50 bg-card/90 p-5 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_24px_48px_-32px_rgba(0,0,0,0.28)] backdrop-blur",
         className,
       )}
     >
