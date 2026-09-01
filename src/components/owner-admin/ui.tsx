@@ -311,7 +311,7 @@ function OwnerTabBar({
   return (
     <>
       {moreOpen ? (
-        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true">
+        <div className="fixed inset-0 z-[60] lg:hidden" role="dialog" aria-modal="true">
           <button
             type="button"
             aria-label="Close menu"
