@@ -117,7 +117,7 @@ export function useOwnerAdminGate() {
 }
 
 // ── Shell ───────────────────────────────────────────────────────────────────
-const NAV = [
+const NAV: { to: string; label: string; icon: typeof Gauge; exact?: boolean }[] = [
   { to: "/owner-admin", label: "Overview", icon: Gauge, exact: true },
   { to: "/owner-admin/organizations", label: "Organizations", icon: Building2 },
   { to: "/owner-admin/users", label: "Users", icon: UserRound },
@@ -126,7 +126,8 @@ const NAV = [
   { to: "/owner-admin/attendance", label: "Attendance", icon: BarChart3 },
   { to: "/owner-admin/growth", label: "Activation & retention", icon: LineChartIcon },
   { to: "/owner-admin/product", label: "Product & health", icon: Activity },
-] as const;
+];
+
 
 export function OwnerAdminShell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
