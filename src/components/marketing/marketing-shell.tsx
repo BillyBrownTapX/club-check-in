@@ -13,10 +13,12 @@ export function absoluteUrl(path: string): string {
 
 const NAV: { label: string; to: string }[] = [
   { label: "QR check-in", to: "/qr-code-attendance" },
+  { label: "Head count", to: "/pre-event-headcount" },
+  { label: "Reports", to: "/attendance-reports" },
   { label: "For clubs", to: "/club-attendance-tracker" },
   { label: "Greek life", to: "/greek-life-attendance" },
-  { label: "Churches & orgs", to: "/church-attendance-app" },
-  { label: "vs Google Forms", to: "/vs-google-forms" },
+  { label: "Churches", to: "/church-attendance-app" },
+  { label: "vs Forms", to: "/vs-google-forms" },
 ];
 
 export function MarketingShell({ children }: { children: ReactNode }) {

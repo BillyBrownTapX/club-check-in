@@ -25,6 +25,7 @@ import { Route as HomeRouteImport } from './routes/home'
 import { Route as HelpRouteImport } from './routes/help'
 import { Route as GreekLifeAttendanceRouteImport } from './routes/greek-life-attendance'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as ClubOfficerRolesRouteImport } from './routes/club-officer-roles'
 import { Route as ClubAttendanceTrackerRouteImport } from './routes/club-attendance-tracker'
 import { Route as ChurchAttendanceAppRouteImport } from './routes/church-attendance-app'
 import { Route as AttendanceReportsRouteImport } from './routes/attendance-reports'
@@ -127,6 +128,11 @@ const GreekLifeAttendanceRoute = GreekLifeAttendanceRouteImport.update({
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
   id: '/forgot-password',
   path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClubOfficerRolesRoute = ClubOfficerRolesRouteImport.update({
+  id: '/club-officer-roles',
+  path: '/club-officer-roles',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ClubAttendanceTrackerRoute = ClubAttendanceTrackerRouteImport.update({
@@ -253,6 +259,7 @@ export interface FileRoutesByFullPath {
   '/attendance-reports': typeof AttendanceReportsRoute
   '/church-attendance-app': typeof ChurchAttendanceAppRoute
   '/club-attendance-tracker': typeof ClubAttendanceTrackerRoute
+  '/club-officer-roles': typeof ClubOfficerRolesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/greek-life-attendance': typeof GreekLifeAttendanceRoute
   '/help': typeof HelpRoute
@@ -294,6 +301,7 @@ export interface FileRoutesByTo {
   '/attendance-reports': typeof AttendanceReportsRoute
   '/church-attendance-app': typeof ChurchAttendanceAppRoute
   '/club-attendance-tracker': typeof ClubAttendanceTrackerRoute
+  '/club-officer-roles': typeof ClubOfficerRolesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/greek-life-attendance': typeof GreekLifeAttendanceRoute
   '/help': typeof HelpRoute
@@ -336,6 +344,7 @@ export interface FileRoutesById {
   '/attendance-reports': typeof AttendanceReportsRoute
   '/church-attendance-app': typeof ChurchAttendanceAppRoute
   '/club-attendance-tracker': typeof ClubAttendanceTrackerRoute
+  '/club-officer-roles': typeof ClubOfficerRolesRoute
   '/forgot-password': typeof ForgotPasswordRoute
   '/greek-life-attendance': typeof GreekLifeAttendanceRoute
   '/help': typeof HelpRoute
@@ -379,6 +388,7 @@ export interface FileRouteTypes {
     | '/attendance-reports'
     | '/church-attendance-app'
     | '/club-attendance-tracker'
+    | '/club-officer-roles'
     | '/forgot-password'
     | '/greek-life-attendance'
     | '/help'
@@ -420,6 +430,7 @@ export interface FileRouteTypes {
     | '/attendance-reports'
     | '/church-attendance-app'
     | '/club-attendance-tracker'
+    | '/club-officer-roles'
     | '/forgot-password'
     | '/greek-life-attendance'
     | '/help'
@@ -461,6 +472,7 @@ export interface FileRouteTypes {
     | '/attendance-reports'
     | '/church-attendance-app'
     | '/club-attendance-tracker'
+    | '/club-officer-roles'
     | '/forgot-password'
     | '/greek-life-attendance'
     | '/help'
@@ -503,6 +515,7 @@ export interface RootRouteChildren {
   AttendanceReportsRoute: typeof AttendanceReportsRoute
   ChurchAttendanceAppRoute: typeof ChurchAttendanceAppRoute
   ClubAttendanceTrackerRoute: typeof ClubAttendanceTrackerRoute
+  ClubOfficerRolesRoute: typeof ClubOfficerRolesRoute
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   GreekLifeAttendanceRoute: typeof GreekLifeAttendanceRoute
   HelpRoute: typeof HelpRoute
@@ -649,6 +662,13 @@ declare module '@tanstack/react-router' {
       path: '/forgot-password'
       fullPath: '/forgot-password'
       preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/club-officer-roles': {
+      id: '/club-officer-roles'
+      path: '/club-officer-roles'
+      fullPath: '/club-officer-roles'
+      preLoaderRoute: typeof ClubOfficerRolesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/club-attendance-tracker': {
@@ -835,6 +855,7 @@ const rootRouteChildren: RootRouteChildren = {
   AttendanceReportsRoute: AttendanceReportsRoute,
   ChurchAttendanceAppRoute: ChurchAttendanceAppRoute,
   ClubAttendanceTrackerRoute: ClubAttendanceTrackerRoute,
+  ClubOfficerRolesRoute: ClubOfficerRolesRoute,
   ForgotPasswordRoute: ForgotPasswordRoute,
   GreekLifeAttendanceRoute: GreekLifeAttendanceRoute,
   HelpRoute: HelpRoute,
