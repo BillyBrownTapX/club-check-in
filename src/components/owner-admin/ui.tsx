@@ -11,6 +11,7 @@ import {
   Building2,
   CalendarRange,
   ChevronLeft,
+  Ellipsis,
   ChevronRight,
   Gauge,
   LineChart as LineChartIcon,
@@ -133,7 +134,7 @@ const NAV: { to: string; label: string; icon: typeof Gauge; exact?: boolean; gro
 
 const NAV_GROUPS = ["Platform", "Accounts", "Activity"] as const;
 
-function isActive(pathname: string, item: (typeof NAV)[number]) {
+function isActive(pathname: string, item: { to: string; exact?: boolean }) {
   return item.exact ? pathname === item.to : pathname.startsWith(item.to);
 }
 
