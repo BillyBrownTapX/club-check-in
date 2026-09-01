@@ -15,6 +15,7 @@ import {
   Gauge,
   LineChart as LineChartIcon,
   LogOut,
+  RefreshCw,
   ShieldCheck,
   UserRound,
   Users,
@@ -520,12 +521,12 @@ const CHART_MARGIN = { top: 6, right: 8, bottom: 0, left: -18 };
 function tooltipStyle() {
   return {
     contentStyle: {
-      background: "hsl(var(--card))",
-      border: "1px solid hsl(var(--border))",
+      background: "var(--card)",
+      border: "1px solid var(--border)",
       borderRadius: 10,
       fontSize: 12,
     },
-    labelStyle: { color: "hsl(var(--muted-foreground))" },
+    labelStyle: { color: "var(--muted-foreground)" },
   } as const;
 }
 
@@ -543,9 +544,9 @@ export function TrendArea({
   return (
     <ResponsiveContainer width="100%" height={height}>
       <AreaChart data={data} margin={CHART_MARGIN}>
-        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-        <XAxis dataKey={xKey} tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-        <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+        <XAxis dataKey={xKey} tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
+        <YAxis tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" allowDecimals={false} />
         <Tooltip {...tooltipStyle()} />
         {series.map((s) => (
           <Area
@@ -578,9 +579,9 @@ export function TrendLine({
   return (
     <ResponsiveContainer width="100%" height={height}>
       <LineChart data={data} margin={CHART_MARGIN}>
-        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-        <XAxis dataKey={xKey} tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-        <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+        <XAxis dataKey={xKey} tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
+        <YAxis tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" allowDecimals={false} />
         <Tooltip {...tooltipStyle()} />
         {series.map((s) => (
           <Line key={s.key} type="monotone" dataKey={s.key} name={s.label} stroke={s.color} strokeWidth={2} dot={false} />
@@ -596,7 +597,7 @@ export function SimpleBars({
   valueKey,
   label,
   height = 220,
-  color = "hsl(var(--primary))",
+  color = "var(--chart-1)",
 }: {
   data: Record<string, unknown>[];
   xKey: string;
@@ -608,9 +609,9 @@ export function SimpleBars({
   return (
     <ResponsiveContainer width="100%" height={height}>
       <BarChart data={data} margin={CHART_MARGIN}>
-        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-        <XAxis dataKey={xKey} tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
-        <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
+        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+        <XAxis dataKey={xKey} tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" />
+        <YAxis tick={{ fontSize: 11 }} stroke="var(--muted-foreground)" allowDecimals={false} />
         <Tooltip {...tooltipStyle()} />
         <Bar dataKey={valueKey} name={label} fill={color} radius={[4, 4, 0, 0]} />
       </BarChart>
