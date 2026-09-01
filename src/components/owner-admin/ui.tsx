@@ -119,17 +119,22 @@ export function useOwnerAdminGate() {
 
 
 // ── Shell ───────────────────────────────────────────────────────────────────
-const NAV: { to: string; label: string; icon: typeof Gauge; exact?: boolean }[] = [
-  { to: "/owner-admin", label: "Overview", icon: Gauge, exact: true },
-  { to: "/owner-admin/organizations", label: "Organizations", icon: Building2 },
-  { to: "/owner-admin/users", label: "Users", icon: UserRound },
-  { to: "/owner-admin/members", label: "Members", icon: Users },
-  { to: "/owner-admin/events", label: "Events", icon: CalendarRange },
-  { to: "/owner-admin/attendance", label: "Attendance", icon: BarChart3 },
-  { to: "/owner-admin/growth", label: "Activation & retention", icon: LineChartIcon },
-  { to: "/owner-admin/product", label: "Product & health", icon: Activity },
+const NAV: { to: string; label: string; icon: typeof Gauge; exact?: boolean; group: string }[] = [
+  { to: "/owner-admin", label: "Overview", icon: Gauge, exact: true, group: "Platform" },
+  { to: "/owner-admin/growth", label: "Activation & retention", icon: LineChartIcon, group: "Platform" },
+  { to: "/owner-admin/organizations", label: "Organizations", icon: Building2, group: "Accounts" },
+  { to: "/owner-admin/users", label: "Hosts", icon: UserRound, group: "Accounts" },
+  { to: "/owner-admin/members", label: "Members", icon: Users, group: "Accounts" },
+  { to: "/owner-admin/events", label: "Events", icon: CalendarRange, group: "Activity" },
+  { to: "/owner-admin/attendance", label: "Attendance", icon: BarChart3, group: "Activity" },
+  { to: "/owner-admin/product", label: "Product & health", icon: Activity, group: "Activity" },
 ];
 
+const NAV_GROUPS = ["Platform", "Accounts", "Activity"] as const;
+
+function isActive(pathname: string, item: (typeof NAV)[number]) {
+  return item.exact ? pathname === item.to : pathname.startsWith(item.to);
+}
 
 export function OwnerAdminShell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
@@ -137,6 +142,20 @@ export function OwnerAdminShell({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [signingOut, setSigningOut] = React.useState(false);
+  const [refreshing, setRefreshing] = React.useState(false);
+  const [loadedAt, setLoadedAt] = React.useState<Date>(() => new Date());
+
+  const current = NAV.filter((item) => isActive(pathname, item)).slice(-1)[0] ?? NAV[0]!;
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      await queryClient.invalidateQueries({ queryKey: ["owner-admin"] });
+      setLoadedAt(new Date());
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleSignOut = async () => {
     setSigningOut(true);
@@ -151,53 +170,120 @@ export function OwnerAdminShell({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-30 border-b border-border/60 bg-background/85 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-[1400px] flex-wrap items-center gap-3 px-4 py-3 lg:px-8">
-          <div className="flex items-center gap-2">
-            <span className="flex size-8 items-center justify-center rounded-lg bg-primary/12 text-primary">
-              <ShieldCheck className="size-4" />
-            </span>
-            <div className="leading-tight">
-              <p className="text-sm font-semibold">Attendance HQ · Owner</p>
-              <p className="text-[11px] text-muted-foreground">Internal platform analytics</p>
-            </div>
-          </div>
-          <div className="ml-auto flex items-center gap-3">
-            {user?.email ? <span className="hidden text-[11px] text-muted-foreground sm:inline">{user.email}</span> : null}
-            <Button variant="ghost" size="sm" onClick={handleSignOut} disabled={signingOut}>
-              <LogOut className="mr-1.5 size-3.5" />
-              {signingOut ? "Signing out…" : "Sign out"}
-            </Button>
+    <div className="min-h-screen bg-surface text-foreground lg:flex">
+      {/* Desktop sidebar */}
+      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-border/60 bg-card/70 backdrop-blur lg:flex">
+        <div className="flex items-center gap-2.5 px-4 py-4">
+          <span className="flex size-9 items-center justify-center rounded-xl bg-primary/12 text-primary">
+            <ShieldCheck className="size-4.5" />
+          </span>
+          <div className="leading-tight">
+            <p className="font-display text-[13px] font-extrabold tracking-tight">Attendance HQ</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Owner console</p>
           </div>
         </div>
 
-        <nav className="mx-auto flex w-full max-w-[1400px] gap-1 overflow-x-auto px-4 pb-2 lg:px-8">
-          {NAV.map((item) => {
-            const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.to}
-                to={item.to}
-                className={cn(
-                  "flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
-                  active
-                    ? "bg-primary/12 text-primary"
-                    : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                )}
-              >
-                <Icon className="size-3.5" />
-                {item.label}
-              </Link>
-            );
-          })}
+        <nav className="flex-1 space-y-5 overflow-y-auto px-3 pb-4">
+          {NAV_GROUPS.map((group) => (
+            <div key={group}>
+              <p className="px-2 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/80">
+                {group}
+              </p>
+              <div className="space-y-0.5">
+                {NAV.filter((item) => item.group === group).map((item) => {
+                  const active = isActive(pathname, item);
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.to}
+                      to={item.to}
+                      className={cn(
+                        "flex items-center gap-2 rounded-lg px-2.5 py-2 text-[13px] font-medium transition-colors",
+                        active
+                          ? "bg-primary/12 text-primary"
+                          : "text-muted-foreground hover:bg-muted/70 hover:text-foreground",
+                      )}
+                    >
+                      <Icon className="size-4 shrink-0" />
+                      <span className="truncate">{item.label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
-      </header>
-      <main className="mx-auto w-full max-w-[1400px] px-4 py-6 lg:px-8">{children}</main>
+
+        <div className="border-t border-border/60 px-3 py-3">
+          {user?.email ? <p className="truncate px-2 pb-2 text-[11px] text-muted-foreground">{user.email}</p> : null}
+          <Button variant="ghost" size="sm" className="w-full justify-start" onClick={handleSignOut} disabled={signingOut}>
+            <LogOut className="mr-1.5 size-3.5" />
+            {signingOut ? "Signing out…" : "Sign out"}
+          </Button>
+        </div>
+      </aside>
+
+      <div className="min-w-0 flex-1">
+        {/* Command bar */}
+        <header className="sticky top-0 z-30 border-b border-border/60 bg-background/85 backdrop-blur">
+          <div className="flex flex-wrap items-center gap-3 px-4 py-3 lg:px-6">
+            <div className="flex items-center gap-2 lg:hidden">
+              <span className="flex size-8 items-center justify-center rounded-lg bg-primary/12 text-primary">
+                <ShieldCheck className="size-4" />
+              </span>
+              <p className="text-sm font-semibold">Owner console</p>
+            </div>
+            <div className="hidden leading-tight lg:block">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                {current.group}
+              </p>
+              <p className="text-sm font-semibold">{current.label}</p>
+            </div>
+
+            <div className="ml-auto flex items-center gap-2">
+              <span className="hidden text-[11px] text-muted-foreground sm:inline">
+                Live data as of {loadedAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+              </span>
+              <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
+                <RefreshCw className={cn("mr-1.5 size-3.5", refreshing && "animate-spin")} />
+                {refreshing ? "Refreshing…" : "Refresh"}
+              </Button>
+              <Button variant="ghost" size="sm" className="lg:hidden" onClick={handleSignOut} disabled={signingOut}>
+                <LogOut className="size-3.5" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Mobile / tablet nav strip */}
+          <nav className="flex gap-1 overflow-x-auto px-4 pb-2 lg:hidden">
+            {NAV.map((item) => {
+              const active = isActive(pathname, item);
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={cn(
+                    "flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
+                    active
+                      ? "bg-primary/12 text-primary"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                  )}
+                >
+                  <Icon className="size-3.5" />
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+        </header>
+
+        <main className="mx-auto w-full max-w-[1500px] px-4 py-6 lg:px-6 lg:py-8">{children}</main>
+      </div>
     </div>
   );
 }
+
 
 export function PageHeading({
   title,
