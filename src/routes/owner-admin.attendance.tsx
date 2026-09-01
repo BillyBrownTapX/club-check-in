@@ -5,6 +5,7 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 
 import { useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
 import {
+  CHART_COLORS,
   DataTable,
   ErrorBlock,
   KpiCard,
@@ -66,6 +67,7 @@ function OwnerAttendanceRoute() {
   return (
     <>
       <PageHeading
+        eyebrow="Activity"
         title="Attendance activity"
         description="Where and how members actually check in — the strongest signal of real product usage."
         actions={
@@ -92,7 +94,7 @@ function OwnerAttendanceRoute() {
       </KpiGrid>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <SectionCard title="Check-ins by day of week" description="When meetings actually happen">
+        <SectionCard title="Check-ins by day of week" description="When meetings actually happen" source="Attendance records in the selected range.">
           <SimpleBars
             data={report.data.byDayOfWeek.map((row) => ({ label: DAY_LABELS[row.day] ?? String(row.day), checkIns: row.checkIns }))}
             xKey="label"
@@ -106,13 +108,13 @@ function OwnerAttendanceRoute() {
             xKey="label"
             valueKey="checkIns"
             label="Check-ins"
-            color="#38bdf8"
+            color={CHART_COLORS[3]}
           />
         </SectionCard>
       </div>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-3">
-        <SectionCard title="Check-in methods" description="How members identified themselves">
+        <SectionCard title="Check-in methods" description="How members identified themselves" source="Recorded check-in method on each attendance record.">
           <div className="space-y-3">
             {methodRows.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground">No check-ins yet.</p>

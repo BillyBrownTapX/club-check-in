@@ -60,6 +60,7 @@ function OwnerGrowthRoute() {
   return (
     <>
       <PageHeading
+        eyebrow="Platform"
         title="Activation &amp; retention"
         description="How quickly new accounts reach real value — and whether they keep coming back."
       />
@@ -71,7 +72,7 @@ function OwnerGrowthRoute() {
         <KpiCard label="Never activated" value={fmtNumber(a.neverActivated.length)} hint={`${fmtNumber(a.stalled.length)} stalled mid-funnel`} tone="warn" />
       </KpiGrid>
 
-      <SectionCard className="mt-4" title="Activation funnel" description="Accounts reaching each milestone">
+      <SectionCard className="mt-4" title="Activation funnel" description="Accounts reaching each milestone" source="Counted live from host accounts, organizations, events and attendance records.">
         <div className="space-y-2">
           {a.funnel.map((stage) => {
             const pct = funnelTop > 0 ? (stage.count / funnelTop) * 100 : 0;
@@ -150,7 +151,7 @@ function OwnerGrowthRoute() {
         </KpiGrid>
       </div>
 
-      <SectionCard className="mt-4" title="Cohort retention" description="Organizations grouped by signup month; each cell is the share still active that month">
+      <SectionCard className="mt-4" title="Cohort retention" description="Organizations grouped by signup month; each cell is the share still active that month" source="Activity derived from real check-in timestamps per organization.">
         {retention.data.cohorts.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">Not enough history yet.</p>
         ) : (
@@ -188,9 +189,9 @@ function OwnerGrowthRoute() {
                             className={cn(
                               "inline-block w-full rounded px-1.5 py-1 text-xs tabular-nums",
                               cell.retained >= 70
-                                ? "bg-emerald-500/20 text-emerald-500"
+                                ? "bg-success/20 text-success"
                                 : cell.retained >= 35
-                                  ? "bg-amber-500/18 text-amber-500"
+                                  ? "bg-warning/18 text-warning"
                                   : "bg-destructive/12 text-destructive",
                             )}
                           >

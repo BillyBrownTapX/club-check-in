@@ -63,6 +63,7 @@ function OwnerUsersRoute() {
   return (
     <>
       <PageHeading
+        eyebrow="Accounts"
         title="Users"
         description="Everyone who has created an Attendance HQ account, with sign-in recency and organization coverage."
       />
@@ -77,6 +78,7 @@ function OwnerUsersRoute() {
       <SectionCard
         className="mt-4"
         title="All users"
+        source="Live host accounts from the authentication system joined with their organization memberships."
         actions={<SearchField value={search} onChange={setSearch} placeholder="Search name or email…" />}
       >
         {users.isLoading ? (

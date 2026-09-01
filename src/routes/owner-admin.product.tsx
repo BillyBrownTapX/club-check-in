@@ -59,6 +59,7 @@ function OwnerProductRoute() {
   return (
     <>
       <PageHeading
+        eyebrow="Activity"
         title="Product &amp; health"
         description="Which capabilities organizations actually adopt, and whether the platform is behaving."
       />
@@ -138,12 +139,12 @@ function OwnerProductRoute() {
               xKey="label"
               valueKey="errors"
               label="Errors"
-              color="hsl(var(--destructive))"
+              color="var(--destructive)"
             />
           )}
         </SectionCard>
 
-        <SectionCard title="Recent incidents" description="Newest platform events (no member data recorded)">
+        <SectionCard title="Recent incidents" description="Newest platform events (no member data recorded)" source="Live platform telemetry rows; historical metrics above are derived from application records.">
           <DataTable
             rows={health.data.recent}
             rowKey={(row) => row.id}

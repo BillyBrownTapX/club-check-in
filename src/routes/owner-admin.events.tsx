@@ -59,6 +59,7 @@ function OwnerEventsRoute() {
   return (
     <>
       <PageHeading
+        eyebrow="Activity"
         title="Events"
         description="Meeting cadence and turnout across every organization, including zero-attendance events worth a nudge."
       />
@@ -80,6 +81,7 @@ function OwnerEventsRoute() {
       <SectionCard
         className="mt-4"
         title="All events"
+        source="Live event records with turnout counted from attendance and pre-check-in records."
         actions={<SearchField value={search} onChange={setSearch} placeholder="Search event or organization…" />}
       >
         {events.isLoading ? (

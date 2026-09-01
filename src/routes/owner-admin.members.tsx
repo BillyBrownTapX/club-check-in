@@ -60,6 +60,7 @@ function OwnerMembersRoute() {
   return (
     <>
       <PageHeading
+        eyebrow="Accounts"
         title="Members"
         description="People who have checked in at least once, or been added to an organization roster. Contact details stay inside the organizations that own them."
       />
@@ -74,6 +75,7 @@ function OwnerMembersRoute() {
       <SectionCard
         className="mt-4"
         title="All members"
+        source="Live student records joined with their attendance and pre-check-in history."
         actions={<SearchField value={search} onChange={setSearch} placeholder="Search name or email…" />}
       >
         {members.isLoading ? (
