@@ -34,9 +34,10 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAttendanceAuth, useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
+import { useAttendanceAuth } from "@/components/attendance-hq/auth-provider";
+import { useOwnerAdminStatus } from "@/hooks/use-owner-admin-status";
 import { ORG_STATUS_LABELS, type OrgStatus } from "@/lib/owner-admin-schemas";
-import { getOwnerAdminMe } from "@/lib/owner-admin.functions";
+
 import { cn } from "@/lib/utils";
 
 // ── Formatters ──────────────────────────────────────────────────────────────
