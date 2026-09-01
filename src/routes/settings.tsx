@@ -1,5 +1,5 @@
 import { useNavigate, createFileRoute, Link } from "@tanstack/react-router";
-import { Bell, ChevronRight, LifeBuoy, Lock, LogOut, Mail, Shield, ShieldCheck, User as UserIcon } from "lucide-react";
+import { Bell, Bot, ChevronRight, LifeBuoy, Lock, LogOut, Mail, Shield, ShieldCheck, User as UserIcon } from "lucide-react";
 import { useAttendanceAuth, useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
 import { HostAppShell } from "@/components/attendance-hq/host-shell";
 import { useRequireHostRedirect } from "@/components/attendance-hq/host-management";
@@ -55,6 +55,7 @@ function SettingsRoute() {
 
       <SectionLabel className="mt-6">Preferences</SectionLabel>
       <GroupedList>
+        <ListRow icon={Bot} label="AI assistants" detail="Connect ChatGPT, Claude, or Cursor" to="/agents" />
         <ListRow icon={Bell} label="Notifications" detail="Activity and milestones" to="/notifications" />
         <ListRow icon={Mail} label="Email" value={auth.user?.email} chevron={false} />
       </GroupedList>
