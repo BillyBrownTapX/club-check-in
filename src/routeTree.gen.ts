@@ -62,6 +62,7 @@ import { Route as ApiPublicStudentCheckInRouteImport } from './routes/api.public
 import { Route as ApiHealthReadyRouteImport } from './routes/api.health.ready'
 import { Route as ApiHealthCheckInRouteImport } from './routes/api.health.check-in'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
+import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
 import { Route as ApiHostEventsEventIdAttendanceDotcsvRouteImport } from './routes/api.host.events.$eventId.attendance[.]csv'
 import { Route as ApiHostClubsClubIdSemesterAttendanceDotcsvRouteImport } from './routes/api.host.clubs.$clubId.semester-attendance[.]csv'
 
@@ -336,6 +337,11 @@ const Char91DotmcpChar93InvokeToolToolRoute =
     path: '/.mcp/invoke-tool/$tool',
     getParentRoute: () => rootRouteImport,
   } as any)
+const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
+  id: '/.lovable/oauth/consent',
+  path: '/.lovable/oauth/consent',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiHostEventsEventIdAttendanceDotcsvRoute =
   ApiHostEventsEventIdAttendanceDotcsvRouteImport.update({
     id: '/api/host/events/$eventId/attendance.csv',
@@ -395,6 +401,7 @@ export interface FileRoutesByFullPath {
   '/clubs/': typeof ClubsIndexRoute
   '/events/': typeof EventsIndexRoute
   '/owner-admin/': typeof OwnerAdminIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/health/check-in': typeof ApiHealthCheckInRoute
   '/api/health/ready': typeof ApiHealthReadyRoute
@@ -451,6 +458,7 @@ export interface FileRoutesByTo {
   '/clubs': typeof ClubsIndexRoute
   '/events': typeof EventsIndexRoute
   '/owner-admin': typeof OwnerAdminIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/health/check-in': typeof ApiHealthCheckInRoute
   '/api/health/ready': typeof ApiHealthReadyRoute
@@ -509,6 +517,7 @@ export interface FileRoutesById {
   '/clubs/': typeof ClubsIndexRoute
   '/events/': typeof EventsIndexRoute
   '/owner-admin/': typeof OwnerAdminIndexRoute
+  '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
   '/api/health/check-in': typeof ApiHealthCheckInRoute
   '/api/health/ready': typeof ApiHealthReadyRoute
@@ -568,6 +577,7 @@ export interface FileRouteTypes {
     | '/clubs/'
     | '/events/'
     | '/owner-admin/'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/health/check-in'
     | '/api/health/ready'
@@ -624,6 +634,7 @@ export interface FileRouteTypes {
     | '/clubs'
     | '/events'
     | '/owner-admin'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/health/check-in'
     | '/api/health/ready'
@@ -681,6 +692,7 @@ export interface FileRouteTypes {
     | '/clubs/'
     | '/events/'
     | '/owner-admin/'
+    | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
     | '/api/health/check-in'
     | '/api/health/ready'
@@ -732,6 +744,7 @@ export interface RootRouteChildren {
   PreCheckInPreTokenRoute: typeof PreCheckInPreTokenRoute
   ClubsIndexRoute: typeof ClubsIndexRoute
   EventsIndexRoute: typeof EventsIndexRoute
+  DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
   Char91DotmcpChar93InvokeToolToolRoute: typeof Char91DotmcpChar93InvokeToolToolRoute
   ApiPublicStudentCheckInRoute: typeof ApiPublicStudentCheckInRoute
   EventsEventIdDisplayRoute: typeof EventsEventIdDisplayRoute
@@ -1113,6 +1126,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof Char91DotmcpChar93InvokeToolToolRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/.lovable/oauth/consent': {
+      id: '/.lovable/oauth/consent'
+      path: '/.lovable/oauth/consent'
+      fullPath: '/.lovable/oauth/consent'
+      preLoaderRoute: typeof DotlovableOauthConsentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/host/events/$eventId/attendance.csv': {
       id: '/api/host/events/$eventId/attendance.csv'
       path: '/api/host/events/$eventId/attendance.csv'
@@ -1212,6 +1232,7 @@ const rootRouteChildren: RootRouteChildren = {
   PreCheckInPreTokenRoute: PreCheckInPreTokenRoute,
   ClubsIndexRoute: ClubsIndexRoute,
   EventsIndexRoute: EventsIndexRoute,
+  DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,
   Char91DotmcpChar93InvokeToolToolRoute: Char91DotmcpChar93InvokeToolToolRoute,
   ApiPublicStudentCheckInRoute: ApiPublicStudentCheckInRoute,
   EventsEventIdDisplayRoute: EventsEventIdDisplayRoute,
