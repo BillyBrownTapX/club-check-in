@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      analytics_events: {
+        Row: {
+          club_id: string | null
+          created_at: string
+          event_id: string | null
+          event_type: string
+          id: string
+          metadata: Json
+          student_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          club_id?: string | null
+          created_at?: string
+          event_id?: string | null
+          event_type: string
+          id?: string
+          metadata?: Json
+          student_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          club_id?: string | null
+          created_at?: string
+          event_id?: string | null
+          event_type?: string
+          id?: string
+          metadata?: Json
+          student_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       attendance_actions: {
         Row: {
           action_type: Database["public"]["Enums"]["attendance_action_type"]
@@ -642,6 +675,7 @@ export type Database = {
       is_club_member: { Args: { _club_id: string }; Returns: boolean }
       is_club_owner: { Args: { _club_id: string }; Returns: boolean }
       is_event_host: { Args: { _event_id: string }; Returns: boolean }
+      is_owner_admin: { Args: never; Returns: boolean }
       is_student_visible_to_host: {
         Args: { _student_id: string }
         Returns: boolean
