@@ -32,6 +32,7 @@ import { Route as ClubAttendanceTrackerRouteImport } from './routes/club-attenda
 import { Route as ChurchAttendanceAppRouteImport } from './routes/church-attendance-app'
 import { Route as CampusDepartmentAttendanceRouteImport } from './routes/campus-department-attendance'
 import { Route as AttendanceReportsRouteImport } from './routes/attendance-reports'
+import { Route as AgentsRouteImport } from './routes/agents'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OwnerAdminIndexRouteImport } from './routes/owner-admin.index'
@@ -63,6 +64,7 @@ import { Route as ApiHealthReadyRouteImport } from './routes/api.health.ready'
 import { Route as ApiHealthCheckInRouteImport } from './routes/api.health.check-in'
 import { Route as Char91DotmcpChar93InvokeToolToolRouteImport } from './routes/[.mcp]/invoke-tool/$tool'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
+import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/lovable/email/transactional/preview'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as ApiHostEventsEventIdAttendanceDotcsvRouteImport } from './routes/api.host.events.$eventId.attendance[.]csv'
@@ -182,6 +184,11 @@ const CampusDepartmentAttendanceRoute =
 const AttendanceReportsRoute = AttendanceReportsRouteImport.update({
   id: '/attendance-reports',
   path: '/attendance-reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AgentsRoute = AgentsRouteImport.update({
+  id: '/agents',
+  path: '/agents',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminRoute = AdminRouteImport.update({
@@ -344,6 +351,12 @@ const DotlovableOauthConsentRoute = DotlovableOauthConsentRouteImport.update({
   path: '/.lovable/oauth/consent',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LovableEmailTransactionalPreviewRoute =
+  LovableEmailTransactionalPreviewRouteImport.update({
+    id: '/lovable/email/transactional/preview',
+    path: '/lovable/email/transactional/preview',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const LovableEmailAuthWebhookRoute = LovableEmailAuthWebhookRouteImport.update({
   id: '/lovable/email/auth/webhook',
   path: '/lovable/email/auth/webhook',
@@ -370,6 +383,7 @@ const ApiHostClubsClubIdSemesterAttendanceDotcsvRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/agents': typeof AgentsRoute
   '/attendance-reports': typeof AttendanceReportsRoute
   '/campus-department-attendance': typeof CampusDepartmentAttendanceRoute
   '/church-attendance-app': typeof ChurchAttendanceAppRoute
@@ -424,12 +438,14 @@ export interface FileRoutesByFullPath {
   '/owner-admin/organizations/': typeof OwnerAdminOrganizationsIndexRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/api/host/clubs/$clubId/semester-attendance.csv': typeof ApiHostClubsClubIdSemesterAttendanceDotcsvRoute
   '/api/host/events/$eventId/attendance.csv': typeof ApiHostEventsEventIdAttendanceDotcsvRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/agents': typeof AgentsRoute
   '/attendance-reports': typeof AttendanceReportsRoute
   '/campus-department-attendance': typeof CampusDepartmentAttendanceRoute
   '/church-attendance-app': typeof ChurchAttendanceAppRoute
@@ -483,6 +499,7 @@ export interface FileRoutesByTo {
   '/owner-admin/organizations': typeof OwnerAdminOrganizationsIndexRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/api/host/clubs/$clubId/semester-attendance.csv': typeof ApiHostClubsClubIdSemesterAttendanceDotcsvRoute
   '/api/host/events/$eventId/attendance.csv': typeof ApiHostEventsEventIdAttendanceDotcsvRoute
 }
@@ -490,6 +507,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
+  '/agents': typeof AgentsRoute
   '/attendance-reports': typeof AttendanceReportsRoute
   '/campus-department-attendance': typeof CampusDepartmentAttendanceRoute
   '/church-attendance-app': typeof ChurchAttendanceAppRoute
@@ -544,6 +562,7 @@ export interface FileRoutesById {
   '/owner-admin/organizations/': typeof OwnerAdminOrganizationsIndexRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
+  '/lovable/email/transactional/preview': typeof LovableEmailTransactionalPreviewRoute
   '/api/host/clubs/$clubId/semester-attendance.csv': typeof ApiHostClubsClubIdSemesterAttendanceDotcsvRoute
   '/api/host/events/$eventId/attendance.csv': typeof ApiHostEventsEventIdAttendanceDotcsvRoute
 }
@@ -552,6 +571,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/admin'
+    | '/agents'
     | '/attendance-reports'
     | '/campus-department-attendance'
     | '/church-attendance-app'
@@ -606,12 +626,14 @@ export interface FileRouteTypes {
     | '/owner-admin/organizations/'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
+    | '/lovable/email/transactional/preview'
     | '/api/host/clubs/$clubId/semester-attendance.csv'
     | '/api/host/events/$eventId/attendance.csv'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/admin'
+    | '/agents'
     | '/attendance-reports'
     | '/campus-department-attendance'
     | '/church-attendance-app'
@@ -665,12 +687,14 @@ export interface FileRouteTypes {
     | '/owner-admin/organizations'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
+    | '/lovable/email/transactional/preview'
     | '/api/host/clubs/$clubId/semester-attendance.csv'
     | '/api/host/events/$eventId/attendance.csv'
   id:
     | '__root__'
     | '/'
     | '/admin'
+    | '/agents'
     | '/attendance-reports'
     | '/campus-department-attendance'
     | '/church-attendance-app'
@@ -725,6 +749,7 @@ export interface FileRouteTypes {
     | '/owner-admin/organizations/'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
+    | '/lovable/email/transactional/preview'
     | '/api/host/clubs/$clubId/semester-attendance.csv'
     | '/api/host/events/$eventId/attendance.csv'
   fileRoutesById: FileRoutesById
@@ -732,6 +757,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
+  AgentsRoute: typeof AgentsRoute
   AttendanceReportsRoute: typeof AttendanceReportsRoute
   CampusDepartmentAttendanceRoute: typeof CampusDepartmentAttendanceRoute
   ChurchAttendanceAppRoute: typeof ChurchAttendanceAppRoute
@@ -775,6 +801,7 @@ export interface RootRouteChildren {
   EventsEventIdEditRoute: typeof EventsEventIdEditRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
+  LovableEmailTransactionalPreviewRoute: typeof LovableEmailTransactionalPreviewRoute
   ApiHostClubsClubIdSemesterAttendanceDotcsvRoute: typeof ApiHostClubsClubIdSemesterAttendanceDotcsvRoute
   ApiHostEventsEventIdAttendanceDotcsvRoute: typeof ApiHostEventsEventIdAttendanceDotcsvRoute
 }
@@ -940,6 +967,13 @@ declare module '@tanstack/react-router' {
       path: '/attendance-reports'
       fullPath: '/attendance-reports'
       preLoaderRoute: typeof AttendanceReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/agents': {
+      id: '/agents'
+      path: '/agents'
+      fullPath: '/agents'
+      preLoaderRoute: typeof AgentsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin': {
@@ -1159,6 +1193,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DotlovableOauthConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/lovable/email/transactional/preview': {
+      id: '/lovable/email/transactional/preview'
+      path: '/lovable/email/transactional/preview'
+      fullPath: '/lovable/email/transactional/preview'
+      preLoaderRoute: typeof LovableEmailTransactionalPreviewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/lovable/email/auth/webhook': {
       id: '/lovable/email/auth/webhook'
       path: '/lovable/email/auth/webhook'
@@ -1235,6 +1276,7 @@ const ApiHealthRouteWithChildren = ApiHealthRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
+  AgentsRoute: AgentsRoute,
   AttendanceReportsRoute: AttendanceReportsRoute,
   CampusDepartmentAttendanceRoute: CampusDepartmentAttendanceRoute,
   ChurchAttendanceAppRoute: ChurchAttendanceAppRoute,
@@ -1279,6 +1321,7 @@ const rootRouteChildren: RootRouteChildren = {
   EventsEventIdEditRoute: EventsEventIdEditRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
+  LovableEmailTransactionalPreviewRoute: LovableEmailTransactionalPreviewRoute,
   ApiHostClubsClubIdSemesterAttendanceDotcsvRoute:
     ApiHostClubsClubIdSemesterAttendanceDotcsvRoute,
   ApiHostEventsEventIdAttendanceDotcsvRoute:

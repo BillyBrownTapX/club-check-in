@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { Link, createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
-import { ArrowRightLeft, BarChart3, CalendarDays, Download, History, Pencil, Plus, ShieldAlert, Trash2, UserPlus, Users, WandSparkles, X } from "lucide-react";
+import { ArrowRightLeft, BarChart3, Bot, CalendarDays, Download, History, Mail, Pencil, Plus, ShieldAlert, Trash2, UserPlus, Users, WandSparkles, X } from "lucide-react";
 import { useAuthorizedMutation, useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
 import { toast } from "sonner";
+import { emailAgentSetupLink } from "@/lib/agent-integration.functions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -183,6 +184,20 @@ function ClubDetailRoute() {
 
   const universityLabel = data.club.universities?.name ?? "University needed";
   const isOwner = data.viewerRole === "owner";
+
+  const agentEmailMutation = useAuthorizedMutation(emailAgentSetupLink);
+
+  const handleEmailAgentSetup = async () => {
+    try {
+      const result = (await agentEmailMutation.mutateAsync(undefined as never)) as
+        | { sent: true; email: string }
+        | { sent: false; email: string; reason: "suppressed" };
+      if (result.sent) toast.success(`Setup link sent to ${result.email}`);
+      else toast.error("We couldn't email that address.");
+    } catch (e) {
+      toast.error(getManagementErrorMessage(e, "Unable to send the setup link."));
+    }
+  };
 
   const handleAddOfficer = async () => {
     const email = officerEmail.trim();
@@ -530,6 +545,37 @@ function ClubDetailRoute() {
             </p>
           ) : null}
         </section>
+
+        {/* AI assistants */}
+        <section className="space-y-3">
+          <SectionLabel className="mb-0 px-1">AI assistants</SectionLabel>
+          <div className="ios-card space-y-3 rounded-2xl p-4">
+            <p className="text-[13px] leading-6 text-muted-foreground">
+              Connect ChatGPT, Claude, Cursor, or Lovable so you can ask for head counts, attendance
+              rosters, and new events in chat. Your assistant works as you and only after you approve
+              it.
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Button asChild variant="outline" className="flex-1 justify-start gap-2">
+                <Link to="/agents">
+                  <Bot className="h-4 w-4" /> Connect an AI assistant
+                </Link>
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="flex-1 justify-start gap-2"
+                disabled={agentEmailMutation.isPending}
+                onClick={handleEmailAgentSetup}
+              >
+                <Mail className="h-4 w-4" />
+                {agentEmailMutation.isPending ? "Sending…" : "Email me the setup link"}
+              </Button>
+            </div>
+          </div>
+        </section>
+
+
 
         {/* Data & privacy */}
         <section className="space-y-3">
