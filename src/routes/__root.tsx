@@ -77,6 +77,7 @@ export const Route = createRootRouteWithContext<AppRouterContext>()({
       { name: "apple-mobile-web-app-title", content: "Attendance-HQ" },
       { name: "application-name", content: "Attendance-HQ" },
       { property: "og:site_name", content: "Attendance-HQ" },
+      { name: "google-site-verification", content: "RXr3Rgz07TE0i-yMbH81OTv6wOOItVyhJe6tPFP78AI" },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
