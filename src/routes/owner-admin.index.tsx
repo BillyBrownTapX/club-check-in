@@ -101,12 +101,15 @@ function OwnerOverviewRoute() {
       <SectionCard
         title="North Star — check-ins recorded this month"
         description="The single number that proves the product is doing its job."
-        className="mb-4"
+        source="Live count of attendance records created this calendar month, compared with last month."
+        className="mb-5 bg-gradient-to-br from-primary/[0.06] to-transparent"
       >
-        <div className="flex flex-wrap items-end gap-6">
+        <div className="flex flex-wrap items-end gap-8">
           <div>
-            <p className="text-4xl font-semibold tabular-nums">{fmtNumber(d.northStar.currentMonth)}</p>
-            <p className="mt-1 text-xs text-muted-foreground">{d.northStar.monthLabel}</p>
+            <p className="font-display text-[44px] font-extrabold leading-none tabular-nums text-primary">
+              {fmtNumber(d.northStar.currentMonth)}
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground">{d.northStar.monthLabel}</p>
           </div>
           <div className="text-sm">
             <p className="text-muted-foreground">Previous month</p>
@@ -119,7 +122,7 @@ function OwnerOverviewRoute() {
                 nsDelta === null
                   ? "font-medium"
                   : nsDelta >= 0
-                    ? "font-medium text-emerald-500"
+                    ? "font-medium text-success"
                     : "font-medium text-destructive"
               }
             >
@@ -128,6 +131,7 @@ function OwnerOverviewRoute() {
           </div>
         </div>
       </SectionCard>
+
 
       <div className="mb-4 space-y-3">
         <h2 className="text-sm font-semibold text-muted-foreground">Organizations</h2>
