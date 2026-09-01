@@ -191,7 +191,6 @@ function ClubDetailRoute() {
   const universityLabel = data.club.universities?.name ?? "University needed";
   const isOwner = data.viewerRole === "owner";
 
-  const agentEmailMutation = useAuthorizedMutation(emailAgentSetupLink);
 
   const handleEmailAgentSetup = async () => {
     try {
