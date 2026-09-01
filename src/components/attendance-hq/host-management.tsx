@@ -11,6 +11,8 @@ import { useAttendanceAuth, useAuthorizedServerFn } from "@/components/attendanc
 import { HostAppShell } from "@/components/attendance-hq/host-shell";
 import { useOwnerAdminStatus } from "@/hooks/use-owner-admin-status";
 import { getOwnerAdminMe } from "@/lib/owner-admin.functions";
+import { claimFirstRun } from "@/lib/host-first-run";
+
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
