@@ -8,6 +8,8 @@ import { useRequireGuestRedirect } from "@/components/attendance-hq/host-managem
 import { supabase } from "@/integrations/supabase/client";
 import { signUpSchema } from "@/lib/attendance-hq-schemas";
 import { getConfirmEmailRedirectUrl } from "@/lib/attendance-hq";
+import { rememberPendingSignUp, startFirstRun } from "@/lib/host-first-run";
+
 import { normalizeSupabaseAuthError } from "@/lib/server-errors";
 
 const formSchema = signUpSchema;
@@ -59,6 +61,9 @@ function SignUpRoute() {
       setSubmitError("Unable to create account.");
       return;
     }
+    // Mark this account for the guided first run (create club -> create event).
+    startFirstRun(data.user.id);
+    rememberPendingSignUp(values.email);
     if (!data.session) {
       setConfirmEmailNotice("Check your inbox to confirm your email, then sign in to continue setting up your club.");
       setAuthSettling(false);
@@ -67,6 +72,7 @@ function SignUpRoute() {
     }
     setAuthSettling(true);
   });
+
 
   return (
     <AuthShell>

@@ -11,6 +11,8 @@ import { useAttendanceAuth, useAuthorizedServerFn } from "@/components/attendanc
 import { HostAppShell } from "@/components/attendance-hq/host-shell";
 import { useOwnerAdminStatus } from "@/hooks/use-owner-admin-status";
 import { getOwnerAdminMe } from "@/lib/owner-admin.functions";
+import { claimFirstRun } from "@/lib/host-first-run";
+
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -544,6 +546,7 @@ export function useRequireHostRedirect() {
 export function useResolvePostAuthRedirect() {
   const navigate = useNavigate();
   const probeOwner = useAuthorizedServerFn(getOwnerAdminMe);
+  const { user } = useAttendanceAuth();
 
   return useCallback(
     async (_seed?: { fullName?: string; email?: string }) => {
@@ -558,11 +561,18 @@ export function useResolvePostAuthRedirect() {
       } catch {
         // non-fatal
       }
+      // Brand-new host accounts get the two-step guided start: create a club,
+      // then create their first event. Existing accounts go straight to /home.
+      if (claimFirstRun(user ? { id: user.id, email: user.email } : null)) {
+        navigate({ to: "/clubs" });
+        return;
+      }
       navigate({ to: "/home" });
     },
-    [navigate, probeOwner],
+    [navigate, probeOwner, user],
   );
 }
+
 
 // Mirror of useRequireHostRedirect for the auth pages: if a logged-in user
 // lands on /sign-in or /sign-up, push them into wherever the server says

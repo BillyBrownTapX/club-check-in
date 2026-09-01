@@ -11,6 +11,8 @@ import {
 } from "@/components/attendance-hq/host-management";
 import { createEvent, duplicateEvent, getEventFormPayload } from "@/lib/attendance-hq.functions";
 import { queryKeys } from "@/lib/query-keys";
+import { clearFirstRun, isFirstRunActive } from "@/lib/host-first-run";
+
 
 function EventCreateError({ error, reset }: { error: Error; reset: () => void }) {
   const router = useRouter();
@@ -54,6 +56,8 @@ function EventCreateRoute() {
   const { loading, user } = useRequireHostRedirect();
   const navigate = useNavigate();
   const search = Route.useSearch();
+  const guided = isFirstRunActive(user?.id);
+
 
   const payloadInput = { eventId: "", ...search };
 
@@ -94,7 +98,13 @@ function EventCreateRoute() {
     <EventForm
       payload={payload}
       title={payload.sourceEventId ? "Duplicate next week" : "Create Event"}
-      description={payload.sourceEventId ? "Same setup as the source event, with the date and check-in window shifted forward by 7 days." : "Create the next event for one of your clubs."}
+      description={
+        payload.sourceEventId
+          ? "Same setup as the source event, with the date and check-in window shifted forward by 7 days."
+          : guided
+            ? "Step 2 of 2 — set up your first event. You can skip this and come back anytime."
+            : "Create the next event for one of your clubs."
+      }
       submitLabel={payload.sourceEventId ? "Create Duplicate" : "Create Event"}
       onSubmit={async (values) => {
         if (payload.sourceEventId) {
@@ -105,9 +115,11 @@ function EventCreateRoute() {
         }
 
         const result = await createEventMutation.mutateAsync(values as never);
+        clearFirstRun(user?.id);
         toast.success("Event created", { description: result.event.event_name });
         navigate({ to: "/events/$eventId", params: { eventId: result.event.id }, search: { created: "1" } });
       }}
     />
   );
 }
+
