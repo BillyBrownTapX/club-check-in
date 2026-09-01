@@ -2,19 +2,24 @@ import { Link, createFileRoute } from "@tanstack/react-router";
 import {
   ArrowRight,
   BadgeCheck,
+  BarChart3,
   CalendarRange,
   CheckCircle2,
   ClipboardList,
   Clock3,
+  Crown,
   Download,
   FileSpreadsheet,
   Landmark,
+  Megaphone,
   QrCode,
   ShieldCheck,
   Smartphone,
   Sparkles,
+  Table2,
   Users2,
   WifiOff,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,10 +28,21 @@ import {
   Section,
   buildPageMeta,
   faqSchema,
+  howToSchema,
   softwareAppSchema,
 } from "@/components/marketing/marketing-shell";
 
 const OG_IMAGE = "https://attendance-hq.com/__l5e/assets-v1/c341e4a9-19bb-43c6-86d2-488104f847ef/og-attendance-hq.jpg";
+
+type MarketingPath =
+  | "/qr-code-attendance"
+  | "/club-attendance-tracker"
+  | "/greek-life-attendance"
+  | "/church-attendance-app"
+  | "/vs-google-forms"
+  | "/pre-event-headcount"
+  | "/attendance-reports"
+  | "/club-officer-roles";
 
 const FAQS = [
   {
@@ -46,8 +62,24 @@ const FAQS = [
     a: "No. Check-in runs in the browser on iPhone, Android, or any device with a camera. The check-in page is a fast, offline-tolerant progressive web app — no App Store or Play Store install needed.",
   },
   {
+    q: "Can I get a head count before the event?",
+    a: "Yes. Turn on pre-event check-in and share a separate promo QR code or link for as long as you want. Members tap to say they're coming, you watch the early head count grow, and on event day you see exactly who followed through. Pre-check-ins never mix into official attendance.",
+  },
+  {
+    q: "How do I make a semester attendance report?",
+    a: "Open the club, pick any date range, and Attendance-HQ builds a student × meeting attendance matrix from real timestamped check-ins. One tap exports it as a CSV for SGA, an advisor, or a national office.",
+  },
+  {
+    q: "Can several officers manage the same club?",
+    a: "Yes. The owner invites co-officers by the email they already sign in with. Officers run events and export reports; only the owner can delete the club or transfer ownership — which takes one tap at exec turnover.",
+  },
+  {
+    q: "Can I stop people from checking in remotely?",
+    a: "Yes. Check-in windows can be opened and closed on your schedule, campus email domains can be enforced, and the event's QR token can be regenerated instantly if a screenshot leaks into a group chat.",
+  },
+  {
     q: "Is Attendance-HQ FERPA-friendly?",
-    a: "Yes. Attendance-HQ is designed with FERPA in mind: student data is stored securely, minimum-necessary fields are collected, roster access is scoped to club officers, and attendance records are retained on a 730-day rolling window. See our Privacy page for details.",
+    a: "Yes. Attendance-HQ is designed with FERPA in mind: student data is stored securely, minimum-necessary fields are collected, roster access is scoped to club officers, and attendance records are retained on a 730-day rolling window with an owner-run purge tool.",
   },
   {
     q: "Can I export attendance to Excel or Google Sheets?",
@@ -63,12 +95,24 @@ const FAQS = [
   },
 ];
 
+const HOW_TO = howToSchema({
+  name: "How to take attendance with a QR code",
+  description:
+    "Take attendance for a club, chapter, class, or church gathering in about a minute using a QR code and Attendance-HQ.",
+  steps: [
+    { name: "Create the event", text: "Create the event, pick the club, and set the check-in window — or reuse a saved template." },
+    { name: "Share the QR code", text: "Project the event QR code, print it, or post the link in your group chat." },
+    { name: "Members check themselves in", text: "Members scan with their phone camera and confirm who they are in the browser. No app install." },
+    { name: "Export the roster", text: "Watch the roster fill live, close the window, and export the attendance CSV in one tap." },
+  ],
+});
+
 export const Route = createFileRoute("/")({
   head: () => {
     const meta = buildPageMeta({
-      title: "Attendance-HQ — QR Code Attendance App for Clubs & Campus Orgs",
+      title: "Attendance-HQ — Free QR Code Attendance App for Clubs & Orgs",
       description:
-        "Free QR code attendance app for college clubs, Greek life, campus departments, churches, and community groups. No student downloads. Instant CSV exports.",
+        "Free QR code attendance app for college clubs, Greek life, churches, and community groups. Pre-event head counts, live rosters, semester reports, instant CSV.",
       path: "/",
       image: OG_IMAGE,
     });
@@ -90,6 +134,7 @@ export const Route = createFileRoute("/")({
           }),
         },
         { type: "application/ld+json", children: JSON.stringify(softwareAppSchema()) },
+        { type: "application/ld+json", children: JSON.stringify(HOW_TO) },
         { type: "application/ld+json", children: JSON.stringify(faqSchema(FAQS)) },
       ],
     };
@@ -113,8 +158,8 @@ function LandingPage() {
             </h1>
             <p className="mt-5 max-w-xl text-[17px] leading-7 text-muted-foreground">
               Attendance-HQ replaces paper sign-in sheets and clunky Google Forms with one
-              QR code, a real-time roster, and one-tap CSV exports. Trusted by student
-              orgs, Greek chapters, and churches.
+              QR code, an early head count before the meeting, a real-time roster during it,
+              and a semester report your advisor or national office will actually accept.
             </p>
             <div className="mt-7 flex flex-col gap-3 sm:flex-row">
               <Button asChild size="xl" className="rounded-full">
@@ -128,9 +173,9 @@ function LandingPage() {
             </div>
             <ul className="mt-8 grid gap-2 text-[13.5px] text-muted-foreground sm:grid-cols-2">
               <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" /> No student app install</li>
-              <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" /> FERPA-aware by design</li>
-              <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" /> Works offline on flaky Wi-Fi</li>
-              <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" /> Live roster + CSV export</li>
+              <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" /> Pre-event head count &amp; RSVP</li>
+              <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" /> Semester reports &amp; CSV export</li>
+              <li className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-primary" /> FERPA-aware, officer-friendly</li>
             </ul>
           </div>
           <HeroCard />
@@ -143,9 +188,9 @@ function LandingPage() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">In one sentence</p>
           <p className="mt-3 text-[18px] leading-8 text-foreground sm:text-[20px]">
             <strong>Attendance-HQ</strong> is a free QR code attendance app that lets any
-            club, chapter, department, church, or community group take attendance in seconds —
-            hosts share one QR, members check themselves in, and an accurate roster is
-            emailed, exported, or reported to a national office in a single tap.
+            club, chapter, department, church, or community group collect an early head count
+            before a meeting, take attendance in seconds with one scannable code, and export a
+            semester-long attendance report to Excel or Google Sheets in a single tap.
           </p>
         </div>
       </Section>
@@ -156,10 +201,69 @@ function LandingPage() {
         <h2 className="mt-2 max-w-3xl font-display text-[32px] font-extrabold tracking-tight sm:text-[40px]">
           Take attendance in 60 seconds.
         </h2>
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
-          <Step n={1} icon={CalendarRange} title="Create the event" body="Pick a club, name the meeting, set a check-in window. Reuse a saved template for recurring gatherings." />
-          <Step n={2} icon={QrCode} title="Share the QR" body="Project it, post it in your GroupMe, or print it. One code per event — regenerate it any time to kill leaks." />
-          <Step n={3} icon={Users2} title="Watch the roster fill" body="Members scan and check in from their own phones. You watch attendance climb live and close the window when you're done." />
+        <div className="mt-10 grid gap-5 md:grid-cols-4">
+          <Step n={1} icon={Megaphone} title="Promote with a head count" body="Turn on pre-event check-in and post the promo QR. Watch how many plan to come, days ahead." />
+          <Step n={2} icon={CalendarRange} title="Create the event" body="Pick a club, name the meeting, set a check-in window. Reuse a saved template for recurring gatherings." />
+          <Step n={3} icon={QrCode} title="Share the QR" body="Project it, post it in your GroupMe, or print it. One code per event — regenerate it any time to kill leaks." />
+          <Step n={4} icon={Users2} title="Watch the roster fill" body="Members scan and check in from their own phones. Close the window and export the CSV when you're done." />
+        </div>
+      </Section>
+
+      {/* CAPABILITIES */}
+      <Section as="section" className="py-16">
+        <Eyebrow>New &amp; notable</Eyebrow>
+        <h2 className="mt-2 max-w-3xl font-display text-[32px] font-extrabold tracking-tight sm:text-[40px]">
+          The parts hosts tell us they can't live without.
+        </h2>
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <CapabilityCard
+            to="/pre-event-headcount"
+            icon={Megaphone}
+            title="Pre-event head count"
+            body="A promo QR that collects RSVPs for as long as you want — then shows who actually showed up."
+          />
+          <CapabilityCard
+            to="/attendance-reports"
+            icon={Table2}
+            title="Semester reports"
+            body="Student × meeting attendance matrix for any date range, exported as a clean CSV."
+          />
+          <CapabilityCard
+            to="/club-officer-roles"
+            icon={Crown}
+            title="Officers & ownership"
+            body="Invite co-officers, transfer the club at exec turnover, keep the roster scoped."
+          />
+          <CapabilityCard
+            to="/club-officer-roles"
+            icon={ShieldCheck}
+            title="Campus domain gate"
+            body="Only your school's email domains can check in — no fake or ineligible sign-ins."
+          />
+          <CapabilityCard
+            to="/qr-code-attendance"
+            icon={QrCode}
+            title="QR leak controls"
+            body="Regenerate an event's QR token instantly when a screenshot escapes the room."
+          />
+          <CapabilityCard
+            to="/qr-code-attendance"
+            icon={WifiOff}
+            title="Offline-tolerant check-in"
+            body="Drafts survive dead venue Wi-Fi and submit the moment the phone reconnects."
+          />
+          <CapabilityCard
+            to="/club-attendance-tracker"
+            icon={CalendarRange}
+            title="Templates & duplicate"
+            body="Save any event as a template, then duplicate next week's meeting with the window shifted."
+          />
+          <CapabilityCard
+            to="/attendance-reports"
+            icon={ClipboardList}
+            title="Retention & audit log"
+            body="Rolling 730-day retention, owner-run purge, and a trail for every roster change."
+          />
         </div>
       </Section>
 
@@ -194,24 +298,61 @@ function LandingPage() {
             title="Churches & orgs"
             body="Small groups, services, youth events, nonprofits, K-12 clubs, gyms."
           />
+          <VerticalCard
+            to="/pre-event-headcount"
+            icon={Megaphone}
+            title="Event promoters"
+            body="Free RSVP head counts before the doors open, plus show-rate you can measure."
+          />
+          <VerticalCard
+            to="/attendance-reports"
+            icon={FileSpreadsheet}
+            title="Advisors & staff"
+            body="Date-ranged attendance matrices and CSV exports for funding and compliance."
+          />
+          <VerticalCard
+            to="/club-officer-roles"
+            icon={Crown}
+            title="Exec boards"
+            body="Shared officer access, ownership transfer, roster privacy, audit trails."
+          />
+          <VerticalCard
+            to="/vs-google-forms"
+            icon={BarChart3}
+            title="Switching from Forms"
+            body="A side-by-side comparison and a step-by-step migration off Google Forms."
+          />
         </div>
       </Section>
 
-      {/* FEATURES */}
+      {/* METHODS COMPARISON TABLE (AEO-friendly) */}
       <Section as="section" className="py-16">
-        <Eyebrow>Everything a host needs</Eyebrow>
+        <Eyebrow>Attendance methods compared</Eyebrow>
         <h2 className="mt-2 max-w-3xl font-display text-[32px] font-extrabold tracking-tight sm:text-[40px]">
-          Serious tooling. Zero learning curve.
+          How QR check-in stacks up.
         </h2>
-        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <Feature icon={QrCode} title="One-tap QR check-in" body="Members scan and confirm. No accounts, no downloads." />
-          <Feature icon={FileSpreadsheet} title="Instant CSV export" body="Per-event and semester-wide reports open cleanly in Excel and Sheets." />
-          <Feature icon={ShieldCheck} title="Officers & owners" body="Assign co-hosts, transfer ownership, protect the roster." />
-          <Feature icon={WifiOff} title="Offline resilience" body="Drafts persist through dead Wi-Fi. Members finish check-in when reconnected." />
-          <Feature icon={Clock3} title="Live ops view" body="Watch attendance climb in real time. Close windows early with one tap." />
-          <Feature icon={Sparkles} title="Templates" body="Save any event as a template. Duplicate next week's meeting in one click." />
-          <Feature icon={Smartphone} title="Mobile-first PWA" body="Feels like a native app. Add to home screen. No App Store required." />
-          <Feature icon={Download} title="Roster tools" body="Correct student profiles, regenerate QR tokens, and purge on retention windows." />
+        <div className="mt-8 overflow-x-auto rounded-3xl border border-border/70 bg-card">
+          <table className="w-full min-w-[720px] border-collapse text-left text-[13.5px]">
+            <caption className="sr-only">
+              Comparison of paper sign-in sheets, Google Forms, spreadsheets, card readers, and Attendance-HQ
+            </caption>
+            <thead>
+              <tr className="border-b border-border/70 text-[11.5px] uppercase tracking-wider text-muted-foreground">
+                <th scope="col" className="px-5 py-4 font-semibold">Method</th>
+                <th scope="col" className="px-5 py-4 font-semibold">Speed for 40 people</th>
+                <th scope="col" className="px-5 py-4 font-semibold">Report-ready</th>
+                <th scope="col" className="px-5 py-4 font-semibold">Blocks remote sign-ins</th>
+                <th scope="col" className="px-5 py-4 font-semibold">Cost</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border/60">
+              <CompareRow method="Paper sign-in sheet" speed="5–10 min, one pen" report={false} reportText="Manual typing" remote={false} remoteText="Anyone can sign a name" cost="Free (plus lost sheets)" />
+              <CompareRow method="Google Form" speed="2–4 min" report={false} reportText="Raw responses tab" remote={false} remoteText="Link works anywhere" cost="Free" />
+              <CompareRow method="Shared spreadsheet" speed="Officer types it later" report={false} reportText="Hand-maintained" remote={false} remoteText="No control" cost="Free" />
+              <CompareRow method="ID card readers" speed="Fast, one line" report reportText="Vendor export" remote remoteText="Physical scan" cost="Hardware + license" />
+              <CompareRow method="Attendance-HQ QR check-in" speed="Under 60 sec, parallel" report reportText="Semester matrix + CSV" remote remoteText="Windows, domains, token rotation" cost="Free to start" highlight />
+            </tbody>
+          </table>
         </div>
       </Section>
 
@@ -235,6 +376,31 @@ function LandingPage() {
               </Button>
             </div>
           </div>
+        </div>
+      </Section>
+
+      {/* FEATURES */}
+      <Section as="section" className="py-16">
+        <Eyebrow>Everything a host needs</Eyebrow>
+        <h2 className="mt-2 max-w-3xl font-display text-[32px] font-extrabold tracking-tight sm:text-[40px]">
+          Serious tooling. Zero learning curve.
+        </h2>
+        <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Feature icon={QrCode} title="One-tap QR check-in" body="Members scan and confirm. No accounts, no downloads." />
+          <Feature icon={Megaphone} title="Early head count" body="A promo link that collects RSVPs weeks before the meeting." />
+          <Feature icon={FileSpreadsheet} title="Instant CSV export" body="Per-event and semester-wide reports open cleanly in Excel and Sheets." />
+          <Feature icon={ShieldCheck} title="Officers & owners" body="Assign co-hosts, transfer ownership, protect the roster." />
+          <Feature icon={WifiOff} title="Offline resilience" body="Drafts persist through dead Wi-Fi. Members finish check-in when reconnected." />
+          <Feature icon={Clock3} title="Live ops view" body="Watch attendance climb in real time. Close windows early with one tap." />
+          <Feature icon={Sparkles} title="Templates" body="Save any event as a template. Duplicate next week's meeting in one click." />
+          <Feature icon={Smartphone} title="Mobile-first PWA" body="Feels like a native app. Add to home screen. No App Store required." />
+        </div>
+        <div className="mt-6">
+          <Button asChild variant="ghost" className="rounded-full">
+            <Link to="/attendance-reports">
+              See reports &amp; exports <ArrowRight className="ml-1 h-4 w-4" />
+            </Link>
+          </Button>
         </div>
       </Section>
 
@@ -287,9 +453,9 @@ function HeroCard() {
         </div>
 
         <div className="mt-5 grid grid-cols-3 gap-3 text-center">
-          <Stat label="Present" value="47" />
-          <Stat label="RSVP'd" value="52" />
-          <Stat label="Rate" value="90%" />
+          <Stat label="Head count" value="52" />
+          <Stat label="Showed up" value="47" />
+          <Stat label="Show rate" value="90%" />
         </div>
       </div>
     </div>
@@ -322,13 +488,90 @@ function Step({ n, icon: Icon, title, body }: { n: number; icon: React.Component
   );
 }
 
+function CompareRow({
+  method,
+  speed,
+  report,
+  reportText,
+  remote,
+  remoteText,
+  cost,
+  highlight = false,
+}: {
+  method: string;
+  speed: string;
+  report?: boolean;
+  reportText: string;
+  remote?: boolean;
+  remoteText: string;
+  cost: string;
+  highlight?: boolean;
+}) {
+  return (
+    <tr className={highlight ? "bg-primary/5" : undefined}>
+      <th scope="row" className={`px-5 py-4 text-left font-display text-[14.5px] font-bold ${highlight ? "text-primary" : "text-foreground"}`}>
+        {method}
+      </th>
+      <td className="px-5 py-4 text-muted-foreground">{speed}</td>
+      <td className="px-5 py-4">
+        <Verdict ok={Boolean(report)} text={reportText} />
+      </td>
+      <td className="px-5 py-4">
+        <Verdict ok={Boolean(remote)} text={remoteText} />
+      </td>
+      <td className="px-5 py-4 text-muted-foreground">{cost}</td>
+    </tr>
+  );
+}
+
+function Verdict({ ok, text }: { ok: boolean; text: string }) {
+  return (
+    <span className="flex items-start gap-2 text-muted-foreground">
+      {ok ? (
+        <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-label="Yes" />
+      ) : (
+        <X className="mt-0.5 h-4 w-4 shrink-0 text-destructive" aria-label="No" />
+      )}
+      <span>{text}</span>
+    </span>
+  );
+}
+
+function CapabilityCard({
+  to,
+  icon: Icon,
+  title,
+  body,
+}: {
+  to: MarketingPath;
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  body: string;
+}) {
+  return (
+    <Link
+      to={to}
+      className="group rounded-2xl border border-border/70 bg-card p-5 transition-shadow hover:shadow-[0_20px_50px_-25px_rgba(37,99,235,0.35)]"
+    >
+      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        <Icon className="h-[18px] w-[18px]" />
+      </div>
+      <p className="mt-3 font-display text-[15.5px] font-bold text-foreground">{title}</p>
+      <p className="mt-1 text-[13.5px] leading-6 text-muted-foreground">{body}</p>
+      <span className="mt-3 inline-flex items-center gap-1 text-[12.5px] font-semibold text-primary">
+        Learn more <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+      </span>
+    </Link>
+  );
+}
+
 function VerticalCard({
   to,
   icon: Icon,
   title,
   body,
 }: {
-  to: "/club-attendance-tracker" | "/greek-life-attendance" | "/qr-code-attendance" | "/church-attendance-app";
+  to: MarketingPath;
   icon: React.ComponentType<{ className?: string }>;
   title: string;
   body: string;
@@ -361,3 +604,8 @@ function Feature({ icon: Icon, title, body }: { icon: React.ComponentType<{ clas
     </div>
   );
 }
+
+function _unusedIconGuard() {
+  return [Download] as const;
+}
+void _unusedIconGuard;
