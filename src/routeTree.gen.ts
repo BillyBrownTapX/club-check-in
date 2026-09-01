@@ -28,6 +28,7 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as ClubOfficerRolesRouteImport } from './routes/club-officer-roles'
 import { Route as ClubAttendanceTrackerRouteImport } from './routes/club-attendance-tracker'
 import { Route as ChurchAttendanceAppRouteImport } from './routes/church-attendance-app'
+import { Route as CampusDepartmentAttendanceRouteImport } from './routes/campus-department-attendance'
 import { Route as AttendanceReportsRouteImport } from './routes/attendance-reports'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
@@ -145,6 +146,12 @@ const ChurchAttendanceAppRoute = ChurchAttendanceAppRouteImport.update({
   path: '/church-attendance-app',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CampusDepartmentAttendanceRoute =
+  CampusDepartmentAttendanceRouteImport.update({
+    id: '/campus-department-attendance',
+    path: '/campus-department-attendance',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const AttendanceReportsRoute = AttendanceReportsRouteImport.update({
   id: '/attendance-reports',
   path: '/attendance-reports',
@@ -257,6 +264,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/attendance-reports': typeof AttendanceReportsRoute
+  '/campus-department-attendance': typeof CampusDepartmentAttendanceRoute
   '/church-attendance-app': typeof ChurchAttendanceAppRoute
   '/club-attendance-tracker': typeof ClubAttendanceTrackerRoute
   '/club-officer-roles': typeof ClubOfficerRolesRoute
@@ -299,6 +307,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/attendance-reports': typeof AttendanceReportsRoute
+  '/campus-department-attendance': typeof CampusDepartmentAttendanceRoute
   '/church-attendance-app': typeof ChurchAttendanceAppRoute
   '/club-attendance-tracker': typeof ClubAttendanceTrackerRoute
   '/club-officer-roles': typeof ClubOfficerRolesRoute
@@ -342,6 +351,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/attendance-reports': typeof AttendanceReportsRoute
+  '/campus-department-attendance': typeof CampusDepartmentAttendanceRoute
   '/church-attendance-app': typeof ChurchAttendanceAppRoute
   '/club-attendance-tracker': typeof ClubAttendanceTrackerRoute
   '/club-officer-roles': typeof ClubOfficerRolesRoute
@@ -386,6 +396,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/attendance-reports'
+    | '/campus-department-attendance'
     | '/church-attendance-app'
     | '/club-attendance-tracker'
     | '/club-officer-roles'
@@ -428,6 +439,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/attendance-reports'
+    | '/campus-department-attendance'
     | '/church-attendance-app'
     | '/club-attendance-tracker'
     | '/club-officer-roles'
@@ -470,6 +482,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/attendance-reports'
+    | '/campus-department-attendance'
     | '/church-attendance-app'
     | '/club-attendance-tracker'
     | '/club-officer-roles'
@@ -513,6 +526,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   AttendanceReportsRoute: typeof AttendanceReportsRoute
+  CampusDepartmentAttendanceRoute: typeof CampusDepartmentAttendanceRoute
   ChurchAttendanceAppRoute: typeof ChurchAttendanceAppRoute
   ClubAttendanceTrackerRoute: typeof ClubAttendanceTrackerRoute
   ClubOfficerRolesRoute: typeof ClubOfficerRolesRoute
@@ -685,6 +699,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ChurchAttendanceAppRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/campus-department-attendance': {
+      id: '/campus-department-attendance'
+      path: '/campus-department-attendance'
+      fullPath: '/campus-department-attendance'
+      preLoaderRoute: typeof CampusDepartmentAttendanceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/attendance-reports': {
       id: '/attendance-reports'
       path: '/attendance-reports'
@@ -853,6 +874,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   AttendanceReportsRoute: AttendanceReportsRoute,
+  CampusDepartmentAttendanceRoute: CampusDepartmentAttendanceRoute,
   ChurchAttendanceAppRoute: ChurchAttendanceAppRoute,
   ClubAttendanceTrackerRoute: ClubAttendanceTrackerRoute,
   ClubOfficerRolesRoute: ClubOfficerRolesRoute,

@@ -17,6 +17,7 @@ const ENTRIES: SitemapEntry[] = [
   { path: "/church-attendance-app", changefreq: "weekly", priority: "0.9" },
   { path: "/pre-event-headcount", changefreq: "weekly", priority: "0.9" },
   { path: "/attendance-reports", changefreq: "weekly", priority: "0.9" },
+  { path: "/campus-department-attendance", changefreq: "weekly", priority: "0.8" },
   { path: "/club-officer-roles", changefreq: "weekly", priority: "0.8" },
   { path: "/vs-google-forms", changefreq: "monthly", priority: "0.7" },
   { path: "/help", changefreq: "monthly", priority: "0.5" },

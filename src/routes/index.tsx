@@ -41,7 +41,8 @@ type MarketingPath =
   | "/vs-google-forms"
   | "/pre-event-headcount"
   | "/attendance-reports"
-  | "/club-officer-roles";
+  | "/club-officer-roles"
+  | "/campus-department-attendance";
 
 const FAQS = [
   {
@@ -286,7 +287,7 @@ function LandingPage() {
             body="Chapter meetings, philanthropy hours, mandatory events, national submissions."
           />
           <VerticalCard
-            to="/qr-code-attendance"
+            to="/campus-department-attendance"
             icon={Landmark}
             title="Campus departments"
             body="Orientation, advising sessions, career fair booths, training sessions."

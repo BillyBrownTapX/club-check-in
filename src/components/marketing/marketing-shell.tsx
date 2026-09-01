@@ -91,7 +91,7 @@ function MarketingFooter() {
             <li><Link to="/greek-life-attendance" className="text-foreground hover:text-primary">Fraternities &amp; sororities</Link></li>
             <li><Link to="/church-attendance-app" className="text-foreground hover:text-primary">Churches &amp; small groups</Link></li>
             <li><Link to="/church-attendance-app" className="text-foreground hover:text-primary">Nonprofits &amp; community orgs</Link></li>
-            <li><Link to="/qr-code-attendance" className="text-foreground hover:text-primary">Campus departments</Link></li>
+            <li><Link to="/campus-department-attendance" className="text-foreground hover:text-primary">Campus departments</Link></li>
           </ul>
         </nav>
         <nav aria-label="Company">
