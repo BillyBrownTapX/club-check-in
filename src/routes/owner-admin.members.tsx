@@ -88,6 +88,11 @@ function OwnerMembersRoute() {
               rows={members.data?.rows ?? []}
               rowKey={(row) => row.id}
               empty="No members match this search."
+              mobile={{
+                title: (row) => row.name,
+                subtitle: (row) => row.email,
+                stats: ["orgs", "events", "checkins", "last"],
+              }}
               columns={[
                 {
                   key: "name",

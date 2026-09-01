@@ -133,7 +133,7 @@ function OwnerOrganizationsRoute() {
         source="Health scores computed live from each organization's events, check-ins, admins and feature use."
         actions={
           <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
-            <div className="col-span-2 sm:contents">
+            <div className="col-span-2 space-y-2 sm:contents">
             <SearchField value={search} onChange={setSearch} placeholder="Search name, owner, university…" />
             <Select value={status} onValueChange={(v) => { setStatus(v as "all" | OrgStatus); setOffset(0); }}>
               <SelectTrigger className="h-9 w-full sm:w-[160px]">
