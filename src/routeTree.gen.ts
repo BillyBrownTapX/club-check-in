@@ -38,6 +38,7 @@ import { Route as EventsIndexRouteImport } from './routes/events.index'
 import { Route as ClubsIndexRouteImport } from './routes/clubs.index'
 import { Route as PreCheckInPreTokenRouteImport } from './routes/pre-check-in.$preToken'
 import { Route as OwnerAdminUsersRouteImport } from './routes/owner-admin.users'
+import { Route as OwnerAdminProductRouteImport } from './routes/owner-admin.product'
 import { Route as OwnerAdminMembersRouteImport } from './routes/owner-admin.members'
 import { Route as OwnerAdminGrowthRouteImport } from './routes/owner-admin.growth'
 import { Route as OwnerAdminEventsRouteImport } from './routes/owner-admin.events'
@@ -206,6 +207,11 @@ const OwnerAdminUsersRoute = OwnerAdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => OwnerAdminRoute,
 } as any)
+const OwnerAdminProductRoute = OwnerAdminProductRouteImport.update({
+  id: '/product',
+  path: '/product',
+  getParentRoute: () => OwnerAdminRoute,
+} as any)
 const OwnerAdminMembersRoute = OwnerAdminMembersRouteImport.update({
   id: '/members',
   path: '/members',
@@ -353,6 +359,7 @@ export interface FileRoutesByFullPath {
   '/owner-admin/events': typeof OwnerAdminEventsRoute
   '/owner-admin/growth': typeof OwnerAdminGrowthRoute
   '/owner-admin/members': typeof OwnerAdminMembersRoute
+  '/owner-admin/product': typeof OwnerAdminProductRoute
   '/owner-admin/users': typeof OwnerAdminUsersRoute
   '/pre-check-in/$preToken': typeof PreCheckInPreTokenRoute
   '/clubs/': typeof ClubsIndexRoute
@@ -404,6 +411,7 @@ export interface FileRoutesByTo {
   '/owner-admin/events': typeof OwnerAdminEventsRoute
   '/owner-admin/growth': typeof OwnerAdminGrowthRoute
   '/owner-admin/members': typeof OwnerAdminMembersRoute
+  '/owner-admin/product': typeof OwnerAdminProductRoute
   '/owner-admin/users': typeof OwnerAdminUsersRoute
   '/pre-check-in/$preToken': typeof PreCheckInPreTokenRoute
   '/clubs': typeof ClubsIndexRoute
@@ -457,6 +465,7 @@ export interface FileRoutesById {
   '/owner-admin/events': typeof OwnerAdminEventsRoute
   '/owner-admin/growth': typeof OwnerAdminGrowthRoute
   '/owner-admin/members': typeof OwnerAdminMembersRoute
+  '/owner-admin/product': typeof OwnerAdminProductRoute
   '/owner-admin/users': typeof OwnerAdminUsersRoute
   '/pre-check-in/$preToken': typeof PreCheckInPreTokenRoute
   '/clubs/': typeof ClubsIndexRoute
@@ -511,6 +520,7 @@ export interface FileRouteTypes {
     | '/owner-admin/events'
     | '/owner-admin/growth'
     | '/owner-admin/members'
+    | '/owner-admin/product'
     | '/owner-admin/users'
     | '/pre-check-in/$preToken'
     | '/clubs/'
@@ -562,6 +572,7 @@ export interface FileRouteTypes {
     | '/owner-admin/events'
     | '/owner-admin/growth'
     | '/owner-admin/members'
+    | '/owner-admin/product'
     | '/owner-admin/users'
     | '/pre-check-in/$preToken'
     | '/clubs'
@@ -614,6 +625,7 @@ export interface FileRouteTypes {
     | '/owner-admin/events'
     | '/owner-admin/growth'
     | '/owner-admin/members'
+    | '/owner-admin/product'
     | '/owner-admin/users'
     | '/pre-check-in/$preToken'
     | '/clubs/'
@@ -878,6 +890,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OwnerAdminUsersRouteImport
       parentRoute: typeof OwnerAdminRoute
     }
+    '/owner-admin/product': {
+      id: '/owner-admin/product'
+      path: '/product'
+      fullPath: '/owner-admin/product'
+      preLoaderRoute: typeof OwnerAdminProductRouteImport
+      parentRoute: typeof OwnerAdminRoute
+    }
     '/owner-admin/members': {
       id: '/owner-admin/members'
       path: '/members'
@@ -1033,6 +1052,7 @@ interface OwnerAdminRouteChildren {
   OwnerAdminEventsRoute: typeof OwnerAdminEventsRoute
   OwnerAdminGrowthRoute: typeof OwnerAdminGrowthRoute
   OwnerAdminMembersRoute: typeof OwnerAdminMembersRoute
+  OwnerAdminProductRoute: typeof OwnerAdminProductRoute
   OwnerAdminUsersRoute: typeof OwnerAdminUsersRoute
   OwnerAdminIndexRoute: typeof OwnerAdminIndexRoute
   OwnerAdminOrganizationsClubIdRoute: typeof OwnerAdminOrganizationsClubIdRoute
@@ -1044,6 +1064,7 @@ const OwnerAdminRouteChildren: OwnerAdminRouteChildren = {
   OwnerAdminEventsRoute: OwnerAdminEventsRoute,
   OwnerAdminGrowthRoute: OwnerAdminGrowthRoute,
   OwnerAdminMembersRoute: OwnerAdminMembersRoute,
+  OwnerAdminProductRoute: OwnerAdminProductRoute,
   OwnerAdminUsersRoute: OwnerAdminUsersRoute,
   OwnerAdminIndexRoute: OwnerAdminIndexRoute,
   OwnerAdminOrganizationsClubIdRoute: OwnerAdminOrganizationsClubIdRoute,
