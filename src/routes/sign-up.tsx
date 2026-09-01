@@ -8,6 +8,8 @@ import { useRequireGuestRedirect } from "@/components/attendance-hq/host-managem
 import { supabase } from "@/integrations/supabase/client";
 import { signUpSchema } from "@/lib/attendance-hq-schemas";
 import { getConfirmEmailRedirectUrl } from "@/lib/attendance-hq";
+import { rememberPendingSignUp, startFirstRun } from "@/lib/host-first-run";
+
 import { normalizeSupabaseAuthError } from "@/lib/server-errors";
 
 const formSchema = signUpSchema;
