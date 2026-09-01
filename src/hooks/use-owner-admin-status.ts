@@ -15,11 +15,14 @@ export function useOwnerAdminStatus() {
   const authLoading = loading || (!!user && !session);
 
   const me = useAuthorizedQuery<{ isOwnerAdmin: boolean }>(
-    [...OWNER_ADMIN_ME_KEY],
+    // Scoped to the signed-in user id: a different account can never read
+    // another account's cached owner answer after an in-session switch.
+    [...OWNER_ADMIN_ME_KEY, user?.id ?? "anonymous"],
     getOwnerAdminMe,
     undefined,
     { staleTime: 300_000, retry: false, enabled: !authLoading && !!user && !!session },
   );
+
 
   return {
     isOwner: !!me.data?.isOwnerAdmin,
