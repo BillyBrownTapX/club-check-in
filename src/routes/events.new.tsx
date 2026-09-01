@@ -56,6 +56,8 @@ function EventCreateRoute() {
   const { loading, user } = useRequireHostRedirect();
   const navigate = useNavigate();
   const search = Route.useSearch();
+  const guided = isFirstRunActive(user?.id);
+
 
   const payloadInput = { eventId: "", ...search };
 
