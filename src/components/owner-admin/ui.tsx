@@ -14,6 +14,7 @@ import {
   ChevronRight,
   Gauge,
   LineChart as LineChartIcon,
+  LogOut,
   ShieldCheck,
   UserRound,
   Users,
@@ -32,11 +33,14 @@ import {
   YAxis,
 } from "recharts";
 
+import { useQueryClient } from "@tanstack/react-query";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAttendanceAuth, useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
+import { useAttendanceAuth } from "@/components/attendance-hq/auth-provider";
+import { useOwnerAdminStatus } from "@/hooks/use-owner-admin-status";
 import { ORG_STATUS_LABELS, type OrgStatus } from "@/lib/owner-admin-schemas";
-import { getOwnerAdminMe } from "@/lib/owner-admin.functions";
+
 import { cn } from "@/lib/utils";
 
 // ── Formatters ──────────────────────────────────────────────────────────────
@@ -98,23 +102,21 @@ export function fmtDays(value: number | null | undefined): string {
 export function useOwnerAdminGate() {
   const { loading, user } = useAttendanceAuth();
   const navigate = useNavigate();
-  const me = useAuthorizedQuery<{ isOwnerAdmin: boolean }>(["owner-admin", "me"], getOwnerAdminMe, undefined, {
-    staleTime: 300_000,
-    retry: false,
-  });
+  const { isOwner, checking, isError } = useOwnerAdminStatus();
 
-  const denied = (!loading && !user) || me.isError || (!!me.data && !me.data.isOwnerAdmin);
+  const denied = (!loading && !user) || isError || (!checking && !!user && !isOwner);
 
   React.useEffect(() => {
     if (denied) navigate({ to: "/home", replace: true });
   }, [denied, navigate]);
 
   return {
-    ready: !loading && !!user && !!me.data?.isOwnerAdmin,
-    checking: loading || me.isLoading,
+    ready: !loading && !!user && isOwner,
+    checking: loading || checking,
     denied,
   };
 }
+
 
 // ── Shell ───────────────────────────────────────────────────────────────────
 const NAV: { to: string; label: string; icon: typeof Gauge; exact?: boolean }[] = [
@@ -131,6 +133,22 @@ const NAV: { to: string; label: string; icon: typeof Gauge; exact?: boolean }[] 
 
 export function OwnerAdminShell({ children }: { children: React.ReactNode }) {
   const { pathname } = useLocation();
+  const { signOut, user } = useAttendanceAuth();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [signingOut, setSigningOut] = React.useState(false);
+
+  const handleSignOut = async () => {
+    setSigningOut(true);
+    try {
+      await queryClient.cancelQueries();
+      queryClient.clear();
+      await signOut();
+      navigate({ to: "/", replace: true });
+    } finally {
+      setSigningOut(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -145,12 +163,15 @@ export function OwnerAdminShell({ children }: { children: React.ReactNode }) {
               <p className="text-[11px] text-muted-foreground">Internal platform analytics</p>
             </div>
           </div>
-          <div className="ml-auto">
-            <Button asChild variant="ghost" size="sm">
-              <Link to="/home">Exit to app</Link>
+          <div className="ml-auto flex items-center gap-3">
+            {user?.email ? <span className="hidden text-[11px] text-muted-foreground sm:inline">{user.email}</span> : null}
+            <Button variant="ghost" size="sm" onClick={handleSignOut} disabled={signingOut}>
+              <LogOut className="mr-1.5 size-3.5" />
+              {signingOut ? "Signing out…" : "Sign out"}
             </Button>
           </div>
         </div>
+
         <nav className="mx-auto flex w-full max-w-[1400px] gap-1 overflow-x-auto px-4 pb-2 lg:px-8">
           {NAV.map((item) => {
             const active = item.exact ? pathname === item.to : pathname.startsWith(item.to);

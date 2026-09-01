@@ -9,6 +9,8 @@ import { useForm } from "react-hook-form";
 import type { z } from "zod";
 import { useAttendanceAuth, useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
 import { HostAppShell } from "@/components/attendance-hq/host-shell";
+import { useOwnerAdminStatus } from "@/hooks/use-owner-admin-status";
+import { getOwnerAdminMe } from "@/lib/owner-admin.functions";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -514,14 +516,24 @@ export function useRequireHostRedirect() {
   const navigate = useNavigate();
   const { user, session, loading } = useAttendanceAuth();
   const authLoading = loading || (!!user && !session);
+  // The application-owner account is administrative only: it never gets the
+  // host experience. Every host screen funnels through this hook, so one
+  // check here locks the whole host surface for that account.
+  const owner = useOwnerAdminStatus();
 
   useEffect(() => {
     if (!authLoading && !user) {
       navigate({ to: "/sign-in" });
+      return;
     }
-  }, [authLoading, navigate, user]);
+    if (!authLoading && user && owner.isOwner) {
+      navigate({ to: "/owner-admin", replace: true });
+    }
+  }, [authLoading, navigate, owner.isOwner, user]);
 
-  return { user, session, loading: authLoading };
+  // Hold the host screen (and its queries) while we don't yet know, or while
+  // we're bouncing the owner into the console.
+  return { user, session, loading: authLoading || owner.checking || owner.isOwner };
 }
 
 // Returns a function that, given the current host's session, asks the server
@@ -531,12 +543,24 @@ export function useRequireHostRedirect() {
 // never compute it locally.
 export function useResolvePostAuthRedirect() {
   const navigate = useNavigate();
+  const probeOwner = useAuthorizedServerFn(getOwnerAdminMe);
 
   return useCallback(
     async (_seed?: { fullName?: string; email?: string }) => {
+      // The owner account lands in the console and nowhere else. If the probe
+      // fails we fall through to /home, where the host gate re-checks.
+      try {
+        const me = (await probeOwner()) as { isOwnerAdmin?: boolean } | null;
+        if (me?.isOwnerAdmin) {
+          navigate({ to: "/owner-admin", replace: true });
+          return;
+        }
+      } catch {
+        // non-fatal
+      }
       navigate({ to: "/home" });
     },
-    [navigate],
+    [navigate, probeOwner],
   );
 }
 
