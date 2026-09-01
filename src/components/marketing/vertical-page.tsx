@@ -14,7 +14,19 @@ export type VerticalPageProps = {
   features: { icon: React.ComponentType<{ className?: string }>; title: string; body: string }[];
   scenarios: { title: string; body: string }[];
   faqs: Faq[];
-  siblingLinks: { to: "/qr-code-attendance" | "/club-attendance-tracker" | "/greek-life-attendance" | "/church-attendance-app" | "/vs-google-forms"; label: string; hint: string }[];
+  siblingLinks: {
+    to:
+      | "/qr-code-attendance"
+      | "/club-attendance-tracker"
+      | "/greek-life-attendance"
+      | "/church-attendance-app"
+      | "/vs-google-forms"
+      | "/pre-event-headcount"
+      | "/attendance-reports"
+      | "/club-officer-roles";
+    label: string;
+    hint: string;
+  }[];
 };
 
 export function VerticalPage(p: VerticalPageProps) {
