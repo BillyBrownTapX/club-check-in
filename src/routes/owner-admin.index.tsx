@@ -133,8 +133,8 @@ function OwnerOverviewRoute() {
       </SectionCard>
 
 
-      <div className="mb-4 space-y-3">
-        <h2 className="text-sm font-semibold text-muted-foreground">Organizations</h2>
+      <div className="mb-5 space-y-2.5">
+        <h2 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Organizations</h2>
         <KpiGrid>
           <KpiCard label="Total" value={fmtNumber(d.organizations.total)} hint={`+${d.organizations.newThisMonth} this month`} />
           <KpiCard label="Active (30d)" value={fmtNumber(d.organizations.active30d)} hint={`${fmtNumber(d.organizations.active7d)} active in last 7 days`} tone="good" />
@@ -143,20 +143,29 @@ function OwnerOverviewRoute() {
         </KpiGrid>
       </div>
 
-      <div className="mb-4 space-y-3">
-        <h2 className="text-sm font-semibold text-muted-foreground">People &amp; activity</h2>
+      <div className="mb-5 space-y-2.5">
+        <h2 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">People &amp; activity</h2>
         <KpiGrid>
           <KpiCard label="Members tracked" value={fmtNumber(d.members.total)} hint={`${fmtNumber(d.members.avgPerOrganization)} avg per organization`} />
           <KpiCard label="Events created" value={fmtNumber(d.events.total)} hint={`${fmtNumber(d.events.thisMonth)} this month · ${fmtNumber(d.events.thisWeek)} this week`} />
           <KpiCard label="Check-ins (lifetime)" value={fmtNumber(d.attendance.total)} hint={`${fmtNumber(d.attendance.avgPerEvent)} avg per event`} />
           <KpiCard label="Unique attendees this month" value={fmtNumber(d.attendance.uniqueThisMonth)} hint={`${fmtNumber(d.attendance.today)} check-ins today`} />
         </KpiGrid>
+        <p className="text-[11px] text-muted-foreground">
+          Counted live from organizations, students, events and attendance records — no sample or seeded data.
+        </p>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <SectionCard title="Check-in volume" description={`Per ${range.bucket}`}>
+        <SectionCard
+          title="Check-in volume"
+          description={`Per ${range.bucket}`}
+          source="Attendance records grouped by check-in timestamp."
+        >
           {series.isLoading ? (
             <LoadingBlock label="Loading trend…" />
+          ) : chartData.length === 0 ? (
+            <EmptyState title="No check-ins in this window yet." />
           ) : (
             <TrendArea
               data={chartData}
@@ -165,9 +174,15 @@ function OwnerOverviewRoute() {
             />
           )}
         </SectionCard>
-        <SectionCard title="Organization growth" description="New vs cumulative">
+        <SectionCard
+          title="Organization growth"
+          description="New vs cumulative"
+          source="Organization records grouped by creation date."
+        >
           {series.isLoading ? (
             <LoadingBlock label="Loading trend…" />
+          ) : chartData.length === 0 ? (
+            <EmptyState title="No organizations created in this window." />
           ) : (
             <TrendLine
               data={chartData}
@@ -179,9 +194,15 @@ function OwnerOverviewRoute() {
             />
           )}
         </SectionCard>
-        <SectionCard title="Events created" description={`Per ${range.bucket}`}>
+        <SectionCard
+          title="Events created"
+          description={`Per ${range.bucket}`}
+          source="Event records grouped by creation date."
+        >
           {series.isLoading ? (
             <LoadingBlock label="Loading trend…" />
+          ) : chartData.length === 0 ? (
+            <EmptyState title="No events created in this window." />
           ) : (
             <TrendArea
               data={chartData}
@@ -190,9 +211,15 @@ function OwnerOverviewRoute() {
             />
           )}
         </SectionCard>
-        <SectionCard title="Active organizations" description="Recorded at least one check-in in the bucket">
+        <SectionCard
+          title="Active organizations"
+          description="Recorded at least one check-in in the bucket"
+          source="Distinct organizations appearing in attendance records, plus new member records."
+        >
           {series.isLoading ? (
             <LoadingBlock label="Loading trend…" />
+          ) : chartData.length === 0 ? (
+            <EmptyState title="No activity in this window yet." />
           ) : (
             <TrendLine
               data={chartData}
@@ -210,6 +237,7 @@ function OwnerOverviewRoute() {
         Member repeat coverage: {fmtPercent((d.members.withAttendance / Math.max(1, d.members.total)) * 100, 0)} of tracked
         members have at least one check-in.
       </p>
+
     </>
   );
 }
