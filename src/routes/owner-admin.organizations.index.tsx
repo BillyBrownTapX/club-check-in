@@ -132,10 +132,11 @@ function OwnerOrganizationsRoute() {
         title="All organizations"
         source="Health scores computed live from each organization's events, check-ins, admins and feature use."
         actions={
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center">
+            <div className="col-span-2 space-y-2 sm:contents">
             <SearchField value={search} onChange={setSearch} placeholder="Search name, owner, university…" />
             <Select value={status} onValueChange={(v) => { setStatus(v as "all" | OrgStatus); setOffset(0); }}>
-              <SelectTrigger className="h-9 w-[160px]">
+              <SelectTrigger className="h-9 w-full sm:w-[160px]">
                 <SelectValue placeholder="Status" />
               </SelectTrigger>
               <SelectContent>
@@ -148,7 +149,7 @@ function OwnerOrganizationsRoute() {
               </SelectContent>
             </Select>
             <Select value={universityId} onValueChange={(v) => { setUniversityId(v); setOffset(0); }}>
-              <SelectTrigger className="h-9 w-[190px]">
+              <SelectTrigger className="h-9 w-full sm:w-[190px]">
                 <SelectValue placeholder="University" />
               </SelectTrigger>
               <SelectContent>
@@ -161,7 +162,7 @@ function OwnerOrganizationsRoute() {
               </SelectContent>
             </Select>
             <Select value={sort} onValueChange={(v) => setSort(v as typeof sort)}>
-              <SelectTrigger className="h-9 w-[160px]">
+              <SelectTrigger className="h-9 w-full sm:w-[160px]">
                 <SelectValue placeholder="Sort" />
               </SelectTrigger>
               <SelectContent>
@@ -172,9 +173,10 @@ function OwnerOrganizationsRoute() {
                 ))}
               </SelectContent>
             </Select>
-            <Button variant="outline" size="sm" onClick={() => setDir(dir === "desc" ? "asc" : "desc")}>
+            <Button variant="outline" size="sm" className="h-9 w-full sm:w-auto" onClick={() => setDir(dir === "desc" ? "asc" : "desc")}>
               {dir === "desc" ? "Desc" : "Asc"}
             </Button>
+            </div>
           </div>
         }
       >
@@ -188,6 +190,15 @@ function OwnerOrganizationsRoute() {
               rows={rows}
               rowKey={(row) => row.club_id}
               empty="No organizations match these filters."
+              mobile={{
+                title: (row) => (
+                  <Link to="/owner-admin/organizations/$clubId" params={{ clubId: row.club_id }} className="text-primary">
+                    {row.club_name}
+                  </Link>
+                ),
+                subtitle: (row) => row.university_name ?? "No university",
+                stats: ["status", "health", "checkins", "activity"],
+              }}
               columns={[
                 {
                   key: "name",

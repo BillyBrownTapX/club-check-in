@@ -94,6 +94,11 @@ function OwnerEventsRoute() {
               rows={events.data?.rows ?? []}
               rowKey={(row) => row.id}
               empty="No events match this search."
+              mobile={{
+                title: (row) => row.name,
+                subtitle: (row) => `${row.organization} · ${fmtDate(row.date)}`,
+                stats: ["status", "checkins", "unique", "pre"],
+              }}
               columns={[
                 {
                   key: "name",

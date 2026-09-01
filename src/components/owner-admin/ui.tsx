@@ -11,8 +11,10 @@ import {
   Building2,
   CalendarRange,
   ChevronLeft,
+  Ellipsis,
   ChevronRight,
   Gauge,
+  Search,
   LineChart as LineChartIcon,
   LogOut,
   RefreshCw,
@@ -133,7 +135,7 @@ const NAV: { to: string; label: string; icon: typeof Gauge; exact?: boolean; gro
 
 const NAV_GROUPS = ["Platform", "Accounts", "Activity"] as const;
 
-function isActive(pathname: string, item: (typeof NAV)[number]) {
+function isActive(pathname: string, item: { to: string; exact?: boolean }) {
   return item.exact ? pathname === item.to : pathname.startsWith(item.to);
 }
 
@@ -225,16 +227,29 @@ export function OwnerAdminShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       <div className="min-w-0 flex-1">
-        {/* Command bar */}
-        <header className="sticky top-0 z-30 border-b border-border/60 bg-background/85 backdrop-blur">
+        {/* Mobile: iOS frosted navigation bar */}
+        <header className="sticky top-0 z-30 px-3 pt-safe-1 pb-2 lg:hidden">
+          <div className="ios-glass flex items-center gap-2 rounded-2xl px-3 py-2">
+            <span className="flex size-7 shrink-0 items-center justify-center rounded-lg bg-primary/12 text-primary">
+              <ShieldCheck className="size-3.5" />
+            </span>
+            <p className="min-w-0 flex-1 truncate font-display text-[15px] font-bold tracking-tight">{current.label}</p>
+            <button
+              type="button"
+              onClick={handleRefresh}
+              disabled={refreshing}
+              aria-label="Refresh live data"
+              className="ios-press flex size-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary"
+            >
+              <RefreshCw className={cn("size-4", refreshing && "animate-spin")} />
+            </button>
+          </div>
+        </header>
+
+        {/* Desktop command bar */}
+        <header className="sticky top-0 z-30 hidden border-b border-border/60 bg-background/85 backdrop-blur lg:block">
           <div className="flex flex-wrap items-center gap-3 px-4 py-3 lg:px-6">
-            <div className="flex items-center gap-2 lg:hidden">
-              <span className="flex size-8 items-center justify-center rounded-lg bg-primary/12 text-primary">
-                <ShieldCheck className="size-4" />
-              </span>
-              <p className="text-sm font-semibold">Owner console</p>
-            </div>
-            <div className="hidden leading-tight lg:block">
+            <div className="leading-tight">
               <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
                 {current.group}
               </p>
@@ -242,48 +257,152 @@ export function OwnerAdminShell({ children }: { children: React.ReactNode }) {
             </div>
 
             <div className="ml-auto flex items-center gap-2">
-              <span className="hidden text-[11px] text-muted-foreground sm:inline">
+              <span className="text-[11px] text-muted-foreground">
                 Live data as of {loadedAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
               </span>
               <Button variant="outline" size="sm" onClick={handleRefresh} disabled={refreshing}>
                 <RefreshCw className={cn("mr-1.5 size-3.5", refreshing && "animate-spin")} />
                 {refreshing ? "Refreshing…" : "Refresh"}
               </Button>
-              <Button variant="ghost" size="sm" className="lg:hidden" onClick={handleSignOut} disabled={signingOut}>
-                <LogOut className="size-3.5" />
-              </Button>
             </div>
           </div>
-
-          {/* Mobile / tablet nav strip */}
-          <nav className="flex gap-1 overflow-x-auto px-4 pb-2 lg:hidden">
-            {NAV.map((item) => {
-              const active = isActive(pathname, item);
-              const Icon = item.icon;
-              return (
-                <Link
-                  key={item.to}
-                  to={item.to}
-                  className={cn(
-                    "flex shrink-0 items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors",
-                    active
-                      ? "bg-primary/12 text-primary"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                  )}
-                >
-                  <Icon className="size-3.5" />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
         </header>
 
-        <main className="mx-auto w-full max-w-[1500px] px-4 py-6 lg:px-6 lg:py-8">{children}</main>
+        <main className="mx-auto w-full max-w-[1500px] px-4 pb-28 pt-1 lg:px-6 lg:py-8 lg:pb-10">{children}</main>
+
+        {/* Mobile: iOS bottom tab bar */}
+        <OwnerTabBar
+          pathname={pathname}
+          email={user?.email ?? null}
+          loadedAt={loadedAt}
+          signingOut={signingOut}
+          onSignOut={handleSignOut}
+        />
       </div>
     </div>
   );
 }
+
+const PRIMARY_TABS: { to: string; label: string; icon: typeof Gauge; exact?: boolean }[] = [
+  { to: "/owner-admin", label: "Overview", icon: Gauge, exact: true },
+  { to: "/owner-admin/organizations", label: "Orgs", icon: Building2 },
+  { to: "/owner-admin/members", label: "People", icon: Users },
+  { to: "/owner-admin/events", label: "Events", icon: CalendarRange },
+];
+
+const MORE_ITEMS = NAV.filter((item) => !PRIMARY_TABS.some((tab) => tab.to === item.to));
+
+function OwnerTabBar({
+  pathname,
+  email,
+  loadedAt,
+  signingOut,
+  onSignOut,
+}: {
+  pathname: string;
+  email: string | null;
+  loadedAt: Date;
+  signingOut: boolean;
+  onSignOut: () => void;
+}) {
+  const [moreOpen, setMoreOpen] = React.useState(false);
+  const moreActive = MORE_ITEMS.some((item) => isActive(pathname, item));
+
+  return (
+    <>
+      {moreOpen ? (
+        <div className="fixed inset-0 z-40 lg:hidden" role="dialog" aria-modal="true">
+          <button
+            type="button"
+            aria-label="Close menu"
+            className="absolute inset-0 bg-foreground/25 backdrop-blur-[2px]"
+            onClick={() => setMoreOpen(false)}
+          />
+          <div className="absolute inset-x-0 bottom-0 rounded-t-[26px] border-t border-border/60 bg-card px-4 pb-safe-1 pt-3 shadow-[0_-20px_50px_-24px_rgba(0,0,0,0.4)]">
+            <div className="mx-auto mb-4 h-1.5 w-10 rounded-full bg-muted-foreground/30" aria-hidden="true" />
+            <p className="ios-section-label px-3 mb-2">More reports</p>
+            <div className="ios-grouped">
+              {MORE_ITEMS.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    onClick={() => setMoreOpen(false)}
+                    className="ios-list-row"
+                  >
+                    <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <Icon className="size-[18px]" />
+                    </span>
+                    <span className="min-w-0 flex-1 text-[15px] font-medium">{item.label}</span>
+                    <ChevronRight className="size-4 shrink-0 text-muted-foreground/70" />
+                  </Link>
+                );
+              })}
+            </div>
+
+            <p className="ios-section-label px-3 mb-2 mt-5">Account</p>
+            <div className="ios-grouped mb-4">
+              {email ? (
+                <div className="ios-list-row">
+                  <span className="min-w-0 flex-1 truncate text-[15px] font-medium">{email}</span>
+                </div>
+              ) : null}
+              <div className="ios-list-row">
+                <span className="min-w-0 flex-1 text-[15px] font-medium">Live data as of</span>
+                <span className="shrink-0 text-[14px] text-muted-foreground">
+                  {loadedAt.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
+                </span>
+              </div>
+              <button type="button" className="ios-list-row" onClick={onSignOut} disabled={signingOut}>
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-destructive/10 text-destructive">
+                  <LogOut className="size-[18px]" />
+                </span>
+                <span className="min-w-0 flex-1 text-left text-[15px] font-medium text-destructive">
+                  {signingOut ? "Signing out…" : "Sign out"}
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      <nav className="fixed inset-x-0 bottom-0 z-30 px-3 pb-safe-1 pt-2 lg:hidden">
+        <div className="ios-glass grid grid-cols-5 gap-1 rounded-[22px] px-1.5 py-1.5">
+          {PRIMARY_TABS.map((tab) => {
+            const active = isActive(pathname, tab);
+            const Icon = tab.icon;
+            return (
+              <Link
+                key={tab.to}
+                to={tab.to}
+                className={cn(
+                  "ios-press flex min-w-0 flex-col items-center gap-1 rounded-2xl px-1 py-1.5 transition-colors",
+                  active ? "text-primary" : "text-muted-foreground",
+                )}
+              >
+                <Icon className="size-[21px] shrink-0" />
+                <span className="w-full truncate text-center text-[10px] font-semibold">{tab.label}</span>
+              </Link>
+            );
+          })}
+          <button
+            type="button"
+            onClick={() => setMoreOpen((v) => !v)}
+            className={cn(
+              "ios-press flex min-w-0 flex-col items-center gap-1 rounded-2xl px-1 py-1.5 transition-colors",
+              moreActive || moreOpen ? "text-primary" : "text-muted-foreground",
+            )}
+          >
+            <Ellipsis className="size-[21px] shrink-0" />
+            <span className="w-full truncate text-center text-[10px] font-semibold">More</span>
+          </button>
+        </div>
+      </nav>
+    </>
+  );
+}
+
 
 
 export function PageHeading({
@@ -298,18 +417,23 @@ export function PageHeading({
   actions?: React.ReactNode;
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-      <div>
+    <div className="mb-5 lg:mb-6 lg:flex lg:flex-wrap lg:items-end lg:justify-between lg:gap-3">
+      <div className="min-w-0 px-1 pt-2 lg:px-0 lg:pt-0">
         {eyebrow ? (
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">{eyebrow}</p>
+          <p className="ios-section-label mb-1.5 text-primary lg:mb-1 lg:text-[10px] lg:tracking-[0.16em]">{eyebrow}</p>
         ) : null}
-        <h1 className="font-display text-[26px] font-extrabold tracking-tight">{title}</h1>
-        {description ? <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">{description}</p> : null}
+        <h1 className="ios-large-title lg:font-display lg:text-[26px] lg:font-extrabold lg:tracking-tight">{title}</h1>
+        {description ? (
+          <p className="mt-2 max-w-2xl text-[15px] leading-snug text-muted-foreground lg:mt-1.5 lg:text-sm">
+            {description}
+          </p>
+        ) : null}
       </div>
-      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+      {actions ? <div className="mt-4 flex flex-wrap items-center gap-2 lg:mt-0">{actions}</div> : null}
     </div>
   );
 }
+
 
 export function SectionCard({
   title,
@@ -330,17 +454,17 @@ export function SectionCard({
   return (
     <section
       className={cn(
-        "overflow-hidden rounded-2xl border border-border/60 bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_12px_24px_-20px_rgba(0,0,0,0.25)]",
+        "overflow-hidden rounded-[22px] border border-border/60 bg-card shadow-[0_1px_2px_rgba(0,0,0,0.04),0_12px_24px_-20px_rgba(0,0,0,0.25)] lg:rounded-2xl",
         className,
       )}
     >
       {title ? (
-        <header className="flex flex-wrap items-center justify-between gap-2 border-b border-border/60 bg-muted/25 px-4 py-3">
+        <header className="border-b border-border/60 bg-muted/25 px-4 py-3 sm:flex sm:flex-wrap sm:items-center sm:justify-between sm:gap-2">
           <div className="min-w-0">
-            <h2 className="text-[13px] font-semibold tracking-tight">{title}</h2>
+            <h2 className="text-[14px] font-semibold tracking-tight sm:text-[13px]">{title}</h2>
             {description ? <p className="mt-0.5 text-xs text-muted-foreground">{description}</p> : null}
           </div>
-          {actions}
+          {actions ? <div className="mt-2.5 sm:mt-0">{actions}</div> : null}
         </header>
       ) : null}
       <div className="p-4">{children}</div>
@@ -382,7 +506,7 @@ export function KpiCard({
     <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-card p-4 shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
       <span className={cn("absolute inset-y-0 left-0 w-[3px]", TONE_RAIL[tone])} aria-hidden="true" />
       <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">{label}</p>
-      <p className={cn("mt-2 font-display text-[26px] font-extrabold leading-none tabular-nums", TONE_TEXT[tone])}>
+      <p className={cn("mt-2 font-display text-[22px] font-extrabold leading-none tabular-nums sm:text-[26px]", TONE_TEXT[tone])}>
         {value}
       </p>
       {hint ? <p className="mt-1.5 text-xs leading-snug text-muted-foreground">{hint}</p> : null}
@@ -391,7 +515,7 @@ export function KpiCard({
 }
 
 export function KpiGrid({ children }: { children: React.ReactNode }) {
-  return <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">{children}</div>;
+  return <div className="grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">{children}</div>;
 }
 
 // ── Plain-language, at-a-glance pieces (Apple-inspired) ─────────────────────
@@ -443,7 +567,7 @@ export function GlanceCard({
   return (
     <section
       className={cn(
-        "rounded-[26px] border border-border/50 bg-card/90 p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_24px_48px_-32px_rgba(0,0,0,0.28)] backdrop-blur",
+        "rounded-[26px] border border-border/50 bg-card/90 p-5 sm:p-6 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_24px_48px_-32px_rgba(0,0,0,0.28)] backdrop-blur",
         className,
       )}
     >
@@ -588,12 +712,15 @@ export function SearchField({
   placeholder: string;
 }) {
   return (
-    <Input
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      className="h-9 w-full sm:w-72"
-    />
+    <label className="flex w-full items-center gap-2 rounded-2xl bg-muted px-3 sm:w-72 sm:rounded-md sm:bg-transparent sm:px-0">
+      <Search className="size-4 shrink-0 text-muted-foreground sm:hidden" />
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        className="h-10 w-full min-w-0 border-0 bg-transparent px-0 text-[15px] shadow-none focus-visible:ring-0 sm:h-9 sm:border sm:bg-background sm:px-3 sm:text-sm sm:shadow-xs sm:focus-visible:ring-[3px]"
+      />
+    </label>
   );
 }
 
@@ -611,20 +738,27 @@ export function Pager({
   const from = total === 0 ? 0 : offset + 1;
   const to = Math.min(total, offset + limit);
   return (
-    <div className="mt-3 flex items-center justify-between gap-3">
-      <p className="text-xs text-muted-foreground">
+    <div className="mt-3 flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+      <p className="text-center text-xs text-muted-foreground sm:text-left">
         {fmtNumber(from)}–{fmtNumber(to)} of {fmtNumber(total)}
       </p>
-      <div className="flex gap-1">
+      <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-1">
         <Button
           variant="outline"
-          size="sm"
+          className="ios-press h-11 rounded-2xl text-[15px] sm:h-8 sm:rounded-md sm:px-3 sm:text-sm"
           disabled={offset <= 0}
           onClick={() => onOffset(Math.max(0, offset - limit))}
         >
           <ChevronLeft className="size-4" />
+          <span className="sm:hidden">Previous</span>
         </Button>
-        <Button variant="outline" size="sm" disabled={to >= total} onClick={() => onOffset(offset + limit)}>
+        <Button
+          variant="outline"
+          className="ios-press h-11 rounded-2xl text-[15px] sm:h-8 sm:rounded-md sm:px-3 sm:text-sm"
+          disabled={to >= total}
+          onClick={() => onOffset(offset + limit)}
+        >
+          <span className="sm:hidden">Next</span>
           <ChevronRight className="size-4" />
         </Button>
       </div>
@@ -638,52 +772,133 @@ export function DataTable<T>({
   empty = "No rows recorded yet.",
   rowKey,
   minWidth = 760,
+  mobile,
 }: {
   rows: T[];
   columns: { key: string; header: string; align?: "left" | "right"; render: (row: T) => React.ReactNode }[];
   empty?: string;
   rowKey: (row: T, index: number) => string;
   minWidth?: number;
+  /**
+   * Optional phone presentation. On mobile the table becomes a grouped list of
+   * cards, because a 760px-wide table can only be read by scrolling sideways.
+   * When omitted, the first column becomes the title and the rest become
+   * label/value pairs, so no page can break.
+   */
+  mobile?: {
+    /** Column keys shown as the row title / subtitle. */
+    title?: (row: T) => React.ReactNode;
+    subtitle?: (row: T) => React.ReactNode;
+    /** Column keys rendered as the compact stat grid under the title. */
+    stats?: string[];
+  };
 }) {
   if (!rows.length) {
     return <EmptyState title={empty} hint="This table reads live application records — nothing matches yet." />;
   }
+
+  const [firstColumn, ...restColumns] = columns;
+  const statColumns = mobile?.stats
+    ? columns.filter((col) => mobile.stats!.includes(col.key))
+    : restColumns.slice(0, 4);
+
   return (
-    <div className="-mx-4 max-h-[70vh] overflow-auto px-4">
-      <table className="w-full border-collapse text-sm" style={{ minWidth }}>
-        <thead className="sticky top-0 z-10">
-          <tr className="text-left">
-            {columns.map((col) => (
-              <th
-                key={col.key}
-                className={cn(
-                  "border-b border-border/60 bg-card px-2 py-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground",
-                  col.align === "right" && "text-right",
-                )}
-              >
-                {col.header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row, index) => (
-            <tr
-              key={rowKey(row, index)}
-              className="border-b border-border/40 transition-colors last:border-0 hover:bg-primary/[0.04]"
-            >
+    <>
+      {/* Phone: grouped cards */}
+      <div className="space-y-2.5 sm:hidden">
+        {rows.map((row, index) => (
+          <article key={rowKey(row, index)} className="rounded-2xl border border-border/50 bg-card/80 p-3.5">
+            <div className="min-w-0 text-[15px] font-semibold leading-snug">
+              {mobile?.title ? mobile.title(row) : firstColumn ? firstColumn.render(row) : null}
+            </div>
+            {mobile?.subtitle ? (
+              <div className="mt-0.5 min-w-0 text-[13px] text-muted-foreground">{mobile.subtitle(row)}</div>
+            ) : null}
+            {statColumns.length ? (
+              <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2.5 border-t border-border/40 pt-3">
+                {statColumns.map((col) => (
+                  <div key={col.key} className="min-w-0">
+                    <dt className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                      {col.header}
+                    </dt>
+                    <dd className="mt-0.5 truncate text-[14px] tabular-nums">{col.render(row)}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : null}
+          </article>
+        ))}
+      </div>
+
+      {/* Tablet and up: real table */}
+      <div className="-mx-4 hidden max-h-[70vh] overflow-auto px-4 sm:block">
+        <table className="w-full border-collapse text-sm" style={{ minWidth }}>
+          <thead className="sticky top-0 z-10">
+            <tr className="text-left">
               {columns.map((col) => (
-                <td key={col.key} className={cn("px-2 py-2.5 align-middle", col.align === "right" && "text-right tabular-nums")}>
-                  {col.render(row)}
-                </td>
+                <th
+                  key={col.key}
+                  className={cn(
+                    "border-b border-border/60 bg-card px-2 py-2.5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground",
+                    col.align === "right" && "text-right",
+                  )}
+                >
+                  {col.header}
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((row, index) => (
+              <tr
+                key={rowKey(row, index)}
+                className="border-b border-border/40 transition-colors last:border-0 hover:bg-primary/[0.04]"
+              >
+                {columns.map((col) => (
+                  <td key={col.key} className={cn("px-2 py-2.5 align-middle", col.align === "right" && "text-right tabular-nums")}>
+                    {col.render(row)}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+/** iOS-style segmented control for the range switchers. */
+export function RangeSegmented<T extends string>({
+  value,
+  onChange,
+  options,
+}: {
+  value: T;
+  onChange: (next: T) => void;
+  options: { key: T; label: string }[];
+}) {
+  return (
+    <div className="inline-flex w-full rounded-2xl bg-muted p-1 sm:w-auto sm:rounded-xl">
+      {options.map((opt) => (
+        <button
+          key={opt.key}
+          type="button"
+          onClick={() => onChange(opt.key)}
+          className={cn(
+            "ios-press flex-1 whitespace-nowrap rounded-[0.9rem] px-3 py-2 text-[13px] font-semibold transition-colors sm:py-1.5 sm:text-[12px]",
+            opt.key === value
+              ? "bg-card text-foreground shadow-[0_2px_6px_rgba(15,23,42,0.08)]"
+              : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {opt.label}
+        </button>
+      ))}
     </div>
   );
 }
+
 
 export function LoadingBlock({ label = "Loading live data…" }: { label?: string }) {
   return <div className="py-16 text-center text-sm text-muted-foreground">{label}</div>;

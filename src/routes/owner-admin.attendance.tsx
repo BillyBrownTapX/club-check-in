@@ -12,13 +12,13 @@ import {
   KpiGrid,
   LoadingBlock,
   PageHeading,
+  RangeSegmented,
   SectionCard,
   SimpleBars,
   fmtDate,
   fmtNumber,
   fmtPercent,
 } from "@/components/owner-admin/ui";
-import { Button } from "@/components/ui/button";
 import { getOwnerAttendance, type OwnerAttendanceReport } from "@/lib/owner-admin.functions";
 
 export const Route = createFileRoute("/owner-admin/attendance")({
@@ -71,18 +71,11 @@ function OwnerAttendanceRoute() {
         title="Attendance activity"
         description="Where and how members actually check in — the strongest signal of real product usage."
         actions={
-          <div className="flex gap-1 rounded-lg border border-border/60 p-1">
-            {RANGES.map((r) => (
-              <Button
-                key={r.key}
-                size="sm"
-                variant={r.key === rangeKey ? "secondary" : "ghost"}
-                onClick={() => setRangeKey(r.key)}
-              >
-                {r.label}
-              </Button>
-            ))}
-          </div>
+          <RangeSegmented
+            value={rangeKey}
+            onChange={setRangeKey}
+            options={RANGES.map((r) => ({ key: r.key, label: r.label }))}
+          />
         }
       />
 
