@@ -416,18 +416,23 @@ export function PageHeading({
   actions?: React.ReactNode;
 }) {
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-      <div>
+    <div className="mb-5 lg:mb-6 lg:flex lg:flex-wrap lg:items-end lg:justify-between lg:gap-3">
+      <div className="min-w-0 px-1 pt-2 lg:px-0 lg:pt-0">
         {eyebrow ? (
-          <p className="mb-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-primary">{eyebrow}</p>
+          <p className="ios-section-label mb-1.5 text-primary lg:mb-1 lg:text-[10px] lg:tracking-[0.16em]">{eyebrow}</p>
         ) : null}
-        <h1 className="font-display text-[26px] font-extrabold tracking-tight">{title}</h1>
-        {description ? <p className="mt-1.5 max-w-2xl text-sm text-muted-foreground">{description}</p> : null}
+        <h1 className="ios-large-title lg:font-display lg:text-[26px] lg:font-extrabold lg:tracking-tight">{title}</h1>
+        {description ? (
+          <p className="mt-2 max-w-2xl text-[15px] leading-snug text-muted-foreground lg:mt-1.5 lg:text-sm">
+            {description}
+          </p>
+        ) : null}
       </div>
-      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+      {actions ? <div className="mt-4 flex flex-wrap items-center gap-2 lg:mt-0">{actions}</div> : null}
     </div>
   );
 }
+
 
 export function SectionCard({
   title,
