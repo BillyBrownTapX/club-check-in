@@ -27,6 +27,7 @@ export function AttendanceAuthProvider({ children }: { children: React.ReactNode
   const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
   }, []);
@@ -34,6 +35,11 @@ export function AttendanceAuthProvider({ children }: { children: React.ReactNode
   useEffect(() => {
     let mounted = true;
     let initialized = false;
+    // Tracks which identity the cache currently belongs to. Any change
+    // (sign-in as a different account, sign-out) must wipe cached query data,
+    // otherwise one account can read another account's cached answers — e.g.
+    // the owner-admin probe returning a stale `false` after an account switch.
+    let currentUserId: string | null | undefined = undefined;
 
     // Centralized state setter so the first source of truth (whichever
     // resolves first — getSession() or the initial onAuthStateChange event)
@@ -42,6 +48,11 @@ export function AttendanceAuthProvider({ children }: { children: React.ReactNode
     // even though a valid session was about to hydrate from localStorage.
     const applySession = (next: Session | null) => {
       if (!mounted) return;
+      const nextUserId = next?.user?.id ?? null;
+      if (currentUserId !== undefined && currentUserId !== nextUserId) {
+        queryClient.clear();
+      }
+      currentUserId = nextUserId;
       setSession(next);
       setUser(next?.user ?? null);
       if (!initialized) {
@@ -64,7 +75,8 @@ export function AttendanceAuthProvider({ children }: { children: React.ReactNode
       mounted = false;
       listener.subscription.unsubscribe();
     };
-  }, []);
+  }, [queryClient]);
+
 
   const value = useMemo<AuthContextValue>(() => ({
     session,
