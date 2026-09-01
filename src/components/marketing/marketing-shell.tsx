@@ -195,6 +195,32 @@ export function softwareAppSchema() {
   };
 }
 
+export function howToSchema({
+  name,
+  description,
+  steps,
+}: {
+  name: string;
+  description: string;
+  steps: { name: string; text: string }[];
+}) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    name,
+    description,
+    totalTime: "PT1M",
+    step: steps.map((s, i) => ({
+      "@type": "HowToStep",
+      position: i + 1,
+      name: s.name,
+      text: s.text,
+    })),
+  };
+}
+
+
+
 export function buildPageMeta({
   title,
   description,
