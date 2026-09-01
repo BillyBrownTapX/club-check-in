@@ -39,6 +39,7 @@ import { Route as ClubsIndexRouteImport } from './routes/clubs.index'
 import { Route as PreCheckInPreTokenRouteImport } from './routes/pre-check-in.$preToken'
 import { Route as OwnerAdminUsersRouteImport } from './routes/owner-admin.users'
 import { Route as OwnerAdminMembersRouteImport } from './routes/owner-admin.members'
+import { Route as OwnerAdminGrowthRouteImport } from './routes/owner-admin.growth'
 import { Route as OwnerAdminEventsRouteImport } from './routes/owner-admin.events'
 import { Route as OwnerAdminAttendanceRouteImport } from './routes/owner-admin.attendance'
 import { Route as OnboardingEventRouteImport } from './routes/onboarding.event'
@@ -210,6 +211,11 @@ const OwnerAdminMembersRoute = OwnerAdminMembersRouteImport.update({
   path: '/members',
   getParentRoute: () => OwnerAdminRoute,
 } as any)
+const OwnerAdminGrowthRoute = OwnerAdminGrowthRouteImport.update({
+  id: '/growth',
+  path: '/growth',
+  getParentRoute: () => OwnerAdminRoute,
+} as any)
 const OwnerAdminEventsRoute = OwnerAdminEventsRouteImport.update({
   id: '/events',
   path: '/events',
@@ -345,6 +351,7 @@ export interface FileRoutesByFullPath {
   '/onboarding/event': typeof OnboardingEventRoute
   '/owner-admin/attendance': typeof OwnerAdminAttendanceRoute
   '/owner-admin/events': typeof OwnerAdminEventsRoute
+  '/owner-admin/growth': typeof OwnerAdminGrowthRoute
   '/owner-admin/members': typeof OwnerAdminMembersRoute
   '/owner-admin/users': typeof OwnerAdminUsersRoute
   '/pre-check-in/$preToken': typeof PreCheckInPreTokenRoute
@@ -395,6 +402,7 @@ export interface FileRoutesByTo {
   '/onboarding/event': typeof OnboardingEventRoute
   '/owner-admin/attendance': typeof OwnerAdminAttendanceRoute
   '/owner-admin/events': typeof OwnerAdminEventsRoute
+  '/owner-admin/growth': typeof OwnerAdminGrowthRoute
   '/owner-admin/members': typeof OwnerAdminMembersRoute
   '/owner-admin/users': typeof OwnerAdminUsersRoute
   '/pre-check-in/$preToken': typeof PreCheckInPreTokenRoute
@@ -447,6 +455,7 @@ export interface FileRoutesById {
   '/onboarding/event': typeof OnboardingEventRoute
   '/owner-admin/attendance': typeof OwnerAdminAttendanceRoute
   '/owner-admin/events': typeof OwnerAdminEventsRoute
+  '/owner-admin/growth': typeof OwnerAdminGrowthRoute
   '/owner-admin/members': typeof OwnerAdminMembersRoute
   '/owner-admin/users': typeof OwnerAdminUsersRoute
   '/pre-check-in/$preToken': typeof PreCheckInPreTokenRoute
@@ -500,6 +509,7 @@ export interface FileRouteTypes {
     | '/onboarding/event'
     | '/owner-admin/attendance'
     | '/owner-admin/events'
+    | '/owner-admin/growth'
     | '/owner-admin/members'
     | '/owner-admin/users'
     | '/pre-check-in/$preToken'
@@ -550,6 +560,7 @@ export interface FileRouteTypes {
     | '/onboarding/event'
     | '/owner-admin/attendance'
     | '/owner-admin/events'
+    | '/owner-admin/growth'
     | '/owner-admin/members'
     | '/owner-admin/users'
     | '/pre-check-in/$preToken'
@@ -601,6 +612,7 @@ export interface FileRouteTypes {
     | '/onboarding/event'
     | '/owner-admin/attendance'
     | '/owner-admin/events'
+    | '/owner-admin/growth'
     | '/owner-admin/members'
     | '/owner-admin/users'
     | '/pre-check-in/$preToken'
@@ -873,6 +885,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OwnerAdminMembersRouteImport
       parentRoute: typeof OwnerAdminRoute
     }
+    '/owner-admin/growth': {
+      id: '/owner-admin/growth'
+      path: '/growth'
+      fullPath: '/owner-admin/growth'
+      preLoaderRoute: typeof OwnerAdminGrowthRouteImport
+      parentRoute: typeof OwnerAdminRoute
+    }
     '/owner-admin/events': {
       id: '/owner-admin/events'
       path: '/events'
@@ -1012,6 +1031,7 @@ declare module '@tanstack/react-router' {
 interface OwnerAdminRouteChildren {
   OwnerAdminAttendanceRoute: typeof OwnerAdminAttendanceRoute
   OwnerAdminEventsRoute: typeof OwnerAdminEventsRoute
+  OwnerAdminGrowthRoute: typeof OwnerAdminGrowthRoute
   OwnerAdminMembersRoute: typeof OwnerAdminMembersRoute
   OwnerAdminUsersRoute: typeof OwnerAdminUsersRoute
   OwnerAdminIndexRoute: typeof OwnerAdminIndexRoute
@@ -1022,6 +1042,7 @@ interface OwnerAdminRouteChildren {
 const OwnerAdminRouteChildren: OwnerAdminRouteChildren = {
   OwnerAdminAttendanceRoute: OwnerAdminAttendanceRoute,
   OwnerAdminEventsRoute: OwnerAdminEventsRoute,
+  OwnerAdminGrowthRoute: OwnerAdminGrowthRoute,
   OwnerAdminMembersRoute: OwnerAdminMembersRoute,
   OwnerAdminUsersRoute: OwnerAdminUsersRoute,
   OwnerAdminIndexRoute: OwnerAdminIndexRoute,
