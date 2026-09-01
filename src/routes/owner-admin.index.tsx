@@ -8,6 +8,7 @@ import * as React from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   CHART_COLORS,
   EmptyState,
@@ -16,18 +17,17 @@ import {
   HeroStat,
   LoadingBlock,
   PlainBars,
+  RangeSegmented,
   StatRing,
   TrendArea,
   fmtNumber,
 } from "@/components/owner-admin/ui";
-import { Button } from "@/components/ui/button";
 import {
   getOwnerPeople,
   getOwnerSeries,
   type OwnerPeople,
   type OwnerSeriesPoint,
 } from "@/lib/owner-admin.functions";
-import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/owner-admin/")({
   head: () => ({
@@ -52,6 +52,7 @@ function pct(part: number, whole: number): number {
 }
 
 function OwnerOverviewRoute() {
+  const isMobile = useIsMobile();
   const [rangeKey, setRangeKey] = React.useState("30");
   const range = RANGES.find((r) => r.key === rangeKey) ?? RANGES[0]!;
 
@@ -92,13 +93,13 @@ function OwnerOverviewRoute() {
   return (
     <div className="mx-auto max-w-5xl animate-in fade-in duration-500">
       {/* Hero — the whole point of this page */}
-      <section className="mb-6 rounded-[30px] border border-border/50 bg-gradient-to-b from-primary/[0.07] via-card to-card p-7 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_30px_60px_-40px_rgba(0,0,0,0.35)] sm:p-9">
+      <section className="mb-6 rounded-[30px] border border-border/50 bg-gradient-to-b from-primary/[0.07] via-card to-card p-5 shadow-[0_1px_2px_rgba(0,0,0,0.03),0_30px_60px_-40px_rgba(0,0,0,0.35)] sm:p-9">
         <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-primary">People on Attendance HQ</p>
         <h1 className="mt-1.5 font-display text-[22px] font-semibold tracking-tight">
           {fmtNumber(totalPeople)} people are on the app right now
         </h1>
 
-        <div className="mt-7 grid gap-7 sm:grid-cols-3 sm:gap-4">
+        <div className="mt-6 grid gap-6 sm:mt-7 sm:grid-cols-3 sm:gap-4">
           <HeroStat
             value={fmtNumber(d.members.total)}
             label="Members"
@@ -119,7 +120,7 @@ function OwnerOverviewRoute() {
           />
         </div>
 
-        <p className="mt-7 border-t border-border/50 pt-3 text-[12px] text-muted-foreground">
+        <p className="mt-6 border-t border-border/50 pt-3 text-[12px] text-muted-foreground">
           Counted live from member, host account, club and check-in records — nothing is estimated or seeded.
         </p>
       </section>
@@ -131,7 +132,7 @@ function OwnerOverviewRoute() {
           question="Of everyone in the app, how many have actually scanned in at least once."
           footnote="Members with one or more attendance records, out of all member records."
         >
-          <div className="flex flex-wrap items-center gap-6">
+          <div className="flex flex-wrap items-center gap-5 sm:gap-6">
             <StatRing
               percent={checkedInPct}
               centerLabel="have checked in"
@@ -191,27 +192,16 @@ function OwnerOverviewRoute() {
           question="Check-ins recorded over time. Higher is better; flat means people stopped using it."
           footnote="Attendance records grouped by the time each person checked in."
         >
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
             <p className="text-[13px] text-muted-foreground">
               {fmtNumber(chartData.reduce((sum, p) => sum + (p.checkIns ?? 0), 0))} check-ins in the last{" "}
               {range.label.toLowerCase()}
             </p>
-            <div className="flex gap-1 rounded-full border border-border/60 bg-muted/40 p-1">
-              {RANGES.map((r) => (
-                <Button
-                  key={r.key}
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setRangeKey(r.key)}
-                  className={cn(
-                    "h-7 rounded-full px-3 text-[12px]",
-                    r.key === rangeKey && "bg-card text-foreground shadow-sm",
-                  )}
-                >
-                  {r.label}
-                </Button>
-              ))}
-            </div>
+            <RangeSegmented
+              value={rangeKey}
+              onChange={setRangeKey}
+              options={RANGES.map((r) => ({ key: r.key, label: r.label }))}
+            />
           </div>
 
           {series.isLoading ? (
@@ -222,7 +212,7 @@ function OwnerOverviewRoute() {
             <TrendArea
               data={chartData}
               xKey="label"
-              height={260}
+              height={isMobile ? 200 : 260}
               series={[{ key: "checkIns", label: "Check-ins", color: CHART_COLORS[0] }]}
             />
           )}
