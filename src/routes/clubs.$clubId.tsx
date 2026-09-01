@@ -152,6 +152,12 @@ function ClubDetailRoute() {
   const purgeAttendanceMutation = useAuthorizedMutation(purgeClubAttendanceOlderThan, {
     invalidate: [queryKeys.clubs.all, queryKeys.events.all, queryKeys.activity.all],
   });
+  // Must stay above the early returns below — a hook created after a
+  // conditional return changes hook order between the loading and loaded
+  // renders and crashes the route on its first open.
+  const agentEmailMutation = useAuthorizedMutation(emailAgentSetupLink);
+
+
 
 
   const [officerDialogOpen, setOfficerDialogOpen] = useState(false);
