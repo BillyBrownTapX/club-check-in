@@ -46,6 +46,7 @@ import { Route as ClubsClubIdRouteImport } from './routes/clubs.$clubId'
 import { Route as CheckInQrTokenRouteImport } from './routes/check-in.$qrToken'
 import { Route as ApiHealthRouteImport } from './routes/api.health'
 import { Route as OwnerAdminOrganizationsIndexRouteImport } from './routes/owner-admin.organizations.index'
+import { Route as OwnerAdminOrganizationsClubIdRouteImport } from './routes/owner-admin.organizations.$clubId'
 import { Route as EventsEventIdEditRouteImport } from './routes/events.$eventId_.edit'
 import { Route as EventsEventIdDisplayRouteImport } from './routes/events.$eventId_.display'
 import { Route as ApiPublicStudentCheckInRouteImport } from './routes/api.public.student-check-in'
@@ -241,6 +242,12 @@ const OwnerAdminOrganizationsIndexRoute =
     path: '/organizations/',
     getParentRoute: () => OwnerAdminRoute,
   } as any)
+const OwnerAdminOrganizationsClubIdRoute =
+  OwnerAdminOrganizationsClubIdRouteImport.update({
+    id: '/organizations/$clubId',
+    path: '/organizations/$clubId',
+    getParentRoute: () => OwnerAdminRoute,
+  } as any)
 const EventsEventIdEditRoute = EventsEventIdEditRouteImport.update({
   id: '/events/$eventId_/edit',
   path: '/events/$eventId/edit',
@@ -321,6 +328,7 @@ export interface FileRoutesByFullPath {
   '/api/public/student-check-in': typeof ApiPublicStudentCheckInRoute
   '/events/$eventId/display': typeof EventsEventIdDisplayRoute
   '/events/$eventId/edit': typeof EventsEventIdEditRoute
+  '/owner-admin/organizations/$clubId': typeof OwnerAdminOrganizationsClubIdRoute
   '/owner-admin/organizations/': typeof OwnerAdminOrganizationsIndexRoute
   '/api/host/clubs/$clubId/semester-attendance.csv': typeof ApiHostClubsClubIdSemesterAttendanceDotcsvRoute
   '/api/host/events/$eventId/attendance.csv': typeof ApiHostEventsEventIdAttendanceDotcsvRoute
@@ -366,6 +374,7 @@ export interface FileRoutesByTo {
   '/api/public/student-check-in': typeof ApiPublicStudentCheckInRoute
   '/events/$eventId/display': typeof EventsEventIdDisplayRoute
   '/events/$eventId/edit': typeof EventsEventIdEditRoute
+  '/owner-admin/organizations/$clubId': typeof OwnerAdminOrganizationsClubIdRoute
   '/owner-admin/organizations': typeof OwnerAdminOrganizationsIndexRoute
   '/api/host/clubs/$clubId/semester-attendance.csv': typeof ApiHostClubsClubIdSemesterAttendanceDotcsvRoute
   '/api/host/events/$eventId/attendance.csv': typeof ApiHostEventsEventIdAttendanceDotcsvRoute
@@ -413,6 +422,7 @@ export interface FileRoutesById {
   '/api/public/student-check-in': typeof ApiPublicStudentCheckInRoute
   '/events/$eventId_/display': typeof EventsEventIdDisplayRoute
   '/events/$eventId_/edit': typeof EventsEventIdEditRoute
+  '/owner-admin/organizations/$clubId': typeof OwnerAdminOrganizationsClubIdRoute
   '/owner-admin/organizations/': typeof OwnerAdminOrganizationsIndexRoute
   '/api/host/clubs/$clubId/semester-attendance.csv': typeof ApiHostClubsClubIdSemesterAttendanceDotcsvRoute
   '/api/host/events/$eventId/attendance.csv': typeof ApiHostEventsEventIdAttendanceDotcsvRoute
@@ -461,6 +471,7 @@ export interface FileRouteTypes {
     | '/api/public/student-check-in'
     | '/events/$eventId/display'
     | '/events/$eventId/edit'
+    | '/owner-admin/organizations/$clubId'
     | '/owner-admin/organizations/'
     | '/api/host/clubs/$clubId/semester-attendance.csv'
     | '/api/host/events/$eventId/attendance.csv'
@@ -506,6 +517,7 @@ export interface FileRouteTypes {
     | '/api/public/student-check-in'
     | '/events/$eventId/display'
     | '/events/$eventId/edit'
+    | '/owner-admin/organizations/$clubId'
     | '/owner-admin/organizations'
     | '/api/host/clubs/$clubId/semester-attendance.csv'
     | '/api/host/events/$eventId/attendance.csv'
@@ -552,6 +564,7 @@ export interface FileRouteTypes {
     | '/api/public/student-check-in'
     | '/events/$eventId_/display'
     | '/events/$eventId_/edit'
+    | '/owner-admin/organizations/$clubId'
     | '/owner-admin/organizations/'
     | '/api/host/clubs/$clubId/semester-attendance.csv'
     | '/api/host/events/$eventId/attendance.csv'
@@ -861,6 +874,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OwnerAdminOrganizationsIndexRouteImport
       parentRoute: typeof OwnerAdminRoute
     }
+    '/owner-admin/organizations/$clubId': {
+      id: '/owner-admin/organizations/$clubId'
+      path: '/organizations/$clubId'
+      fullPath: '/owner-admin/organizations/$clubId'
+      preLoaderRoute: typeof OwnerAdminOrganizationsClubIdRouteImport
+      parentRoute: typeof OwnerAdminRoute
+    }
     '/events/$eventId_/edit': {
       id: '/events/$eventId_/edit'
       path: '/events/$eventId/edit'
@@ -915,11 +935,13 @@ declare module '@tanstack/react-router' {
 
 interface OwnerAdminRouteChildren {
   OwnerAdminIndexRoute: typeof OwnerAdminIndexRoute
+  OwnerAdminOrganizationsClubIdRoute: typeof OwnerAdminOrganizationsClubIdRoute
   OwnerAdminOrganizationsIndexRoute: typeof OwnerAdminOrganizationsIndexRoute
 }
 
 const OwnerAdminRouteChildren: OwnerAdminRouteChildren = {
   OwnerAdminIndexRoute: OwnerAdminIndexRoute,
+  OwnerAdminOrganizationsClubIdRoute: OwnerAdminOrganizationsClubIdRoute,
   OwnerAdminOrganizationsIndexRoute: OwnerAdminOrganizationsIndexRoute,
 }
 
