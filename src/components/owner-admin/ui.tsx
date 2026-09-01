@@ -98,23 +98,21 @@ export function fmtDays(value: number | null | undefined): string {
 export function useOwnerAdminGate() {
   const { loading, user } = useAttendanceAuth();
   const navigate = useNavigate();
-  const me = useAuthorizedQuery<{ isOwnerAdmin: boolean }>(["owner-admin", "me"], getOwnerAdminMe, undefined, {
-    staleTime: 300_000,
-    retry: false,
-  });
+  const { isOwner, checking, isError } = useOwnerAdminStatus();
 
-  const denied = (!loading && !user) || me.isError || (!!me.data && !me.data.isOwnerAdmin);
+  const denied = (!loading && !user) || isError || (!checking && !!user && !isOwner);
 
   React.useEffect(() => {
     if (denied) navigate({ to: "/home", replace: true });
   }, [denied, navigate]);
 
   return {
-    ready: !loading && !!user && !!me.data?.isOwnerAdmin,
-    checking: loading || me.isLoading,
+    ready: !loading && !!user && isOwner,
+    checking: loading || checking,
     denied,
   };
 }
+
 
 // ── Shell ───────────────────────────────────────────────────────────────────
 const NAV: { to: string; label: string; icon: typeof Gauge; exact?: boolean }[] = [
