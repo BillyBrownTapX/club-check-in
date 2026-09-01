@@ -556,7 +556,7 @@ function ClubDetailRoute() {
           <SectionLabel className="mb-0 px-1">AI assistants</SectionLabel>
           <div className="ios-card space-y-3 rounded-2xl p-4">
             <p className="text-[13px] leading-6 text-muted-foreground">
-              Connect ChatGPT, Claude, Cursor, or Lovable so you can ask for head counts, attendance
+              Connect ChatGPT, Claude, or MANUS so you can ask for head counts, attendance
               rosters, and new events in chat. Your assistant works as you and only after you approve
               it.
             </p>

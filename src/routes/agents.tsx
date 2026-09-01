@@ -29,12 +29,8 @@ const CLIENTS = [
     steps: ["Settings → Connectors → Add custom connector", "Paste the server URL", "Sign in and approve"],
   },
   {
-    name: "Cursor",
-    steps: ["Settings → MCP → Add server", "Paste the server URL", "Sign in and approve"],
-  },
-  {
-    name: "Lovable",
-    steps: ["Open Connectors", "Add this app's connector", "Sign in and approve"],
+    name: "MANUS",
+    steps: ["Open MANUS → Add MCP server", "Paste the server URL", "Sign in and approve"],
   },
 ];
 
@@ -45,7 +41,7 @@ export const Route = createFileRoute("/agents")({
       {
         name: "description",
         content:
-          "Connect ChatGPT, Claude, Cursor, or Lovable to Attendance HQ so your assistant can pull head counts, rosters, and schedule events as you.",
+          "Connect ChatGPT, Claude, or MANUS to Attendance HQ so your assistant can pull head counts, rosters, and schedule events as you.",
       },
       { property: "og:title", content: "Connect an AI assistant — Attendance HQ" },
       {
@@ -103,7 +99,7 @@ function AgentsRoute() {
       <LargeTitleHeader
         eyebrow="Agent integrations"
         title="Connect an AI assistant"
-        subtitle="Ask ChatGPT, Claude, Cursor, or Lovable about your events — it works as you, with your access."
+        subtitle="Ask ChatGPT, Claude, or MANUS about your events — it works as you, with your access."
       />
 
       <SectionLabel className="mt-6">Server address</SectionLabel>
