@@ -1,0 +1,155 @@
+{
+  "version": 1,
+  "sdk_version": "0.28.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://ikmxrbgsbdxettetvqiw.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "attendance-hq",
+      "version": "0.1.0",
+      "title": "Attendance HQ"
+    },
+    "tools": [
+      {
+        "name": "list_clubs",
+        "title": "List clubs",
+        "description": "List the clubs (organizations) the signed-in host can manage in Attendance HQ.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {}
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_events",
+        "title": "List events",
+        "description": "List events for the signed-in host, newest first. Optionally filter by club.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "club_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Only return events for this club id."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Maximum number of events to return (default 20)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "event_attendance",
+        "title": "Event attendance",
+        "description": "Get the attendance roster and head count for one event the signed-in host manages.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "event_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The event id to report on."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "description": "Maximum roster rows to return (default 100)."
+            }
+          },
+          "required": [
+            "event_id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "create_event",
+        "title": "Create event",
+        "description": "Create an event for one of the signed-in host's clubs. Times are local clock times (HH:MM) and the date is YYYY-MM-DD.",
+        "annotations": {
+          "readOnlyHint": false,
+          "destructiveHint": false,
+          "idempotentHint": false,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "club_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Club the event belongs to."
+            },
+            "event_name": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 120,
+              "description": "Event name."
+            },
+            "event_date": {
+              "type": "string",
+              "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+              "description": "Event date, YYYY-MM-DD."
+            },
+            "start_time": {
+              "type": "string",
+              "pattern": "^\\d{2}:\\d{2}$",
+              "description": "Start time, HH:MM (24h)."
+            },
+            "end_time": {
+              "type": "string",
+              "pattern": "^\\d{2}:\\d{2}$",
+              "description": "End time, HH:MM (24h)."
+            },
+            "location": {
+              "type": "string",
+              "maxLength": 160,
+              "description": "Optional location."
+            }
+          },
+          "required": [
+            "club_id",
+            "event_name",
+            "event_date",
+            "start_time",
+            "end_time"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
