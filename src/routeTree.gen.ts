@@ -33,6 +33,7 @@ import { Route as CampusDepartmentAttendanceRouteImport } from './routes/campus-
 import { Route as AttendanceReportsRouteImport } from './routes/attendance-reports'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as OwnerAdminIndexRouteImport } from './routes/owner-admin.index'
 import { Route as EventsIndexRouteImport } from './routes/events.index'
 import { Route as ClubsIndexRouteImport } from './routes/clubs.index'
 import { Route as PreCheckInPreTokenRouteImport } from './routes/pre-check-in.$preToken'
@@ -173,6 +174,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OwnerAdminIndexRoute = OwnerAdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => OwnerAdminRoute,
+} as any)
 const EventsIndexRoute = EventsIndexRouteImport.update({
   id: '/events/',
   path: '/events/',
@@ -280,7 +286,7 @@ export interface FileRoutesByFullPath {
   '/home': typeof HomeRoute
   '/live': typeof LiveRoute
   '/notifications': typeof NotificationsRoute
-  '/owner-admin': typeof OwnerAdminRoute
+  '/owner-admin': typeof OwnerAdminRouteWithChildren
   '/pre-event-headcount': typeof PreEventHeadcountRoute
   '/privacy': typeof PrivacyRoute
   '/qr-code-attendance': typeof QrCodeAttendanceRoute
@@ -302,6 +308,7 @@ export interface FileRoutesByFullPath {
   '/pre-check-in/$preToken': typeof PreCheckInPreTokenRoute
   '/clubs/': typeof ClubsIndexRoute
   '/events/': typeof EventsIndexRoute
+  '/owner-admin/': typeof OwnerAdminIndexRoute
   '/api/health/check-in': typeof ApiHealthCheckInRoute
   '/api/health/ready': typeof ApiHealthReadyRoute
   '/api/public/student-check-in': typeof ApiPublicStudentCheckInRoute
@@ -324,7 +331,6 @@ export interface FileRoutesByTo {
   '/home': typeof HomeRoute
   '/live': typeof LiveRoute
   '/notifications': typeof NotificationsRoute
-  '/owner-admin': typeof OwnerAdminRoute
   '/pre-event-headcount': typeof PreEventHeadcountRoute
   '/privacy': typeof PrivacyRoute
   '/qr-code-attendance': typeof QrCodeAttendanceRoute
@@ -346,6 +352,7 @@ export interface FileRoutesByTo {
   '/pre-check-in/$preToken': typeof PreCheckInPreTokenRoute
   '/clubs': typeof ClubsIndexRoute
   '/events': typeof EventsIndexRoute
+  '/owner-admin': typeof OwnerAdminIndexRoute
   '/api/health/check-in': typeof ApiHealthCheckInRoute
   '/api/health/ready': typeof ApiHealthReadyRoute
   '/api/public/student-check-in': typeof ApiPublicStudentCheckInRoute
@@ -369,7 +376,7 @@ export interface FileRoutesById {
   '/home': typeof HomeRoute
   '/live': typeof LiveRoute
   '/notifications': typeof NotificationsRoute
-  '/owner-admin': typeof OwnerAdminRoute
+  '/owner-admin': typeof OwnerAdminRouteWithChildren
   '/pre-event-headcount': typeof PreEventHeadcountRoute
   '/privacy': typeof PrivacyRoute
   '/qr-code-attendance': typeof QrCodeAttendanceRoute
@@ -391,6 +398,7 @@ export interface FileRoutesById {
   '/pre-check-in/$preToken': typeof PreCheckInPreTokenRoute
   '/clubs/': typeof ClubsIndexRoute
   '/events/': typeof EventsIndexRoute
+  '/owner-admin/': typeof OwnerAdminIndexRoute
   '/api/health/check-in': typeof ApiHealthCheckInRoute
   '/api/health/ready': typeof ApiHealthReadyRoute
   '/api/public/student-check-in': typeof ApiPublicStudentCheckInRoute
@@ -437,6 +445,7 @@ export interface FileRouteTypes {
     | '/pre-check-in/$preToken'
     | '/clubs/'
     | '/events/'
+    | '/owner-admin/'
     | '/api/health/check-in'
     | '/api/health/ready'
     | '/api/public/student-check-in'
@@ -459,7 +468,6 @@ export interface FileRouteTypes {
     | '/home'
     | '/live'
     | '/notifications'
-    | '/owner-admin'
     | '/pre-event-headcount'
     | '/privacy'
     | '/qr-code-attendance'
@@ -481,6 +489,7 @@ export interface FileRouteTypes {
     | '/pre-check-in/$preToken'
     | '/clubs'
     | '/events'
+    | '/owner-admin'
     | '/api/health/check-in'
     | '/api/health/ready'
     | '/api/public/student-check-in'
@@ -525,6 +534,7 @@ export interface FileRouteTypes {
     | '/pre-check-in/$preToken'
     | '/clubs/'
     | '/events/'
+    | '/owner-admin/'
     | '/api/health/check-in'
     | '/api/health/ready'
     | '/api/public/student-check-in'
@@ -548,7 +558,7 @@ export interface RootRouteChildren {
   HomeRoute: typeof HomeRoute
   LiveRoute: typeof LiveRoute
   NotificationsRoute: typeof NotificationsRoute
-  OwnerAdminRoute: typeof OwnerAdminRoute
+  OwnerAdminRoute: typeof OwnerAdminRouteWithChildren
   PreEventHeadcountRoute: typeof PreEventHeadcountRoute
   PrivacyRoute: typeof PrivacyRoute
   QrCodeAttendanceRoute: typeof QrCodeAttendanceRoute
@@ -747,6 +757,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/owner-admin/': {
+      id: '/owner-admin/'
+      path: '/'
+      fullPath: '/owner-admin/'
+      preLoaderRoute: typeof OwnerAdminIndexRouteImport
+      parentRoute: typeof OwnerAdminRoute
+    }
     '/events/': {
       id: '/events/'
       path: '/events'
@@ -876,6 +893,18 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface OwnerAdminRouteChildren {
+  OwnerAdminIndexRoute: typeof OwnerAdminIndexRoute
+}
+
+const OwnerAdminRouteChildren: OwnerAdminRouteChildren = {
+  OwnerAdminIndexRoute: OwnerAdminIndexRoute,
+}
+
+const OwnerAdminRouteWithChildren = OwnerAdminRoute._addFileChildren(
+  OwnerAdminRouteChildren,
+)
+
 interface ApiHealthRouteChildren {
   ApiHealthCheckInRoute: typeof ApiHealthCheckInRoute
   ApiHealthReadyRoute: typeof ApiHealthReadyRoute
@@ -904,7 +933,7 @@ const rootRouteChildren: RootRouteChildren = {
   HomeRoute: HomeRoute,
   LiveRoute: LiveRoute,
   NotificationsRoute: NotificationsRoute,
-  OwnerAdminRoute: OwnerAdminRoute,
+  OwnerAdminRoute: OwnerAdminRouteWithChildren,
   PreEventHeadcountRoute: PreEventHeadcountRoute,
   PrivacyRoute: PrivacyRoute,
   QrCodeAttendanceRoute: QrCodeAttendanceRoute,
