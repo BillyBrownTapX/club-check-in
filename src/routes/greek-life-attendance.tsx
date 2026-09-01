@@ -65,9 +65,9 @@ export const Route = createFileRoute("/greek-life-attendance")({
         ]}
         faqs={FAQS}
         siblingLinks={[
-          { to: "/club-attendance-tracker", label: "For college clubs", hint: "GBMs, exec meetings, SGA reports" },
-          { to: "/qr-code-attendance", label: "How QR check-in works", hint: "Product deep dive" },
-          { to: "/vs-google-forms", label: "vs Google Forms", hint: "Migration guide" },
+          { to: "/attendance-reports", label: "Reports for nationals", hint: "Semester matrix + CSV" },
+          { to: "/pre-event-headcount", label: "Pre-event head count", hint: "Know your turnout early" },
+          { to: "/club-officer-roles", label: "Officers & ownership", hint: "Exec turnover in one tap" },
         ]}
       />
     </MarketingShell>

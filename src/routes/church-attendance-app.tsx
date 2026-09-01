@@ -65,9 +65,9 @@ export const Route = createFileRoute("/church-attendance-app")({
         ]}
         faqs={FAQS}
         siblingLinks={[
+          { to: "/pre-event-headcount", label: "Pre-event head count", hint: "Plan food, chairs, rides" },
+          { to: "/attendance-reports", label: "Reports & CSV export", hint: "Any date range, one tap" },
           { to: "/qr-code-attendance", label: "How QR check-in works", hint: "Product deep dive" },
-          { to: "/club-attendance-tracker", label: "For college clubs", hint: "GBMs, exec meetings, SGA reports" },
-          { to: "/vs-google-forms", label: "vs Google Forms", hint: "Migration guide" },
         ]}
       />
     </MarketingShell>
