@@ -115,6 +115,26 @@ export const getOwnerOverview = createServerFn({ method: "GET" })
     return callReport<OwnerOverview>(admin, "owner_admin_overview", {}, "Unable to load overview.");
   });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// People summary — the plain-language "who is on the app and do they come
+// back?" report that drives the simplified overview screen.
+// ─────────────────────────────────────────────────────────────────────────────
+export type OwnerPeople = {
+  members: { total: number; newThisMonth: number; checkedIn: number; repeat: number };
+  hosts: { total: number; newThisMonth: number; organizations: number; withOrganization: number };
+  checkIns: { total: number; thisMonth: number; previousMonth: number; monthLabel: string };
+  frequency: { label: string; people: number }[];
+  returning: { lastMonthAttendees: number; returnedThisMonth: number };
+};
+
+export const getOwnerPeople = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<OwnerPeople> => {
+    const admin = await requireOwnerAdmin(context.userId);
+    return callReport<OwnerPeople>(admin, "owner_admin_people", {}, "Unable to load people summary.");
+  });
+
+
 export type OwnerSeriesPoint = {
   bucket: string;
   newOrganizations: number;
