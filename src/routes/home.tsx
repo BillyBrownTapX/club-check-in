@@ -268,7 +268,7 @@ function HomeRoute() {
                 hint={
                   metrics && metrics.retentionEligible > 0
                     ? `${metrics.retentionReturned} of ${metrics.retentionEligible} returned`
-                    : "Needs two past events"
+                    : "Needs two finished events"
                 }
                 icon={Repeat}
                 tone="default"
