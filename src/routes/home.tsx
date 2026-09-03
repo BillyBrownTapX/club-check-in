@@ -96,7 +96,7 @@ function HomeRoute() {
     { staleTime: 60_000 },
   );
 
-  const clubs = clubsQuery.data ?? [];
+  
   const events = eventsQuery.data ?? [];
   const metrics = metricsQuery.data;
   const fetching = clubsQuery.isLoading || eventsQuery.isLoading;
@@ -117,18 +117,6 @@ function HomeRoute() {
   const upcomingEvent = useMemo(() => events.find((e) => e.checkInStatus === "upcoming") ?? null, [events]);
   const featuredEvent = liveEvent ?? upcomingEvent;
 
-  const stats = useMemo(() => {
-    const todayIso = new Date().toISOString().slice(0, 10);
-    const checkInsToday = events
-      .filter((e) => e.event_date === todayIso)
-      .reduce((sum, e) => sum + (e.attendanceCount ?? 0), 0);
-    const upcomingCount = events.filter((e) => e.checkInStatus === "upcoming" || e.checkInStatus === "open").length;
-    return {
-      activeClubs: clubs.filter((c) => c.is_active).length,
-      checkInsToday,
-      upcomingCount,
-    };
-  }, [clubs, events]);
 
   const recentEvents = useMemo(() => events.slice(0, 4), [events]);
 
@@ -198,9 +186,8 @@ function HomeRoute() {
             </div>
           )}
 
-          <SectionLabel className="mt-7">Membership &amp; growth</SectionLabel>
           {metricsQuery.isLoading && !metrics ? (
-            <div className="grid grid-cols-2 gap-3" aria-hidden>
+            <div className="mt-3 grid grid-cols-2 gap-3" aria-hidden>
               {[0, 1, 2, 3].map((i) => (
                 <div key={i} className="ios-card rounded-2xl p-4">
                   <div className="h-3 w-1/2 animate-pulse rounded-full bg-muted" />
@@ -210,11 +197,11 @@ function HomeRoute() {
               ))}
             </div>
           ) : metricsQuery.error ? (
-            <div className="ios-card rounded-2xl p-4 text-[13px] text-muted-foreground">
+            <div className="ios-card mt-3 rounded-2xl p-4 text-[13px] text-muted-foreground">
               {getManagementErrorMessage(metricsQuery.error, "Unable to load membership metrics.")}
             </div>
           ) : (
-            <div className="grid grid-cols-2 gap-3">
+            <div className="mt-3 grid grid-cols-2 gap-3">
               <button type="button" onClick={handleExportMembers} className="ios-press text-left">
                 <StatTile
                   label="Members"
@@ -263,12 +250,6 @@ function HomeRoute() {
               />
             </div>
           )}
-
-          <div className="mt-3 -mx-1 flex gap-3 overflow-x-auto px-1 pb-1 scrollbar-none snap-x">
-            <div className="snap-start"><StatTile label="Today" value={stats.checkInsToday} hint="Check-ins" tone="default" /></div>
-            <div className="snap-start"><StatTile label="Upcoming" value={stats.upcomingCount} hint="Events on deck" tone="default" /></div>
-            <div className="snap-start"><StatTile label="Clubs" value={stats.activeClubs} hint="Active" tone="default" /></div>
-          </div>
 
           <SectionLabel className="mt-7">Quick actions</SectionLabel>
           <div className="grid grid-cols-2 gap-3">
