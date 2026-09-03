@@ -320,6 +320,22 @@ export type HostMemberMetrics = {
   clubCount: number;
 };
 
+/**
+ * Drill-down data behind the Home metric tiles. Same scalars as
+ * HostMemberMetrics (so the modal can never disagree with the tile) plus the
+ * per-event / per-member series the charts plot.
+ */
+export type HostMetricBreakdown = HostMemberMetrics & {
+  /** Past events, oldest first, with unique attendees (check-ins + pre-check-ins). */
+  eventAttendance: Array<{ id: string; name: string; date: string; attendees: number }>;
+  /** Members bucketed by how many distinct events they attended. */
+  eventsPerMemberBuckets: Array<{ bucket: string; members: number }>;
+  /** First-time members per ISO week over the trailing ~9 weeks. */
+  newMembersByWeek: Array<{ weekStart: string; count: number }>;
+};
+
+
+
 
 export const CLUB_REPORT_MAX_EVENTS = 40;
 export const CLUB_REPORT_MAX_STUDENTS = 400;
