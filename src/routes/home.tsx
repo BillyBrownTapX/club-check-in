@@ -96,7 +96,7 @@ function HomeRoute() {
     { staleTime: 60_000 },
   );
 
-  const clubs = clubsQuery.data ?? [];
+  
   const events = eventsQuery.data ?? [];
   const metrics = metricsQuery.data;
   const fetching = clubsQuery.isLoading || eventsQuery.isLoading;
