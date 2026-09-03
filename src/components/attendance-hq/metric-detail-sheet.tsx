@@ -101,9 +101,6 @@ function SuccessBody({ data }: { data: HostMetricBreakdown }) {
   const series = data.eventAttendance.map((e) => ({ ...e, label: shortDate(e.date) }));
   return (
     <div className="space-y-4">
-      <Formula>
-        avg {data.avgAttendancePerEvent} per event ÷ {data.totalMembers} members = {data.eventSuccessPct ?? 0}%
-      </Formula>
       <ChartContainer config={config} className="h-[190px] w-full">
         <BarChart data={series} margin={{ left: -16, right: 8 }}>
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
