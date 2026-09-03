@@ -49,9 +49,9 @@ function Empty({ children }: { children: React.ReactNode }) {
 }
 
 const config: ChartConfig = {
-  members: { label: "Members", color: "hsl(var(--primary))" },
-  attendees: { label: "Check-ins", color: "hsl(var(--primary))" },
-  count: { label: "New members", color: "hsl(var(--primary))" },
+  members: { label: "Members", color: "var(--primary)" },
+  attendees: { label: "Check-ins", color: "var(--primary)" },
+  count: { label: "New members", color: "var(--primary)" },
 };
 
 function RetentionBody({ data }: { data: HostMetricBreakdown }) {
@@ -80,7 +80,7 @@ function RetentionBody({ data }: { data: HostMetricBreakdown }) {
           <ChartTooltip content={<ChartTooltipContent />} />
           <Bar dataKey="members" radius={6}>
             {split.map((s) => (
-              <Cell key={s.label} fill={s.label === "Returned" ? "hsl(var(--primary))" : "hsl(var(--muted-foreground) / 0.35)"} />
+              <Cell key={s.label} fill={s.label === "Returned" ? "var(--primary)" : "var(--muted-foreground)"} fillOpacity={s.label === "Returned" ? 1 : 0.3} />
             ))}
           </Bar>
         </BarChart>
@@ -93,7 +93,7 @@ function RetentionBody({ data }: { data: HostMetricBreakdown }) {
             <XAxis dataKey="bucket" tickLine={false} axisLine={false} fontSize={12} />
             <YAxis allowDecimals={false} tickLine={false} axisLine={false} fontSize={12} />
             <ChartTooltip content={<ChartTooltipContent />} />
-            <Bar dataKey="members" fill="hsl(var(--primary))" radius={6} />
+            <Bar dataKey="members" fill="var(--primary)" radius={6} />
           </BarChart>
         </ChartContainer>
       </div>
@@ -131,8 +131,8 @@ function SuccessBody({ data }: { data: HostMetricBreakdown }) {
               />
             }
           />
-          <ReferenceLine y={data.avgAttendancePerEvent} stroke="hsl(var(--accent))" strokeDasharray="4 4" />
-          <Bar dataKey="attendees" fill="hsl(var(--primary))" radius={6} />
+          <ReferenceLine y={data.avgAttendancePerEvent} stroke="var(--accent)" strokeDasharray="4 4" />
+          <Bar dataKey="attendees" fill="var(--primary)" radius={6} />
         </BarChart>
       </ChartContainer>
       <p className="text-[12px] text-muted-foreground">
@@ -171,7 +171,7 @@ function GrowthBody({ data }: { data: HostMetricBreakdown }) {
           <ChartTooltip content={<ChartTooltipContent />} />
           <Bar dataKey="count" radius={6}>
             {compare.map((c) => (
-              <Cell key={c.label} fill={c.label === "Last 30d" ? "hsl(var(--primary))" : "hsl(var(--muted-foreground) / 0.35)"} />
+              <Cell key={c.label} fill={c.label === "Last 30d" ? "var(--primary)" : "var(--muted-foreground)"} fillOpacity={c.label === "Last 30d" ? 1 : 0.3} />
             ))}
           </Bar>
         </BarChart>
@@ -184,7 +184,7 @@ function GrowthBody({ data }: { data: HostMetricBreakdown }) {
             <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={11} interval="preserveStartEnd" />
             <YAxis allowDecimals={false} tickLine={false} axisLine={false} fontSize={12} />
             <ChartTooltip content={<ChartTooltipContent />} />
-            <Line type="monotone" dataKey="count" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} />
+            <Line type="monotone" dataKey="count" stroke="var(--primary)" strokeWidth={2} dot={{ r: 3 }} />
           </LineChart>
         </ChartContainer>
       </div>
