@@ -141,13 +141,6 @@ function GrowthBody({ data }: { data: HostMetricBreakdown }) {
   const weekly = data.newMembersByWeek.map((w) => ({ ...w, label: shortDate(w.weekStart) }));
   return (
     <div className="space-y-4">
-      <Formula>
-        {data.newMembersPrior30d > 0
-          ? `(${data.newMembers30d} − ${data.newMembersPrior30d}) ÷ ${data.newMembersPrior30d} = ${data.growthRatePct ?? 0}%`
-          : data.newMembers30d > 0
-            ? `${data.newMembers30d} new with no prior-month baseline = +100%`
-            : "No new members in either window yet"}
-      </Formula>
       <ChartContainer config={config} className="h-[150px] w-full">
         <BarChart data={compare} margin={{ left: -16, right: 8 }}>
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
