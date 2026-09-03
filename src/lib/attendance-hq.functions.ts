@@ -35,6 +35,7 @@ import {
   getDefaultClubReportRange,
   isDeviceSessionExpired,
   type HostMemberMetrics,
+  type HostMetricBreakdown,
   type HostOnboardingState,
   type HostActivityEntry,
   type HostActivityType,

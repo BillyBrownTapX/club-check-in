@@ -40,5 +40,6 @@ export const queryKeys = {
   members: {
     all: ["members"] as const,
     metrics: () => ["members", "metrics"] as const,
+    breakdown: () => ["members", "breakdown"] as const,
   },
 } as const;
