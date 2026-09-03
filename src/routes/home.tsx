@@ -89,9 +89,16 @@ function HomeRoute() {
     { clubId: "", status: "all" as const, query: "" },
     { staleTime: 30_000 },
   );
+  const metricsQuery = useAuthorizedQuery(
+    queryKeys.members.metrics(),
+    getHostMemberMetrics,
+    undefined,
+    { staleTime: 60_000 },
+  );
 
   const clubs = clubsQuery.data ?? [];
   const events = eventsQuery.data ?? [];
+  const metrics = metricsQuery.data;
   const fetching = clubsQuery.isLoading || eventsQuery.isLoading;
   const queryError = clubsQuery.error ?? eventsQuery.error;
 
