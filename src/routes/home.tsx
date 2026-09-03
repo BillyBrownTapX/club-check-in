@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Link, createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
-import { Activity, CalendarPlus, ChevronRight, ListChecks, Plus, QrCode } from "lucide-react";
+import { Activity, CalendarPlus, ChevronRight, ListChecks, Plus, QrCode, Repeat, Target, TrendingDown, TrendingUp, Users } from "lucide-react";
 import { useAttendanceAuth, useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
 import { HostAppShell, HomeTopActions } from "@/components/attendance-hq/host-shell";
 import { useRequireHostRedirect, getManagementErrorMessage } from "@/components/attendance-hq/host-management";
