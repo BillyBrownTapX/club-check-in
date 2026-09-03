@@ -905,15 +905,20 @@ async function getHostMetricBreakdownForUser(
 
   const { data: eventsRaw, error: eventsError } = await supabase
     .from("events")
-    .select("id, event_name, event_date")
+    .select("id, event_name, event_date, check_in_closes_at")
     .in("club_id", clubIds);
   if (eventsError) throw new Error(safeMessage(eventsError));
-  const events = (eventsRaw ?? []) as Array<{ id: string; event_name: string; event_date: string }>;
+  const events = (eventsRaw ?? []) as Array<{
+    id: string;
+    event_name: string;
+    event_date: string;
+    check_in_closes_at: string;
+  }>;
   const eventIds = events.map((e) => e.id);
   if (!eventIds.length) return empty;
 
-  const todayIso = new Date().toISOString().slice(0, 10);
-  const rowsByEvent = new Map<string, number>();
+  const nowIso = new Date().toISOString();
+  const attendeesByEvent = new Map<string, Set<string>>();
   const memberFirstAt = new Map<string, string>();
   const memberEventCount = new Map<string, Set<string>>();
 
@@ -929,7 +934,9 @@ async function getHostMetricBreakdownForUser(
       if (error) throw new Error(safeMessage(error));
       const list = (rows ?? []) as Array<{ event_id: string; student_id: string; checked_in_at: string }>;
       for (const row of list) {
-        rowsByEvent.set(row.event_id, (rowsByEvent.get(row.event_id) ?? 0) + 1);
+        const attendees = attendeesByEvent.get(row.event_id) ?? new Set<string>();
+        attendees.add(row.student_id);
+        attendeesByEvent.set(row.event_id, attendees);
         const first = memberFirstAt.get(row.student_id);
         if (!first || row.checked_in_at < first) memberFirstAt.set(row.student_id, row.checked_in_at);
         const set = memberEventCount.get(row.student_id) ?? new Set<string>();
@@ -944,22 +951,32 @@ async function getHostMetricBreakdownForUser(
   await pageTable("attendance_records");
   await pageTable("pre_check_ins");
 
-  const eventAttendance = events
-    .filter((e) => e.event_date < todayIso)
-    .sort((a, b) => a.event_date.localeCompare(b.event_date))
+  // Held events only: check-in window closed AND at least one attendee.
+  const heldEvents = events.filter(
+    (e) => e.check_in_closes_at < nowIso && (attendeesByEvent.get(e.id)?.size ?? 0) > 0,
+  );
+  const heldEventIds = new Set(heldEvents.map((e) => e.id));
+
+  const eventAttendance = heldEvents
+    .slice()
+    .sort((a, b) => a.check_in_closes_at.localeCompare(b.check_in_closes_at))
     .map((e) => ({
       id: e.id,
       name: e.event_name,
       date: e.event_date,
-      attendees: rowsByEvent.get(e.id) ?? 0,
+      attendees: attendeesByEvent.get(e.id)?.size ?? 0,
     }));
 
   const buckets = new Map<string, number>([["1", 0], ["2", 0], ["3", 0], ["4", 0], ["5+", 0]]);
   for (const set of memberEventCount.values()) {
-    const key = set.size >= 5 ? "5+" : String(set.size);
+    let held = 0;
+    for (const id of set) if (heldEventIds.has(id)) held += 1;
+    if (held < 1) continue;
+    const key = held >= 5 ? "5+" : String(held);
     buckets.set(key, (buckets.get(key) ?? 0) + 1);
   }
   const eventsPerMemberBuckets = Array.from(buckets, ([bucket, members]) => ({ bucket, members }));
+
 
   // Weekly first-time members over the trailing 9 weeks (Monday-anchored).
   const day = 24 * 60 * 60 * 1000;
