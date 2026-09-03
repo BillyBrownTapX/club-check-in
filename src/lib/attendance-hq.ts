@@ -294,6 +294,33 @@ export type ClubAttendanceReportPayload = {
   truncated: boolean;
 };
 
+/**
+ * Membership + growth metrics for the host Home page, aggregated across every
+ * club the host can access. "Member" = a student who has ever checked in OR
+ * pre-checked in, so the count doubles as the size of the outreach list.
+ */
+export type HostMemberMetrics = {
+  totalMembers: number;
+  membersWithEmail: number;
+  /** Members whose first activity landed in the last 30 days. */
+  newMembers30d: number;
+  newMembersPrior30d: number;
+  /** Percent change of new members vs the prior 30-day window; null when no prior baseline. */
+  growthRatePct: number | null;
+  /** Members eligible for retention (first activity before the most recent past event). */
+  retentionEligible: number;
+  /** Of those, how many attended a later event. */
+  retentionReturned: number;
+  retentionPct: number | null;
+  pastEventCount: number;
+  /** Average check-ins (incl. pre-check-ins) per past event. */
+  avgAttendancePerEvent: number;
+  /** Avg attendance as a share of total members — the "event success" score. */
+  eventSuccessPct: number | null;
+  clubCount: number;
+};
+
+
 export const CLUB_REPORT_MAX_EVENTS = 40;
 export const CLUB_REPORT_MAX_STUDENTS = 400;
 export const CLUB_REPORT_DEFAULT_RANGE_DAYS = 120;
