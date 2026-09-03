@@ -8,7 +8,7 @@ import { useRequireHostRedirect, getManagementErrorMessage } from "@/components/
 import { ActionTile, Chip, GroupedList, LargeTitleHeader, ListRow, SectionLabel, StatTile } from "@/components/attendance-hq/ios";
 import { InstallBanner } from "@/components/attendance-hq/install-cta";
 import { Button } from "@/components/ui/button";
-import { getHostClubSummaries, getHostEvents, getHostMemberMetrics } from "@/lib/attendance-hq.functions";
+import { getHostClubSummaries, getHostEvents, getHostMemberEmails, getHostMemberMetrics } from "@/lib/attendance-hq.functions";
 import { formatEventDate, formatEventTime } from "@/lib/attendance-hq";
 import { queryKeys } from "@/lib/query-keys";
 
@@ -46,6 +46,34 @@ function HomeRoute() {
   const auth = useAttendanceAuth();
   const navigate = useNavigate();
   const [exporting, setExporting] = useState(false);
+  const [emailingMembers, setEmailingMembers] = useState(false);
+
+  // Members tile: open a new draft in the host's default mail app with every
+  // member address in BCC. mailto: URLs break around ~2000 chars in some
+  // clients, so oversized lists fall back to the clipboard instead.
+  const handleEmailMembers = async () => {
+    if (emailingMembers) return;
+    setEmailingMembers(true);
+    try {
+      const emails = await getHostMemberEmails();
+      if (!emails.length) {
+        toast.info("No member emails yet", { description: "Members appear here after their first check-in or pre-check-in." });
+        return;
+      }
+      const bcc = emails.join(",");
+      const mailto = `mailto:?bcc=${encodeURIComponent(bcc)}`;
+      if (mailto.length > 1800) {
+        await navigator.clipboard.writeText(bcc);
+        toast.success("Member emails copied", { description: "List too long for one draft — paste into your email's BCC field." });
+        return;
+      }
+      window.location.href = mailto;
+    } catch {
+      toast.error("Couldn't load member emails. Please try again.");
+    } finally {
+      setEmailingMembers(false);
+    }
+  };
 
   // Full member export: every student who checked in or pre-checked in to
   // any event across all of this host's clubs. The CSV comes from a
@@ -202,14 +230,16 @@ function HomeRoute() {
             </div>
           ) : (
             <div className="mt-3 grid grid-cols-2 gap-3">
-              <button type="button" onClick={handleExportMembers} className="ios-press text-left">
+              <button type="button" onClick={handleEmailMembers} disabled={emailingMembers} className="ios-press text-left disabled:opacity-60">
                 <StatTile
                   label="Members"
                   value={metrics?.totalMembers ?? 0}
                   hint={
-                    metrics
-                      ? `${metrics.membersWithEmail} email contacts · tap to export`
-                      : "Check-ins + pre-check-ins"
+                    emailingMembers
+                      ? "Preparing draft…"
+                      : metrics
+                        ? `${metrics.membersWithEmail} email contacts · tap to email all`
+                        : "Check-ins + pre-check-ins"
                   }
                   icon={Users}
                   tone="blue"
