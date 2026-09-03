@@ -750,18 +750,16 @@ async function getHostMemberMetricsForUser(
 
   const { data: eventsRaw, error: eventsError } = await supabase
     .from("events")
-    .select("id, event_date")
+    .select("id, event_date, check_in_closes_at")
     .in("club_id", clubIds);
   if (eventsError) throw new Error(safeMessage(eventsError));
 
-  const events = (eventsRaw ?? []) as Array<{ id: string; event_date: string }>;
+  const events = (eventsRaw ?? []) as Array<{ id: string; event_date: string; check_in_closes_at: string }>;
   const eventIds = events.map((e) => e.id);
-  const todayIso = new Date().toISOString().slice(0, 10);
-  const pastEvents = events.filter((e) => e.event_date < todayIso);
-  const latestPastDate = pastEvents.reduce<string | null>(
-    (max, e) => (max === null || e.event_date > max ? e.event_date : max),
-    null,
-  );
+  const nowIso = new Date().toISOString();
+  // "Concluded" = the check-in window has closed, so a meeting that ended
+  // earlier today counts immediately.
+  const concluded = new Set(events.filter((e) => e.check_in_closes_at < nowIso).map((e) => e.id));
   if (!eventIds.length) return { ...empty, clubCount: clubIds.length };
 
   type Member = {
@@ -770,8 +768,8 @@ async function getHostMemberMetricsForUser(
     eventIds: Set<string>;
   };
   const members = new Map<string, Member>();
-  let pastAttendanceRows = 0;
-  const eventDateById = new Map(events.map((e) => [e.id, e.event_date]));
+  // Unique students per event (a pre-check-in + check-in is one attendee).
+  const attendeesByEvent = new Map<string, Set<string>>();
 
   const pageTable = async (table: "attendance_records" | "pre_check_ins") => {
     let offset = 0;
@@ -794,6 +792,7 @@ async function getHostMemberMetricsForUser(
         if (existing) {
           if (row.checked_in_at < existing.firstAt) existing.firstAt = row.checked_in_at;
           existing.eventIds.add(row.event_id);
+          if (!existing.email && row.students?.student_email) existing.email = row.students.student_email;
         } else {
           members.set(row.student_id, {
             email: row.students?.student_email ?? "",
@@ -801,8 +800,9 @@ async function getHostMemberMetricsForUser(
             eventIds: new Set([row.event_id]),
           });
         }
-        const eventDate = eventDateById.get(row.event_id);
-        if (eventDate && eventDate < todayIso) pastAttendanceRows += 1;
+        const set = attendeesByEvent.get(row.event_id) ?? new Set<string>();
+        set.add(row.student_id);
+        attendeesByEvent.set(row.event_id, set);
       }
       if (list.length < MEMBER_METRICS_PAGE_SIZE) break;
       offset += MEMBER_METRICS_PAGE_SIZE;
@@ -811,6 +811,16 @@ async function getHostMemberMetricsForUser(
 
   await pageTable("attendance_records");
   await pageTable("pre_check_ins");
+
+  // Held = concluded AND someone actually showed up. Empty duplicates never
+  // happened, so they must not dilute the averages.
+  const heldEvents = events.filter((e) => concluded.has(e.id) && (attendeesByEvent.get(e.id)?.size ?? 0) > 0);
+  const heldEventIds = new Set(heldEvents.map((e) => e.id));
+  const latestHeldClose = heldEvents.reduce<string | null>(
+    (max, e) => (max === null || e.check_in_closes_at > max ? e.check_in_closes_at : max),
+    null,
+  );
+  const heldAttendanceTotal = heldEvents.reduce((sum, e) => sum + (attendeesByEvent.get(e.id)?.size ?? 0), 0);
 
   const now = Date.now();
   const day = 24 * 60 * 60 * 1000;
@@ -828,18 +838,21 @@ async function getHostMemberMetricsForUser(
     if (member.firstAt >= cutoff30) newMembers30d += 1;
     else if (member.firstAt >= cutoff60) newMembersPrior30d += 1;
     // Retention only judges members who had a chance to come back: their first
-    // activity predates the most recent past event.
-    if (latestPastDate && member.firstAt.slice(0, 10) < latestPastDate) {
+    // activity predates the end of the most recent held event.
+    if (latestHeldClose && member.firstAt < latestHeldClose) {
       retentionEligible += 1;
-      if (member.eventIds.size > 1) retentionReturned += 1;
+      let distinctHeld = 0;
+      for (const id of member.eventIds) if (heldEventIds.has(id)) distinctHeld += 1;
+      if (distinctHeld > 1) retentionReturned += 1;
     }
   }
 
   const totalMembers = members.size;
-  const pastEventCount = pastEvents.length;
+  const pastEventCount = heldEvents.length;
   const avgAttendancePerEvent = pastEventCount
-    ? Math.round((pastAttendanceRows / pastEventCount) * 10) / 10
+    ? Math.round((heldAttendanceTotal / pastEventCount) * 10) / 10
     : 0;
+
 
   return {
     totalMembers,
