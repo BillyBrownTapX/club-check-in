@@ -80,7 +80,7 @@ function RetentionBody({ data }: { data: HostMetricBreakdown }) {
           <ChartTooltip content={<ChartTooltipContent />} />
           <Bar dataKey="members" radius={6}>
             {split.map((s) => (
-              <Cell key={s.label} fill={s.label === "Returned" ? "var(--primary)" : "var(--muted-foreground)"} fillOpacity={s.label === "Returned" ? 1 : 0.3} />
+              <Cell key={s.label} className={s.label === "Returned" ? "fill-primary" : "fill-muted-foreground/30"} />
             ))}
           </Bar>
         </BarChart>
@@ -93,7 +93,7 @@ function RetentionBody({ data }: { data: HostMetricBreakdown }) {
             <XAxis dataKey="bucket" tickLine={false} axisLine={false} fontSize={12} />
             <YAxis allowDecimals={false} tickLine={false} axisLine={false} fontSize={12} />
             <ChartTooltip content={<ChartTooltipContent />} />
-            <Bar dataKey="members" fill="var(--primary)" radius={6} />
+            <Bar dataKey="members" className="fill-primary" radius={6} />
           </BarChart>
         </ChartContainer>
       </div>
@@ -131,8 +131,8 @@ function SuccessBody({ data }: { data: HostMetricBreakdown }) {
               />
             }
           />
-          <ReferenceLine y={data.avgAttendancePerEvent} stroke="var(--accent)" strokeDasharray="4 4" />
-          <Bar dataKey="attendees" fill="var(--primary)" radius={6} />
+          <ReferenceLine y={data.avgAttendancePerEvent} className="stroke-accent" strokeDasharray="4 4" />
+          <Bar dataKey="attendees" className="fill-primary" radius={6} />
         </BarChart>
       </ChartContainer>
       <p className="text-[12px] text-muted-foreground">
@@ -171,7 +171,7 @@ function GrowthBody({ data }: { data: HostMetricBreakdown }) {
           <ChartTooltip content={<ChartTooltipContent />} />
           <Bar dataKey="count" radius={6}>
             {compare.map((c) => (
-              <Cell key={c.label} fill={c.label === "Last 30d" ? "var(--primary)" : "var(--muted-foreground)"} fillOpacity={c.label === "Last 30d" ? 1 : 0.3} />
+              <Cell key={c.label} className={c.label === "Last 30d" ? "fill-primary" : "fill-muted-foreground/30"} />
             ))}
           </Bar>
         </BarChart>
@@ -184,7 +184,7 @@ function GrowthBody({ data }: { data: HostMetricBreakdown }) {
             <XAxis dataKey="label" tickLine={false} axisLine={false} fontSize={11} interval="preserveStartEnd" />
             <YAxis allowDecimals={false} tickLine={false} axisLine={false} fontSize={12} />
             <ChartTooltip content={<ChartTooltipContent />} />
-            <Line type="monotone" dataKey="count" stroke="var(--primary)" strokeWidth={2} dot={{ r: 3 }} />
+            <Line type="monotone" dataKey="count" className="stroke-primary" strokeWidth={2} dot={{ r: 3, className: "fill-primary stroke-primary" }} />
           </LineChart>
         </ChartContainer>
       </div>
