@@ -871,6 +871,112 @@ export const getHostMemberMetrics = createServerFn({ method: "GET" })
     return getHostMemberMetricsForUser(context.supabase, context.userId);
   });
 
+// Drill-down series behind the Retention / Event success / Growth tiles.
+// Same scan as getHostMemberMetricsForUser, so the scalars always agree with
+// what the tile already shows; the extra series power the charts.
+async function getHostMetricBreakdownForUser(
+  supabase: AppSupabaseClient,
+  userId: string,
+): Promise<HostMetricBreakdown> {
+  const scalars = await getHostMemberMetricsForUser(supabase, userId);
+  const empty: HostMetricBreakdown = {
+    ...scalars,
+    eventAttendance: [],
+    eventsPerMemberBuckets: [],
+    newMembersByWeek: [],
+  };
+
+  const clubIds = await getAccessibleClubIds(supabase, userId);
+  if (!clubIds.length) return empty;
+
+  const { data: eventsRaw, error: eventsError } = await supabase
+    .from("events")
+    .select("id, event_name, event_date")
+    .in("club_id", clubIds);
+  if (eventsError) throw new Error(safeMessage(eventsError));
+  const events = (eventsRaw ?? []) as Array<{ id: string; event_name: string; event_date: string }>;
+  const eventIds = events.map((e) => e.id);
+  if (!eventIds.length) return empty;
+
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const rowsByEvent = new Map<string, number>();
+  const memberFirstAt = new Map<string, string>();
+  const memberEventCount = new Map<string, Set<string>>();
+
+  const pageTable = async (table: "attendance_records" | "pre_check_ins") => {
+    let offset = 0;
+    for (;;) {
+      const { data: rows, error } = await supabase
+        .from(table)
+        .select("event_id, student_id, checked_in_at")
+        .in("event_id", eventIds)
+        .order("checked_in_at", { ascending: true })
+        .range(offset, offset + MEMBER_METRICS_PAGE_SIZE - 1);
+      if (error) throw new Error(safeMessage(error));
+      const list = (rows ?? []) as Array<{ event_id: string; student_id: string; checked_in_at: string }>;
+      for (const row of list) {
+        rowsByEvent.set(row.event_id, (rowsByEvent.get(row.event_id) ?? 0) + 1);
+        const first = memberFirstAt.get(row.student_id);
+        if (!first || row.checked_in_at < first) memberFirstAt.set(row.student_id, row.checked_in_at);
+        const set = memberEventCount.get(row.student_id) ?? new Set<string>();
+        set.add(row.event_id);
+        memberEventCount.set(row.student_id, set);
+      }
+      if (list.length < MEMBER_METRICS_PAGE_SIZE) break;
+      offset += MEMBER_METRICS_PAGE_SIZE;
+    }
+  };
+
+  await pageTable("attendance_records");
+  await pageTable("pre_check_ins");
+
+  const eventAttendance = events
+    .filter((e) => e.event_date < todayIso)
+    .sort((a, b) => a.event_date.localeCompare(b.event_date))
+    .map((e) => ({
+      id: e.id,
+      name: e.event_name,
+      date: e.event_date,
+      attendees: rowsByEvent.get(e.id) ?? 0,
+    }));
+
+  const buckets = new Map<string, number>([["1", 0], ["2", 0], ["3", 0], ["4", 0], ["5+", 0]]);
+  for (const set of memberEventCount.values()) {
+    const key = set.size >= 5 ? "5+" : String(set.size);
+    buckets.set(key, (buckets.get(key) ?? 0) + 1);
+  }
+  const eventsPerMemberBuckets = Array.from(buckets, ([bucket, members]) => ({ bucket, members }));
+
+  // Weekly first-time members over the trailing 9 weeks (Monday-anchored).
+  const day = 24 * 60 * 60 * 1000;
+  const weekStartOf = (iso: string) => {
+    const d = new Date(iso);
+    const dow = (d.getUTCDay() + 6) % 7;
+    return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() - dow)).toISOString().slice(0, 10);
+  };
+  const weeks: Array<{ weekStart: string; count: number }> = [];
+  const thisWeek = weekStartOf(new Date().toISOString());
+  for (let i = 8; i >= 0; i -= 1) {
+    const ws = new Date(new Date(`${thisWeek}T00:00:00Z`).getTime() - i * 7 * day).toISOString().slice(0, 10);
+    weeks.push({ weekStart: ws, count: 0 });
+  }
+  const weekIndex = new Map(weeks.map((w, i) => [w.weekStart, i]));
+  for (const firstAt of memberFirstAt.values()) {
+    const idx = weekIndex.get(weekStartOf(firstAt));
+    if (idx !== undefined) weeks[idx]!.count += 1;
+  }
+
+  return { ...scalars, eventAttendance, eventsPerMemberBuckets, newMembersByWeek: weeks };
+}
+
+export const getHostMetricBreakdown = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    return getHostMetricBreakdownForUser(context.supabase, context.userId);
+  });
+
+
+
 // Unique member email addresses across all of the host's clubs — used to
 // pre-fill a BCC outreach draft from the Home "Members" tile.
 export const getHostMemberEmails = createServerFn({ method: "GET" })
