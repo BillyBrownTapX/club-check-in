@@ -61,9 +61,6 @@ function RetentionBody({ data }: { data: HostMetricBreakdown }) {
   ];
   return (
     <div className="space-y-4">
-      <Formula>
-        {data.retentionReturned} returned ÷ {data.retentionEligible} eligible = {data.retentionPct ?? 0}%
-      </Formula>
       <ChartContainer config={config} className="h-[140px] w-full">
         <BarChart data={split} layout="vertical" margin={{ left: 4, right: 12 }}>
           <XAxis type="number" hide />
