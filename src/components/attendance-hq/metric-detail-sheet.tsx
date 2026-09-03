@@ -26,15 +26,6 @@ function shortDate(iso: string) {
   return d.toLocaleDateString([], { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
-function Formula({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="ios-card rounded-2xl p-4">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">The math</p>
-      <p className="mt-1.5 font-display text-[16px] font-bold leading-snug text-foreground">{children}</p>
-    </div>
-  );
-}
-
 function Note({ children }: { children: React.ReactNode }) {
   return (
     <div className="rounded-2xl bg-muted/50 p-4">
@@ -70,9 +61,6 @@ function RetentionBody({ data }: { data: HostMetricBreakdown }) {
   ];
   return (
     <div className="space-y-4">
-      <Formula>
-        {data.retentionReturned} returned ÷ {data.retentionEligible} eligible = {data.retentionPct ?? 0}%
-      </Formula>
       <ChartContainer config={config} className="h-[140px] w-full">
         <BarChart data={split} layout="vertical" margin={{ left: 4, right: 12 }}>
           <XAxis type="number" hide />
@@ -113,9 +101,6 @@ function SuccessBody({ data }: { data: HostMetricBreakdown }) {
   const series = data.eventAttendance.map((e) => ({ ...e, label: shortDate(e.date) }));
   return (
     <div className="space-y-4">
-      <Formula>
-        avg {data.avgAttendancePerEvent} per event ÷ {data.totalMembers} members = {data.eventSuccessPct ?? 0}%
-      </Formula>
       <ChartContainer config={config} className="h-[190px] w-full">
         <BarChart data={series} margin={{ left: -16, right: 8 }}>
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
@@ -156,13 +141,6 @@ function GrowthBody({ data }: { data: HostMetricBreakdown }) {
   const weekly = data.newMembersByWeek.map((w) => ({ ...w, label: shortDate(w.weekStart) }));
   return (
     <div className="space-y-4">
-      <Formula>
-        {data.newMembersPrior30d > 0
-          ? `(${data.newMembers30d} − ${data.newMembersPrior30d}) ÷ ${data.newMembersPrior30d} = ${data.growthRatePct ?? 0}%`
-          : data.newMembers30d > 0
-            ? `${data.newMembers30d} new with no prior-month baseline = +100%`
-            : "No new members in either window yet"}
-      </Formula>
       <ChartContainer config={config} className="h-[150px] w-full">
         <BarChart data={compare} margin={{ left: -16, right: 8 }}>
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
