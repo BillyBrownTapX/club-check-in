@@ -230,14 +230,16 @@ function HomeRoute() {
             </div>
           ) : (
             <div className="mt-3 grid grid-cols-2 gap-3">
-              <button type="button" onClick={handleExportMembers} className="ios-press text-left">
+              <button type="button" onClick={handleEmailMembers} disabled={emailingMembers} className="ios-press text-left disabled:opacity-60">
                 <StatTile
                   label="Members"
                   value={metrics?.totalMembers ?? 0}
                   hint={
-                    metrics
-                      ? `${metrics.membersWithEmail} email contacts · tap to export`
-                      : "Check-ins + pre-check-ins"
+                    emailingMembers
+                      ? "Preparing draft…"
+                      : metrics
+                        ? `${metrics.membersWithEmail} email contacts · tap to email all`
+                        : "Check-ins + pre-check-ins"
                   }
                   icon={Users}
                   tone="blue"
