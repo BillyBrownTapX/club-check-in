@@ -50,8 +50,8 @@ function RetentionBody({ data }: { data: HostMetricBreakdown }) {
   if (!data.retentionEligible) {
     return (
       <Empty>
-        Retention needs at least two past events with members who had a chance to return. Hold another meeting and this
-        fills in automatically.
+        Retention needs at least two finished events with members who had a chance to return. Hold another meeting and
+        this fills in automatically.
       </Empty>
     );
   }
@@ -86,9 +86,9 @@ function RetentionBody({ data }: { data: HostMetricBreakdown }) {
         </ChartContainer>
       </div>
       <Note>
-        A member counts as eligible once their first check-in or pre-check-in happened before your most recent past
-        event, so they actually had a later meeting to attend. They count as returned when they appear at two or more
-        distinct events. Upcoming events are excluded.
+        A member counts as eligible once their first check-in or pre-check-in happened before your most recent finished
+        event ended, so they actually had a later meeting to attend. They count as returned when they appear at two or
+        more distinct held events. Upcoming events, and events nobody attended, are excluded.
       </Note>
     </div>
   );
@@ -96,7 +96,7 @@ function RetentionBody({ data }: { data: HostMetricBreakdown }) {
 
 function SuccessBody({ data }: { data: HostMetricBreakdown }) {
   if (!data.eventAttendance.length) {
-    return <Empty>This score appears after your first event has passed and check-ins are recorded.</Empty>;
+    return <Empty>This score appears once your first event has finished with check-ins recorded.</Empty>;
   }
   const series = data.eventAttendance.map((e) => ({ ...e, label: shortDate(e.date) }));
   return (
@@ -121,11 +121,11 @@ function SuccessBody({ data }: { data: HostMetricBreakdown }) {
         </BarChart>
       </ChartContainer>
       <p className="text-[12px] text-muted-foreground">
-        Dashed line = average of {data.avgAttendancePerEvent} across {data.pastEventCount} past
+        Dashed line = average of {data.avgAttendancePerEvent} across {data.pastEventCount} held
         {data.pastEventCount === 1 ? " event" : " events"}.
       </p>
       <Note>
-        Each bar counts every check-in and pre-check-in recorded for that past event. The score divides the average bar
+        Each bar counts the unique members who checked in or pre-checked in to that held event. The score divides the average bar
         height by your total member roster ({data.totalMembers}), so 100% would mean every member you have ever reached
         shows up to a typical meeting.
       </Note>
