@@ -871,6 +871,51 @@ export const getHostMemberMetrics = createServerFn({ method: "GET" })
     return getHostMemberMetricsForUser(context.supabase, context.userId);
   });
 
+// Unique member email addresses across all of the host's clubs — used to
+// pre-fill a BCC outreach draft from the Home "Members" tile.
+export const getHostMemberEmails = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const clubIds = await getAccessibleClubIds(supabase, userId);
+    if (!clubIds.length) return [] as string[];
+
+    const { data: eventsRaw, error: eventsError } = await supabase
+      .from("events")
+      .select("id")
+      .in("club_id", clubIds);
+    if (eventsError) throw new Error(safeMessage(eventsError));
+    const eventIds = ((eventsRaw ?? []) as Array<{ id: string }>).map((e) => e.id);
+    if (!eventIds.length) return [] as string[];
+
+    const emails = new Set<string>();
+    const pageTable = async (table: "attendance_records" | "pre_check_ins") => {
+      let offset = 0;
+      for (;;) {
+        const { data: rows, error } = await supabase
+          .from(table)
+          .select("students(student_email)")
+          .in("event_id", eventIds)
+          .range(offset, offset + MEMBER_METRICS_PAGE_SIZE - 1);
+        if (error) throw new Error(safeMessage(error));
+        const list = (rows ?? []) as unknown as Array<{
+          students: { student_email: string } | null;
+        }>;
+        for (const row of list) {
+          const email = row.students?.student_email?.trim();
+          if (email) emails.add(email);
+        }
+        if (list.length < MEMBER_METRICS_PAGE_SIZE) break;
+        offset += MEMBER_METRICS_PAGE_SIZE;
+      }
+    };
+
+    await pageTable("attendance_records");
+    await pageTable("pre_check_ins");
+
+    return Array.from(emails).sort((a, b) => a.localeCompare(b));
+  });
+
 
 export const getUniversitiesForHost = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
