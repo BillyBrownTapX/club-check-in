@@ -26,15 +26,6 @@ function shortDate(iso: string) {
   return d.toLocaleDateString([], { month: "short", day: "numeric", timeZone: "UTC" });
 }
 
-function Formula({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="ios-card rounded-2xl p-4">
-      <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">The math</p>
-      <p className="mt-1.5 font-display text-[16px] font-bold leading-snug text-foreground">{children}</p>
-    </div>
-  );
-}
-
 function Note({ children }: { children: React.ReactNode }) {
   return (
     <div className="rounded-2xl bg-muted/50 p-4">
