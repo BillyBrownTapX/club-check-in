@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Link, createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
 import { Activity, CalendarPlus, ChevronRight, ListChecks, Plus, QrCode, Repeat, Target, TrendingDown, TrendingUp, Users } from "lucide-react";
-import { useAttendanceAuth, useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
+import { useAttendanceAuth, useAuthorizedQuery, useAuthorizedServerFn } from "@/components/attendance-hq/auth-provider";
 import { HostAppShell, HomeTopActions } from "@/components/attendance-hq/host-shell";
 import { useRequireHostRedirect, getManagementErrorMessage } from "@/components/attendance-hq/host-management";
 import { ActionTile, Chip, GroupedList, LargeTitleHeader, ListRow, SectionLabel, StatTile } from "@/components/attendance-hq/ios";
@@ -47,6 +47,10 @@ function HomeRoute() {
   const navigate = useNavigate();
   const [exporting, setExporting] = useState(false);
   const [emailingMembers, setEmailingMembers] = useState(false);
+  // Must run through useAuthorizedServerFn — this project has no global bearer
+  // functionMiddleware, so a direct call ships without the Authorization
+  // header and the server's auth middleware answers 401.
+  const fetchMemberEmails = useAuthorizedServerFn(getHostMemberEmails);
 
   // Members tile: open a new draft in the host's default mail app with every
   // member address in BCC. mailto: URLs break around ~2000 chars in some
@@ -55,7 +59,10 @@ function HomeRoute() {
     if (emailingMembers) return;
     setEmailingMembers(true);
     try {
-      const emails = await getHostMemberEmails();
+      const result = (await fetchMemberEmails()) as unknown;
+      // A rejected/malformed response must never look like "no members".
+      if (!Array.isArray(result)) throw new Error("Unexpected member email response");
+      const emails = result.filter((e): e is string => typeof e === "string" && e.trim().length > 0);
       if (!emails.length) {
         toast.info("No member emails yet", { description: "Members appear here after their first check-in or pre-check-in." });
         return;
