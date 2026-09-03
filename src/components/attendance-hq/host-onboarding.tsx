@@ -79,12 +79,12 @@ export function ProgressIndicator({ step, total, label }: { step: number; total:
   );
 }
 
-export function PageHeadingBlock({ eyebrow, title, description }: { eyebrow?: string; title: string; description: string }) {
+export function PageHeadingBlock({ eyebrow, title, description }: { eyebrow?: string; title: string; description?: string }) {
   return (
     <div className="space-y-2">
       {eyebrow ? <p className="ios-section-label">{eyebrow}</p> : null}
       <h1 className="ios-screen-title">{title}</h1>
-      <p className="text-[14.5px] leading-6 text-muted-foreground">{description}</p>
+      {description ? <p className="text-[14.5px] leading-6 text-muted-foreground">{description}</p> : null}
     </div>
   );
 }

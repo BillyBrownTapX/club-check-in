@@ -57,7 +57,7 @@ function SignInRoute() {
   return (
     <AuthShell>
       <AuthCard>
-        <PageHeadingBlock eyebrow="Welcome back" title="Sign in" description="Return to your UNG-branded event workspace and keep mobile attendance moving without delay." />
+        <PageHeadingBlock eyebrow="Welcome back" title="Sign in" />
         {reasonMessage ? <SuccessBanner message={reasonMessage} /> : null}
         <div className="grid grid-cols-2 gap-3">
           <div className="rounded-[1.35rem] surface-soft px-4 py-4"><p className="text-[0.7rem] font-semibold uppercase tracking-[0.16em] text-primary/70">Workspace</p><p className="mt-1 font-display text-lg font-bold text-foreground">Host ops</p></div>
