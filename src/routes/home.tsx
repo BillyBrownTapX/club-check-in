@@ -8,7 +8,8 @@ import { useRequireHostRedirect, getManagementErrorMessage } from "@/components/
 import { ActionTile, Chip, GroupedList, LargeTitleHeader, ListRow, SectionLabel, StatTile } from "@/components/attendance-hq/ios";
 import { InstallBanner } from "@/components/attendance-hq/install-cta";
 import { Button } from "@/components/ui/button";
-import { getHostClubSummaries, getHostEvents, getHostMemberEmails, getHostMemberMetrics } from "@/lib/attendance-hq.functions";
+import { MetricDetailSheet, type MetricKey } from "@/components/attendance-hq/metric-detail-sheet";
+import { getHostClubSummaries, getHostEvents, getHostMemberEmails, getHostMemberMetrics, getHostMetricBreakdown } from "@/lib/attendance-hq.functions";
 import { formatEventDate, formatEventTime } from "@/lib/attendance-hq";
 import { queryKeys } from "@/lib/query-keys";
 
@@ -47,6 +48,7 @@ function HomeRoute() {
   const navigate = useNavigate();
   const [exporting, setExporting] = useState(false);
   const [emailingMembers, setEmailingMembers] = useState(false);
+  const [openMetric, setOpenMetric] = useState<MetricKey | null>(null);
   // Must run through useAuthorizedServerFn — this project has no global bearer
   // functionMiddleware, so a direct call ships without the Authorization
   // header and the server's auth middleware answers 401.
@@ -129,6 +131,13 @@ function HomeRoute() {
     getHostMemberMetrics,
     undefined,
     { staleTime: 60_000 },
+  );
+  // Drill-down series only load once a metric modal is opened.
+  const breakdownQuery = useAuthorizedQuery(
+    queryKeys.members.breakdown(),
+    getHostMetricBreakdown,
+    undefined,
+    { staleTime: 60_000, enabled: openMetric !== null },
   );
 
   
@@ -252,6 +261,7 @@ function HomeRoute() {
                   tone="blue"
                 />
               </button>
+              <button type="button" onClick={() => setOpenMetric("retention")} className="ios-press text-left">
               <StatTile
                 label="Retention"
                 value={metrics?.retentionPct === null || metrics === undefined ? "—" : `${metrics.retentionPct}%`}
@@ -263,6 +273,8 @@ function HomeRoute() {
                 icon={Repeat}
                 tone="default"
               />
+              </button>
+              <button type="button" onClick={() => setOpenMetric("success")} className="ios-press text-left">
               <StatTile
                 label="Event success"
                 value={metrics?.eventSuccessPct === null || metrics === undefined ? "—" : `${metrics.eventSuccessPct}%`}
@@ -274,6 +286,8 @@ function HomeRoute() {
                 icon={Target}
                 tone="gold"
               />
+              </button>
+              <button type="button" onClick={() => setOpenMetric("growth")} className="ios-press text-left">
               <StatTile
                 label="Growth 30d"
                 value={
@@ -285,8 +299,17 @@ function HomeRoute() {
                 icon={metrics && (metrics.growthRatePct ?? 0) < 0 ? TrendingDown : TrendingUp}
                 tone={metrics && (metrics.growthRatePct ?? 0) < 0 ? "default" : "success"}
               />
+              </button>
             </div>
           )}
+
+          <MetricDetailSheet
+            metric={openMetric}
+            onOpenChange={(open) => { if (!open) setOpenMetric(null); }}
+            data={breakdownQuery.data}
+            loading={breakdownQuery.isLoading}
+            error={breakdownQuery.error ? getManagementErrorMessage(breakdownQuery.error, "Unable to load the details for this metric.") : null}
+          />
 
           <SectionLabel className="mt-7">Quick actions</SectionLabel>
           <div className="grid grid-cols-2 gap-3">
