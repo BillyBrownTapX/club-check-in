@@ -8,7 +8,7 @@ import { useRequireHostRedirect, getManagementErrorMessage } from "@/components/
 import { ActionTile, Chip, GroupedList, LargeTitleHeader, ListRow, SectionLabel, StatTile } from "@/components/attendance-hq/ios";
 import { InstallBanner } from "@/components/attendance-hq/install-cta";
 import { Button } from "@/components/ui/button";
-import { getHostClubSummaries, getHostEvents } from "@/lib/attendance-hq.functions";
+import { getHostClubSummaries, getHostEvents, getHostMemberMetrics } from "@/lib/attendance-hq.functions";
 import { formatEventDate, formatEventTime } from "@/lib/attendance-hq";
 import { queryKeys } from "@/lib/query-keys";
 
