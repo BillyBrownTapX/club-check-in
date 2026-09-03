@@ -34,6 +34,7 @@ import {
   getAttendanceRetentionCutoffDate,
   getDefaultClubReportRange,
   isDeviceSessionExpired,
+  type HostMemberMetrics,
   type HostOnboardingState,
   type HostActivityEntry,
   type HostActivityType,
@@ -718,6 +719,158 @@ export const getHostClubSummaries = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     return getHostClubSummariesForUser(context.supabase, context.userId);
   });
+
+// Membership + growth metrics for the Home page. Everything is derived from
+// real check-in / pre-check-in rows through the user-scoped client, so RLS
+// keeps a host to their own clubs.
+const MEMBER_METRICS_PAGE_SIZE = 1000;
+
+async function getHostMemberMetricsForUser(
+  supabase: AppSupabaseClient,
+  userId: string,
+): Promise<HostMemberMetrics> {
+  const empty: HostMemberMetrics = {
+    totalMembers: 0,
+    membersWithEmail: 0,
+    newMembers30d: 0,
+    newMembersPrior30d: 0,
+    growthRatePct: null,
+    retentionEligible: 0,
+    retentionReturned: 0,
+    retentionPct: null,
+    pastEventCount: 0,
+    avgAttendancePerEvent: 0,
+    eventSuccessPct: null,
+    clubCount: 0,
+  };
+
+  const clubIds = await getAccessibleClubIds(supabase, userId);
+  if (!clubIds.length) return empty;
+
+  const { data: eventsRaw, error: eventsError } = await supabase
+    .from("events")
+    .select("id, event_date")
+    .in("club_id", clubIds);
+  if (eventsError) throw new Error(safeMessage(eventsError));
+
+  const events = (eventsRaw ?? []) as Array<{ id: string; event_date: string }>;
+  const eventIds = events.map((e) => e.id);
+  const todayIso = new Date().toISOString().slice(0, 10);
+  const pastEvents = events.filter((e) => e.event_date < todayIso);
+  const latestPastDate = pastEvents.reduce<string | null>(
+    (max, e) => (max === null || e.event_date > max ? e.event_date : max),
+    null,
+  );
+  if (!eventIds.length) return { ...empty, clubCount: clubIds.length };
+
+  type Member = {
+    email: string;
+    firstAt: string;
+    eventIds: Set<string>;
+  };
+  const members = new Map<string, Member>();
+  let pastAttendanceRows = 0;
+  const eventDateById = new Map(events.map((e) => [e.id, e.event_date]));
+
+  const pageTable = async (table: "attendance_records" | "pre_check_ins") => {
+    let offset = 0;
+    for (;;) {
+      const { data: rows, error } = await supabase
+        .from(table)
+        .select("event_id, student_id, checked_in_at, students(student_email)")
+        .in("event_id", eventIds)
+        .order("checked_in_at", { ascending: true })
+        .range(offset, offset + MEMBER_METRICS_PAGE_SIZE - 1);
+      if (error) throw new Error(safeMessage(error));
+      const list = (rows ?? []) as unknown as Array<{
+        event_id: string;
+        student_id: string;
+        checked_in_at: string;
+        students: { student_email: string } | null;
+      }>;
+      for (const row of list) {
+        const existing = members.get(row.student_id);
+        if (existing) {
+          if (row.checked_in_at < existing.firstAt) existing.firstAt = row.checked_in_at;
+          existing.eventIds.add(row.event_id);
+        } else {
+          members.set(row.student_id, {
+            email: row.students?.student_email ?? "",
+            firstAt: row.checked_in_at,
+            eventIds: new Set([row.event_id]),
+          });
+        }
+        const eventDate = eventDateById.get(row.event_id);
+        if (eventDate && eventDate < todayIso) pastAttendanceRows += 1;
+      }
+      if (list.length < MEMBER_METRICS_PAGE_SIZE) break;
+      offset += MEMBER_METRICS_PAGE_SIZE;
+    }
+  };
+
+  await pageTable("attendance_records");
+  await pageTable("pre_check_ins");
+
+  const now = Date.now();
+  const day = 24 * 60 * 60 * 1000;
+  const cutoff30 = new Date(now - 30 * day).toISOString();
+  const cutoff60 = new Date(now - 60 * day).toISOString();
+
+  let newMembers30d = 0;
+  let newMembersPrior30d = 0;
+  let membersWithEmail = 0;
+  let retentionEligible = 0;
+  let retentionReturned = 0;
+
+  for (const member of members.values()) {
+    if (member.email) membersWithEmail += 1;
+    if (member.firstAt >= cutoff30) newMembers30d += 1;
+    else if (member.firstAt >= cutoff60) newMembersPrior30d += 1;
+    // Retention only judges members who had a chance to come back: their first
+    // activity predates the most recent past event.
+    if (latestPastDate && member.firstAt.slice(0, 10) < latestPastDate) {
+      retentionEligible += 1;
+      if (member.eventIds.size > 1) retentionReturned += 1;
+    }
+  }
+
+  const totalMembers = members.size;
+  const pastEventCount = pastEvents.length;
+  const avgAttendancePerEvent = pastEventCount
+    ? Math.round((pastAttendanceRows / pastEventCount) * 10) / 10
+    : 0;
+
+  return {
+    totalMembers,
+    membersWithEmail,
+    newMembers30d,
+    newMembersPrior30d,
+    growthRatePct: newMembersPrior30d
+      ? Math.round(((newMembers30d - newMembersPrior30d) / newMembersPrior30d) * 100)
+      : newMembers30d > 0
+        ? 100
+        : null,
+    retentionEligible,
+    retentionReturned,
+    retentionPct: retentionEligible
+      ? Math.round((retentionReturned / retentionEligible) * 100)
+      : null,
+    pastEventCount,
+    avgAttendancePerEvent,
+    eventSuccessPct:
+      totalMembers && pastEventCount
+        ? Math.round((avgAttendancePerEvent / totalMembers) * 100)
+        : null,
+    clubCount: clubIds.length,
+  };
+}
+
+export const getHostMemberMetrics = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    return getHostMemberMetricsForUser(context.supabase, context.userId);
+  });
+
 
 export const getUniversitiesForHost = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

@@ -37,4 +37,8 @@ export const queryKeys = {
     all: ["activity"] as const,
     feed: () => ["activity", "feed"] as const,
   },
+  members: {
+    all: ["members"] as const,
+    metrics: () => ["members", "metrics"] as const,
+  },
 } as const;

@@ -1,14 +1,14 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Link, createFileRoute, useNavigate, useRouter } from "@tanstack/react-router";
-import { Activity, CalendarPlus, ChevronRight, ListChecks, Plus, QrCode } from "lucide-react";
+import { Activity, CalendarPlus, ChevronRight, ListChecks, Plus, QrCode, Repeat, Target, TrendingDown, TrendingUp, Users } from "lucide-react";
 import { useAttendanceAuth, useAuthorizedQuery } from "@/components/attendance-hq/auth-provider";
 import { HostAppShell, HomeTopActions } from "@/components/attendance-hq/host-shell";
 import { useRequireHostRedirect, getManagementErrorMessage } from "@/components/attendance-hq/host-management";
 import { ActionTile, Chip, GroupedList, LargeTitleHeader, ListRow, SectionLabel, StatTile } from "@/components/attendance-hq/ios";
 import { InstallBanner } from "@/components/attendance-hq/install-cta";
 import { Button } from "@/components/ui/button";
-import { getHostClubSummaries, getHostEvents } from "@/lib/attendance-hq.functions";
+import { getHostClubSummaries, getHostEvents, getHostMemberMetrics } from "@/lib/attendance-hq.functions";
 import { formatEventDate, formatEventTime } from "@/lib/attendance-hq";
 import { queryKeys } from "@/lib/query-keys";
 
@@ -89,9 +89,16 @@ function HomeRoute() {
     { clubId: "", status: "all" as const, query: "" },
     { staleTime: 30_000 },
   );
+  const metricsQuery = useAuthorizedQuery(
+    queryKeys.members.metrics(),
+    getHostMemberMetrics,
+    undefined,
+    { staleTime: 60_000 },
+  );
 
   const clubs = clubsQuery.data ?? [];
   const events = eventsQuery.data ?? [];
+  const metrics = metricsQuery.data;
   const fetching = clubsQuery.isLoading || eventsQuery.isLoading;
   const queryError = clubsQuery.error ?? eventsQuery.error;
 
@@ -191,10 +198,76 @@ function HomeRoute() {
             </div>
           )}
 
-          <div className="mt-6 -mx-1 flex gap-3 overflow-x-auto px-1 pb-1 scrollbar-none snap-x">
+          <SectionLabel className="mt-7">Membership &amp; growth</SectionLabel>
+          {metricsQuery.isLoading && !metrics ? (
+            <div className="grid grid-cols-2 gap-3" aria-hidden>
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="ios-card rounded-2xl p-4">
+                  <div className="h-3 w-1/2 animate-pulse rounded-full bg-muted" />
+                  <div className="mt-3 h-7 w-2/3 animate-pulse rounded-lg bg-muted" />
+                  <div className="mt-2 h-3 w-3/4 animate-pulse rounded-full bg-muted" />
+                </div>
+              ))}
+            </div>
+          ) : metricsQuery.error ? (
+            <div className="ios-card rounded-2xl p-4 text-[13px] text-muted-foreground">
+              {getManagementErrorMessage(metricsQuery.error, "Unable to load membership metrics.")}
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              <button type="button" onClick={handleExportMembers} className="ios-press text-left">
+                <StatTile
+                  label="Members"
+                  value={metrics?.totalMembers ?? 0}
+                  hint={
+                    metrics
+                      ? `${metrics.membersWithEmail} email contacts · tap to export`
+                      : "Check-ins + pre-check-ins"
+                  }
+                  icon={Users}
+                  tone="blue"
+                />
+              </button>
+              <StatTile
+                label="Retention"
+                value={metrics?.retentionPct === null || metrics === undefined ? "—" : `${metrics.retentionPct}%`}
+                hint={
+                  metrics && metrics.retentionEligible > 0
+                    ? `${metrics.retentionReturned} of ${metrics.retentionEligible} returned`
+                    : "Needs two past events"
+                }
+                icon={Repeat}
+                tone="default"
+              />
+              <StatTile
+                label="Event success"
+                value={metrics?.eventSuccessPct === null || metrics === undefined ? "—" : `${metrics.eventSuccessPct}%`}
+                hint={
+                  metrics && metrics.pastEventCount > 0
+                    ? `Avg ${metrics.avgAttendancePerEvent} per event · ${metrics.pastEventCount} held`
+                    : "After your first event"
+                }
+                icon={Target}
+                tone="gold"
+              />
+              <StatTile
+                label="Growth 30d"
+                value={
+                  metrics?.growthRatePct === null || metrics === undefined
+                    ? "—"
+                    : `${metrics.growthRatePct > 0 ? "+" : ""}${metrics.growthRatePct}%`
+                }
+                hint={metrics ? `${metrics.newMembers30d} new · ${metrics.newMembersPrior30d} prior 30d` : "New members"}
+                icon={metrics && (metrics.growthRatePct ?? 0) < 0 ? TrendingDown : TrendingUp}
+                tone={metrics && (metrics.growthRatePct ?? 0) < 0 ? "default" : "success"}
+              />
+            </div>
+          )}
+
+          <div className="mt-3 -mx-1 flex gap-3 overflow-x-auto px-1 pb-1 scrollbar-none snap-x">
             <div className="snap-start"><StatTile label="Today" value={stats.checkInsToday} hint="Check-ins" tone="default" /></div>
-            <div className="snap-start"><StatTile label="Upcoming" value={stats.upcomingCount} hint="Events on deck" tone="blue" /></div>
-            <div className="snap-start"><StatTile label="Clubs" value={stats.activeClubs} hint="Active" tone="gold" /></div>
+            <div className="snap-start"><StatTile label="Upcoming" value={stats.upcomingCount} hint="Events on deck" tone="default" /></div>
+            <div className="snap-start"><StatTile label="Clubs" value={stats.activeClubs} hint="Active" tone="default" /></div>
           </div>
 
           <SectionLabel className="mt-7">Quick actions</SectionLabel>
