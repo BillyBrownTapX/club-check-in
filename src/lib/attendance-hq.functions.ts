@@ -34,6 +34,7 @@ import {
   getAttendanceRetentionCutoffDate,
   getDefaultClubReportRange,
   isDeviceSessionExpired,
+  type HostMemberMetrics,
   type HostOnboardingState,
   type HostActivityEntry,
   type HostActivityType,
