@@ -97,6 +97,9 @@ import {
   regeneratePreCheckInTokenSchema,
   togglePreCheckInSchema,
   rememberedDeviceInputSchema,
+  rememberedPreCheckInSchema,
+  rememberedProfileUpdateSchema,
+
   removeAttendanceSchema,
   purgeClubAttendanceSchema,
   removeClubOfficerSchema,
