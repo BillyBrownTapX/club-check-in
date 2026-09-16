@@ -227,6 +227,13 @@ export const PRE_CHECK_IN_COPY = {
   closedBody: "The early head count for this event is closed. You can still check in at the event itself.",
 } as const;
 
+/** Capitalize the first character of a first name for display only. */
+export function formatDisplayFirstName(name: string | null | undefined): string {
+  const trimmed = (name ?? "").trim();
+  if (!trimmed) return trimmed;
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+}
+
 /**
  * Shifts an optional pre check-in window by `days` calendar days, keeping the
  * wall-clock time. Returns nulls untouched so disabled events stay disabled
