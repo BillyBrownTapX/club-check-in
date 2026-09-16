@@ -97,6 +97,9 @@ import {
   regeneratePreCheckInTokenSchema,
   togglePreCheckInSchema,
   rememberedDeviceInputSchema,
+  rememberedPreCheckInSchema,
+  rememberedProfileUpdateSchema,
+
   removeAttendanceSchema,
   purgeClubAttendanceSchema,
   removeClubOfficerSchema,
@@ -122,8 +125,13 @@ type PublicCheckInOp =
   | "confirmReturningStudent"
   | "fastCheckIn"
   | "getRememberedStudent"
+  | "getRememberedProfileDetails"
+  | "updateRememberedProfile"
+  | "getRememberedPreCheckInStudent"
+  | "fastPreCheckIn"
   | "getPublicEventDisplay"
   | "getPublicEventByQr";
+
 
 function hashQrTokenForLog(qrToken: string | undefined | null): string {
   if (!qrToken) return "none";
@@ -2331,8 +2339,16 @@ export const studentCheckIn = createServerFn({ method: "POST" })
     };
   }));
 
-// Remembered-device peek. Returns ONLY the masked preview; the device token
-// is the only secret the client holds, so we never echo back the student id.
+// Remembered-device recognition. One round trip returns the masked preview
+// AND this attendee's state for THIS event, so the public page can pick the
+// right screen without a second call and without ever flashing the form:
+//
+//   eventState "none"           → "Welcome back" + Check Me In
+//   eventState "pre_registered" → "You're already registered" + I'm Here
+//   eventState "checked_in"     → "You're already checked in" + timestamp
+//
+// The device token is the only secret the client holds, so we never echo
+// back the student id.
 export const getRememberedStudent = createServerFn({ method: "POST" })
   .inputValidator(rememberedDeviceInputSchema)
   .handler(withCheckInLog("getRememberedStudent", async ({ data }) => {
@@ -2340,55 +2356,127 @@ export const getRememberedStudent = createServerFn({ method: "POST" })
     const eventCheck = await getEventForPublicCheckInByQr(data.qrToken);
     if (!eventCheck.ok) return eventCheck;
 
+    const resolved = await resolveDeviceSession(data.deviceToken);
+    if (!resolved.ok) return resolved;
 
-
-    const { data: session, error } = await (await getSupabaseAdmin())
-      .from("student_device_sessions")
-      .select("id, student_id, created_at, last_used_at")
-      .eq("device_token", data.deviceToken)
-      .maybeSingle();
-
-    if (error) throw new Error(safeMessage(error));
-    if (!session) {
-      return { ok: false as const, state: "student_not_found" as const };
-    }
-
-    if (isDeviceSessionExpired(session)) {
-      // Best-effort cleanup of this one stale row. Errors are ignored so a
-      // transient delete failure still returns the same "unknown device"
-      // state and the client falls through to first-time / returning.
-      await (await getSupabaseAdmin())
-        .from("student_device_sessions")
-        .delete()
-        .eq("id", session.id);
-      return { ok: false as const, state: "student_not_found" as const };
-    }
-
-    const { data: student, error: studentError } = await (await getSupabaseAdmin())
-      .from("students")
-      .select("first_name, last_name, student_email")
-      .eq("id", session.student_id)
-      .maybeSingle();
-
-    if (studentError) throw new Error(safeMessage(studentError));
-    if (!student) {
-      return { ok: false as const, state: "student_not_found" as const };
-    }
-
-    const existingAttendance = await getExistingAttendance(eventCheck.event.id, session.student_id);
+    const existingAttendance = await getExistingAttendance(eventCheck.event.id, resolved.session.student_id);
     if (existingAttendance) {
       return {
-        ok: false as const,
-        state: "already_checked_in" as const,
+        ok: true as const,
+        student: buildStudentPreview(resolved.student),
+        eventState: "checked_in" as const,
         checkedInAt: existingAttendance.checked_in_at,
+      };
+    }
+
+    const { data: preCheckIn } = await (await getSupabaseAdmin())
+      .from("pre_check_ins")
+      .select("checked_in_at")
+      .eq("event_id", eventCheck.event.id)
+      .eq("student_id", resolved.session.student_id)
+      .maybeSingle();
+
+    if (preCheckIn) {
+      return {
+        ok: true as const,
+        student: buildStudentPreview(resolved.student),
+        eventState: "pre_registered" as const,
+        preRegisteredAt: preCheckIn.checked_in_at,
       };
     }
 
     return {
       ok: true as const,
-      student: buildStudentPreview(student),
+      student: buildStudentPreview(resolved.student),
+      eventState: "none" as const,
     };
   }));
+
+// Shared device-session resolution for every remembered-device action. Expired
+// or idle sessions are deleted (best effort) and reported as "unknown device"
+// so the public client silently clears its stored token and shows the form.
+async function resolveDeviceSession(deviceToken: string) {
+  const admin = await getSupabaseAdmin();
+  const { data: session, error } = await admin
+    .from("student_device_sessions")
+    .select("id, student_id, created_at, last_used_at")
+    .eq("device_token", deviceToken)
+    .maybeSingle();
+
+  if (error) throw new Error(safeMessage(error));
+  if (!session) return { ok: false as const, state: "student_not_found" as const };
+
+  if (isDeviceSessionExpired(session)) {
+    await admin.from("student_device_sessions").delete().eq("id", session.id);
+    return { ok: false as const, state: "student_not_found" as const };
+  }
+
+  const { data: student, error: studentError } = await admin
+    .from("students")
+    .select("id, first_name, last_name, student_email, university_id")
+    .eq("id", session.student_id)
+    .maybeSingle();
+
+  if (studentError) throw new Error(safeMessage(studentError));
+  if (!student) return { ok: false as const, state: "student_not_found" as const };
+
+  return { ok: true as const, session, student };
+}
+
+// Full (unmasked) profile for the device that owns the session — used only to
+// prefill "Update my information". The device token is the authorization.
+export const getRememberedProfileDetails = createServerFn({ method: "POST" })
+  .inputValidator(rememberedDeviceInputSchema)
+  .handler(withCheckInLog("getRememberedProfileDetails", async ({ data }) => {
+    await rateLimit("fast", data.qrToken);
+    const eventCheck = await getEventForPublicCheckInByQr(data.qrToken);
+    if (!eventCheck.ok) return eventCheck;
+
+    const resolved = await resolveDeviceSession(data.deviceToken);
+    if (!resolved.ok) return resolved;
+
+    return {
+      ok: true as const,
+      profile: {
+        firstName: resolved.student.first_name,
+        lastName: resolved.student.last_name,
+        studentEmail: resolved.student.student_email,
+      },
+    };
+  }));
+
+// Attendee updates their own stored name / email. Updates the EXISTING student
+// row (never creates a duplicate) and keeps the university email-domain rule.
+export const updateRememberedProfile = createServerFn({ method: "POST" })
+  .inputValidator(rememberedProfileUpdateSchema)
+  .handler(withCheckInLog("updateRememberedProfile", async ({ data }) => {
+    await rateLimit("register", data.qrToken);
+    const eventCheck = await getEventForPublicCheckInByQr(data.qrToken);
+    if (!eventCheck.ok) return eventCheck;
+
+    const resolved = await resolveDeviceSession(data.deviceToken);
+    if (!resolved.ok) return resolved;
+
+    const universityId = resolved.student.university_id
+      ?? (await requireEventUniversityId(eventCheck.event));
+    await assertUniversityEmailAllowed(universityId, data.studentEmail);
+
+    const { data: updated, error } = await (await getSupabaseAdmin())
+      .from("students")
+      .update({
+        first_name: data.firstName.trim(),
+        last_name: data.lastName.trim(),
+        student_email: data.studentEmail,
+      })
+      .eq("id", resolved.student.id)
+      .select("first_name, last_name, student_email")
+      .single();
+
+    if (error || !updated) throw new Error(safeMessage(error, "Unable to save your information"));
+
+    return { ok: true as const, student: buildStudentPreview(updated) };
+  }));
+
 
 // Fast-path remembered-device check-in. The server resolves the student from
 // the device session — clients never tell us who they are. Pre-fix, the
