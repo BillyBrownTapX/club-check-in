@@ -147,6 +147,8 @@ function CheckInRouteComponent() {
   const [successAt, setSuccessAt] = useState<string | null>(null);
   const [rememberedStudent, setRememberedStudent] = useState<PublicStudentPreview | null>(null);
   const [rememberedLoading, setRememberedLoading] = useState(false);
+  // True when the recognized attendee already saved their spot for this event.
+  const [rememberedPreRegistered, setRememberedPreRegistered] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
   // Distinguish "no network path" from "server said no". The offline banner
   // is driven off `useOnlineStatus()` OR a sticky flag set when the last
