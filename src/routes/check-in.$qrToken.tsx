@@ -292,6 +292,19 @@ function CheckInRouteComponent() {
     setRememberedStudent(null);
   };
 
+  // Persist a device marker returned by ANY flow (first-time, returning
+  // shortcut, already-checked-in) so this phone is recognized next time.
+  const storeDeviceToken = (result: unknown) => {
+    const token = (result as { deviceToken?: string | null } | null)?.deviceToken;
+    if (!token || typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(DEVICE_TOKEN_KEY, token);
+    } catch {
+      /* private mode — ignore */
+    }
+    setRememberedDeviceToken(token);
+  };
+
   const clearTransientState = () => {
     setGlobalError(null);
     setPendingStudent(null);

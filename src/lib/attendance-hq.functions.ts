@@ -3621,6 +3621,8 @@ export const getRememberedPreCheckInStudent = createServerFn({ method: "POST" })
 
     const device = await resolveDeviceSession(data.deviceToken);
     if (!device.ok) return { ok: false as const, state: "student_not_found" as const };
+    // Recognition counts as use, so an active phone never ages out.
+    await touchDeviceSession(device.session.id);
 
     const existingAttendance = await getExistingAttendance(resolved.event.id, device.session.student_id);
     if (existingAttendance) {
