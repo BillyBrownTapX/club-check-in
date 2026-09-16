@@ -396,6 +396,7 @@ function CheckInRouteComponent() {
     setLastFailureWasNetwork(false);
     try {
       const result = await lookupReturningStudent({ data: { ...values, qrToken } });
+      storeDeviceToken(result);
       if (!result.ok) {
         openBlockedState(result.state);
         return;
@@ -443,6 +444,7 @@ function CheckInRouteComponent() {
       const result = await confirmReturning({
         data: { qrToken, nineHundredNumber: pendingNineHundredNumber },
       });
+      storeDeviceToken(result);
       if (!result.ok) {
         openBlockedState(result.state);
         return;
