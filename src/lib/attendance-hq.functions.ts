@@ -122,8 +122,13 @@ type PublicCheckInOp =
   | "confirmReturningStudent"
   | "fastCheckIn"
   | "getRememberedStudent"
+  | "getRememberedProfileDetails"
+  | "updateRememberedProfile"
+  | "getRememberedPreCheckInStudent"
+  | "fastPreCheckIn"
   | "getPublicEventDisplay"
   | "getPublicEventByQr";
+
 
 function hashQrTokenForLog(qrToken: string | undefined | null): string {
   if (!qrToken) return "none";
