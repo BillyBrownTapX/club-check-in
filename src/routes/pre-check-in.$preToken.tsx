@@ -202,14 +202,16 @@ function PreCheckInRoute() {
   const applyResult = (
     outcome: { ok: boolean; state?: string; deviceToken?: string | null },
   ) => {
-    if (outcome.ok) {
-      if (outcome.deviceToken && typeof window !== "undefined") {
-        try {
-          window.localStorage.setItem(DEVICE_TOKEN_KEY, outcome.deviceToken);
-        } catch {
-          /* private mode — ignore */
-        }
+    // Remember the phone on EVERY outcome that identified a real person —
+    // including "already saved" and the 900-number shortcut.
+    if (outcome.deviceToken && typeof window !== "undefined") {
+      try {
+        window.localStorage.setItem(DEVICE_TOKEN_KEY, outcome.deviceToken);
+      } catch {
+        /* private mode — ignore */
       }
+    }
+    if (outcome.ok) {
       setCount((prev) => prev + 1);
       setScreen("success");
       return;

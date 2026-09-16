@@ -292,6 +292,19 @@ function CheckInRouteComponent() {
     setRememberedStudent(null);
   };
 
+  // Persist a device marker returned by ANY flow (first-time, returning
+  // shortcut, already-checked-in) so this phone is recognized next time.
+  const storeDeviceToken = (result: unknown) => {
+    const token = (result as { deviceToken?: string | null } | null)?.deviceToken;
+    if (!token || typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(DEVICE_TOKEN_KEY, token);
+    } catch {
+      /* private mode — ignore */
+    }
+    setRememberedDeviceToken(token);
+  };
+
   const clearTransientState = () => {
     setGlobalError(null);
     setPendingStudent(null);
@@ -353,6 +366,7 @@ function CheckInRouteComponent() {
     setLastFailureWasNetwork(false);
     try {
       const result = await submitStudentCheckIn({ data: { ...values, qrToken } });
+      storeDeviceToken(result);
       if (!result.ok) {
         if (result.state === "student_exists") {
           setPendingStudent(result.student);
@@ -367,9 +381,6 @@ function CheckInRouteComponent() {
         return;
       }
 
-      if (typeof window !== "undefined" && result.deviceToken) {
-        window.localStorage.setItem(DEVICE_TOKEN_KEY, result.deviceToken);
-      }
       // Successful commit — clear any saved draft for this QR.
       clearDraft(REGISTRATION_DRAFT_KEY(qrToken));
       clearDraft(RETURNING_DRAFT_KEY(qrToken));
@@ -385,6 +396,7 @@ function CheckInRouteComponent() {
     setLastFailureWasNetwork(false);
     try {
       const result = await lookupReturningStudent({ data: { ...values, qrToken } });
+      storeDeviceToken(result);
       if (!result.ok) {
         openBlockedState(result.state);
         return;
@@ -432,6 +444,7 @@ function CheckInRouteComponent() {
       const result = await confirmReturning({
         data: { qrToken, nineHundredNumber: pendingNineHundredNumber },
       });
+      storeDeviceToken(result);
       if (!result.ok) {
         openBlockedState(result.state);
         return;
