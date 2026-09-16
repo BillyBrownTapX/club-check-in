@@ -472,7 +472,11 @@ function CheckInRouteComponent() {
                 </div>
                 <div className="min-w-0 space-y-1">
                   <p className="text-sm font-semibold text-foreground">Welcome back, {rememberedStudent.firstName} {rememberedStudent.lastInitial}.</p>
-                  <p className="text-sm text-muted-foreground">Use the fast path on this device or complete the form below.</p>
+                  <p className="text-sm text-muted-foreground">
+                    {rememberedPreRegistered
+                      ? "You already saved your spot — tap below to confirm you're here."
+                      : "Use the fast path on this device or complete the form below."}
+                  </p>
                 </div>
               </div>
               <PrimaryButton
