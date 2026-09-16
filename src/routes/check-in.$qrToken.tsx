@@ -22,6 +22,7 @@ import {
 import { getPublicEventByQr, getRememberedStudent, studentCheckIn, lookupStudent, confirmReturningStudent, fastCheckIn } from "@/lib/attendance-hq.functions";
 import {
   DEVICE_TOKEN_KEY,
+  formatDisplayFirstName,
   getBlockedStateCopy,
   getCheckInStatus,
   getPublicBlockedState,

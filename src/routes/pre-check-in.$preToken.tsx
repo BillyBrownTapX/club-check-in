@@ -32,7 +32,7 @@ import {
   submitPreCheckIn,
   submitReturningPreCheckIn,
 } from "@/lib/attendance-hq.functions";
-import { DEVICE_TOKEN_KEY, PRE_CHECK_IN_COPY } from "@/lib/attendance-hq";
+import { DEVICE_TOKEN_KEY, formatDisplayFirstName, PRE_CHECK_IN_COPY } from "@/lib/attendance-hq";
 import type { PublicStudentPreview } from "@/lib/attendance-hq";
 import { returningLookupSchema, studentRegistrationSchema } from "@/lib/attendance-hq-schemas";
 import { isLikelyOfflineError, useOnlineStatus } from "@/hooks/use-online-status";
