@@ -2250,12 +2250,17 @@ export const studentCheckIn = createServerFn({ method: "POST" })
     if (existingStudentError) throw new Error(safeMessage(existingStudentError, "Unable to look up student."));
 
     if (existingStudent) {
+      // Remember this device on the returning paths too. Previously only
+      // brand-new students ever got a device session, so anyone who already
+      // existed could never be recognized on their own phone.
+      const deviceToken = data.rememberDevice ? await issueDeviceSession(existingStudent.id) : null;
       const existingAttendance = await getExistingAttendance(eventCheck.event.id, existingStudent.id);
       if (existingAttendance) {
         return {
           ok: false as const,
           state: "already_checked_in" as const,
           checkedInAt: existingAttendance.checked_in_at,
+          deviceToken,
         };
       }
 
@@ -2265,6 +2270,7 @@ export const studentCheckIn = createServerFn({ method: "POST" })
         ok: false as const,
         state: "student_exists" as const,
         student: buildStudentPreview(existingStudent),
+        deviceToken,
       };
     }
 
@@ -2358,6 +2364,8 @@ export const getRememberedStudent = createServerFn({ method: "POST" })
 
     const resolved = await resolveDeviceSession(data.deviceToken);
     if (!resolved.ok) return resolved;
+    // Keep active devices alive: recognition counts as use, not just check-in.
+    await touchDeviceSession(resolved.session.id);
 
     const existingAttendance = await getExistingAttendance(eventCheck.event.id, resolved.session.student_id);
     if (existingAttendance) {
@@ -2421,6 +2429,25 @@ async function resolveDeviceSession(deviceToken: string) {
   if (!student) return { ok: false as const, state: "student_not_found" as const };
 
   return { ok: true as const, session, student };
+}
+
+// Create a remembered-device session for a known student and return the opaque
+// token the client stores. Best effort: a failure here must never break a
+// check-in, so we return null instead of throwing.
+async function issueDeviceSession(studentId: string): Promise<string | null> {
+  const token = createDeviceToken();
+  const { error } = await (await getSupabaseAdmin())
+    .from("student_device_sessions")
+    .insert({ student_id: studentId, device_token: token });
+  return error ? null : token;
+}
+
+// Refresh last_used_at so a device that keeps getting recognized never ages out.
+async function touchDeviceSession(sessionId: string): Promise<void> {
+  await (await getSupabaseAdmin())
+    .from("student_device_sessions")
+    .update({ last_used_at: new Date().toISOString() })
+    .eq("id", sessionId);
 }
 
 // Full (unmasked) profile for the device that owns the session — used only to
@@ -2551,14 +2578,15 @@ export const confirmReturningStudent = createServerFn({ method: "POST" })
       return { ok: false as const, state: "student_not_found" as const };
     }
 
+    const deviceToken = await issueDeviceSession(student.id);
     const attendanceResult = await createAttendanceRecord({
       event: eventCheck.event,
       studentId: student.id,
       method: "returning_lookup",
     });
 
-    if (!attendanceResult.ok) return attendanceResult;
-    return { ok: true as const, attendance: attendanceResult.attendance };
+    if (!attendanceResult.ok) return { ...attendanceResult, deviceToken };
+    return { ok: true as const, attendance: attendanceResult.attendance, deviceToken };
   }));
 
 // Returning-student lookup. Pre-fix, this returned the raw student UUID and
@@ -2592,6 +2620,7 @@ export const lookupStudent = createServerFn({ method: "POST" })
         ok: false as const,
         state: "already_checked_in" as const,
         checkedInAt: existingAttendance.checked_in_at,
+        deviceToken: await issueDeviceSession(student.id),
       };
     }
 
@@ -3502,7 +3531,14 @@ export const submitPreCheckIn = createServerFn({ method: "POST" })
       method: existingStudent ? "returning_lookup" : "qr_scan",
     });
     if (!result.ok) {
-      return { ok: false as const, state: result.state, checkedInAt: result.checkedInAt };
+      // Already saved for this event — still remember the phone so the next
+      // visit is recognized instead of showing the blank form again.
+      return {
+        ok: false as const,
+        state: result.state,
+        checkedInAt: result.checkedInAt,
+        deviceToken: data.rememberDevice ? await issueDeviceSession(studentId!) : null,
+      };
     }
 
     let deviceToken: string | null = null;
@@ -3542,16 +3578,22 @@ export const submitReturningPreCheckIn = createServerFn({ method: "POST" })
     if (error) throw new Error(safeMessage(error, "Unable to look up student."));
     if (!student) return { ok: false as const, state: "student_not_found" as const };
 
+    const deviceToken = await issueDeviceSession(student.id);
     const result = await insertPreCheckIn({
       eventId: resolved.event.id,
       studentId: student.id,
       method: "returning_lookup",
     });
     if (!result.ok) {
-      return { ok: false as const, state: result.state, checkedInAt: result.checkedInAt };
+      return { ok: false as const, state: result.state, checkedInAt: result.checkedInAt, deviceToken };
     }
 
-    return { ok: true as const, preCheckIn: result.preCheckIn, student: buildStudentPreview(student) };
+    return {
+      ok: true as const,
+      preCheckIn: result.preCheckIn,
+      student: buildStudentPreview(student),
+      deviceToken,
+    };
   });
 
 /**
