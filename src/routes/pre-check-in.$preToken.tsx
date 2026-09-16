@@ -4,13 +4,17 @@
 // pre_check_in_token, writes to pre_check_ins, and is explicit that this is
 // NOT attendance. Hosts share this link in marketing (group chat, flyer QR,
 // Instagram story) weeks ahead of the event.
+//
+// Returning attendees are recognized from the device token this page already
+// stores after a first submit. Recognition is read-only: opening the link
+// never saves a spot, so the head count only counts explicit taps.
 
 import { useEffect, useState } from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { useServerFn } from "@tanstack/react-start";
-import { CalendarCheck2, Users } from "lucide-react";
+import { CalendarCheck2, CheckCircle2, Users } from "lucide-react";
 import {
   CheckInFormCard,
   ErrorStateCard,
@@ -21,12 +25,20 @@ import {
   PublicCheckInShell,
   SecondaryTextButton,
 } from "@/components/attendance-hq/public-check-in";
-import { getPublicPreCheckInEvent, submitPreCheckIn, submitReturningPreCheckIn } from "@/lib/attendance-hq.functions";
+import {
+  fastPreCheckIn,
+  getPublicPreCheckInEvent,
+  getRememberedPreCheckInStudent,
+  submitPreCheckIn,
+  submitReturningPreCheckIn,
+} from "@/lib/attendance-hq.functions";
 import { DEVICE_TOKEN_KEY, PRE_CHECK_IN_COPY } from "@/lib/attendance-hq";
+import type { PublicStudentPreview } from "@/lib/attendance-hq";
 import { returningLookupSchema, studentRegistrationSchema } from "@/lib/attendance-hq-schemas";
 import { isLikelyOfflineError, useOnlineStatus } from "@/hooks/use-online-status";
 
-type Screen = "first-time" | "returning" | "success" | "blocked";
+type Screen = "recognizing" | "recognized" | "first-time" | "returning" | "success" | "blocked";
+type RecognizedState = "none" | "pre_registered" | "checked_in";
 
 function formatEventDate(date: string, startTime: string) {
   const parsed = new Date(`${date}T${startTime}`);
@@ -38,6 +50,31 @@ function formatEventDate(date: string, startTime: string) {
     hour: "numeric",
     minute: "2-digit",
   });
+}
+
+function formatTime(value: string | null | undefined) {
+  if (!value) return null;
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+}
+
+function readDeviceToken() {
+  if (typeof window === "undefined") return null;
+  try {
+    return window.localStorage.getItem(DEVICE_TOKEN_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function clearDeviceToken() {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(DEVICE_TOKEN_KEY);
+  } catch {
+    /* private mode — ignore */
+  }
 }
 
 function RouteErrorComponent({ reset }: { error: Error; reset: () => void }) {
@@ -86,18 +123,61 @@ function PreCheckInRoute() {
 
   const submit = useServerFn(submitPreCheckIn);
   const submitReturning = useServerFn(submitReturningPreCheckIn);
+  const recognizeDevice = useServerFn(getRememberedPreCheckInStudent);
+  const savePlaceForDevice = useServerFn(fastPreCheckIn);
 
-  const [screen, setScreen] = useState<Screen>(result.ok ? "first-time" : "blocked");
+  const [screen, setScreen] = useState<Screen>(result.ok ? "recognizing" : "blocked");
   const [blocked, setBlocked] = useState<string | null>(result.ok ? null : result.state);
   const [count, setCount] = useState(result.preCheckInCount ?? 0);
   const [formError, setFormError] = useState("");
   const [networkError, setNetworkError] = useState(false);
 
+  const [remembered, setRemembered] = useState<PublicStudentPreview | null>(null);
+  const [rememberedState, setRememberedState] = useState<RecognizedState>("none");
+  const [rememberedAt, setRememberedAt] = useState<string | null>(null);
+  const [savingSpot, setSavingSpot] = useState(false);
+
+  // Recognition gate: resolve the stored device token BEFORE any form renders.
   useEffect(() => {
-    setScreen(result.ok ? "first-time" : "blocked");
-    setBlocked(result.ok ? null : result.state);
-    setCount(result.preCheckInCount ?? 0);
-  }, [result]);
+    if (!result.ok) {
+      setScreen("blocked");
+      setBlocked(result.state);
+      return;
+    }
+
+    let cancelled = false;
+    const token = readDeviceToken();
+    if (!token) {
+      setScreen("first-time");
+      return;
+    }
+
+    setScreen("recognizing");
+    void (async () => {
+      try {
+        const outcome = await recognizeDevice({ data: { preToken, deviceToken: token } });
+        if (cancelled) return;
+        if (!outcome.ok || !outcome.student) {
+          // Unknown / expired device: forget it silently and show the form.
+          clearDeviceToken();
+          setScreen("first-time");
+          return;
+        }
+        setRemembered(outcome.student);
+        setRememberedState(outcome.eventState ?? "none");
+        setRememberedAt(outcome.checkedInAt ?? outcome.preRegisteredAt ?? null);
+        setScreen("recognized");
+      } catch {
+        if (cancelled) return;
+        setScreen("first-time");
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result, preToken]);
 
   const registrationForm = useForm({
     resolver: zodResolver(studentRegistrationSchema),
@@ -146,6 +226,49 @@ function PreCheckInRoute() {
     setScreen("blocked");
   };
 
+  const handleForgetDevice = () => {
+    clearDeviceToken();
+    setRemembered(null);
+    setRememberedState("none");
+    setRememberedAt(null);
+    setFormError("");
+    setScreen("first-time");
+  };
+
+  const handleSaveMySpot = async () => {
+    const token = readDeviceToken();
+    if (!token) {
+      handleForgetDevice();
+      return;
+    }
+    setSavingSpot(true);
+    setFormError("");
+    setNetworkError(false);
+    try {
+      const outcome = await savePlaceForDevice({ data: { preToken, deviceToken: token } });
+      if (outcome.ok) {
+        setCount((prev) => prev + 1);
+        setScreen("success");
+        return;
+      }
+      if (outcome.state === "already_pre_checked_in") {
+        setRememberedState("pre_registered");
+        setRememberedAt(outcome.checkedInAt ?? null);
+        return;
+      }
+      if (outcome.state === "student_not_found") {
+        handleForgetDevice();
+        return;
+      }
+      setBlocked(outcome.state ?? "closed");
+      setScreen("blocked");
+    } catch (error) {
+      handleFailure(error);
+    } finally {
+      setSavingSpot(false);
+    }
+  };
+
   if (screen === "blocked" || !event) {
     const copy = blocked === "not_open_yet"
       ? { title: PRE_CHECK_IN_COPY.notOpenTitle, description: PRE_CHECK_IN_COPY.notOpenBody }
@@ -177,7 +300,52 @@ function PreCheckInRoute() {
         </div>
       </div>
 
-      {screen === "success" ? (
+      {screen === "recognizing" ? (
+        <div className="ios-card mt-4 rounded-3xl p-6 text-center">
+          <p className="text-sm text-muted-foreground">Loading check-in…</p>
+        </div>
+      ) : screen === "recognized" && remembered ? (
+        <div className="ios-card mt-4 rounded-3xl p-6">
+          <div className="flex items-start gap-3">
+            <div className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-success/12 text-success">
+              <CheckCircle2 className="h-5 w-5" />
+            </div>
+            <div className="min-w-0 space-y-1">
+              <p className="text-base font-bold text-foreground">
+                Welcome back, {remembered.firstName} {remembered.lastInitial}.
+              </p>
+              <p className="text-sm text-muted-foreground">
+                {rememberedState === "checked_in"
+                  ? formatTime(rememberedAt)
+                    ? `You're already checked in at ${formatTime(rememberedAt)}.`
+                    : "You're already checked in for this event."
+                  : rememberedState === "pre_registered"
+                    ? formatTime(rememberedAt)
+                      ? `You're already saved for this event (${formatTime(rememberedAt)}).`
+                      : "You're already saved for this event."
+                    : "Tap once to let the host know you're coming."}
+              </p>
+            </div>
+          </div>
+
+          {formError ? <p className="mt-4 text-sm text-destructive">{formError}</p> : null}
+
+          {rememberedState === "none" ? (
+            <PrimaryButton
+              type="button"
+              className="mt-5 w-full"
+              disabled={savingSpot || !isOnline}
+              onClick={() => void handleSaveMySpot()}
+            >
+              {savingSpot ? "Saving…" : "Save My Spot"}
+            </PrimaryButton>
+          ) : null}
+
+          <SecondaryTextButton type="button" className="mt-2 w-full" onClick={handleForgetDevice}>
+            Not {remembered.firstName}?
+          </SecondaryTextButton>
+        </div>
+      ) : screen === "success" ? (
         <div className="ios-card mt-4 rounded-3xl p-6 text-center">
           <CalendarCheck2 className="mx-auto h-10 w-10 text-primary" />
           <h2 className="mt-3 text-lg font-bold text-foreground">{PRE_CHECK_IN_COPY.successTitle}</h2>
@@ -213,7 +381,7 @@ function PreCheckInRoute() {
                 />
                 {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
                 <PrimaryButton type="submit" className="w-full" disabled={returningForm.formState.isSubmitting}>
-                  {returningForm.formState.isSubmitting ? "Saving…" : "I'm coming"}
+                  {returningForm.formState.isSubmitting ? "Saving…" : "Save My Spot"}
                 </PrimaryButton>
                 <SecondaryTextButton type="button" className="w-full" onClick={() => { setFormError(""); setScreen("first-time"); }}>
                   First time here
@@ -252,8 +420,11 @@ function PreCheckInRoute() {
                 />
                 {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
                 <PrimaryButton type="submit" className="w-full" disabled={registrationForm.formState.isSubmitting}>
-                  {registrationForm.formState.isSubmitting ? "Saving…" : "I'm coming"}
+                  {registrationForm.formState.isSubmitting ? "Saving…" : "Save My Spot"}
                 </PrimaryButton>
+                <p className="text-center text-[12px] text-muted-foreground">
+                  We'll remember you on this device for faster check-ins next time.
+                </p>
                 <SecondaryTextButton type="button" className="w-full" onClick={() => { setFormError(""); setScreen("returning"); }}>
                   I've checked in before
                 </SecondaryTextButton>

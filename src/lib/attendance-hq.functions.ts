@@ -158,7 +158,7 @@ function logCheckInError(op: PublicCheckInOp, qrToken: string | undefined | null
 // The same catch also records a PII-free telemetry row so the Owner Admin
 // system-health view reflects real failures. Telemetry is fire-and-forget and
 // can never change the check-in outcome.
-function withCheckInLog<A extends { data: { qrToken?: string } }, R>(
+function withCheckInLog<A extends { data: { qrToken?: string; preToken?: string } }, R>(
   op: PublicCheckInOp,
   fn: (args: A) => Promise<R>,
 ): (args: A) => Promise<R> {
@@ -166,7 +166,7 @@ function withCheckInLog<A extends { data: { qrToken?: string } }, R>(
     try {
       return await fn(args);
     } catch (err) {
-      logCheckInError(op, args?.data?.qrToken, err);
+      logCheckInError(op, args?.data?.qrToken ?? args?.data?.preToken, err);
       const code = (err as { code?: string } | null)?.code;
       void (async () => {
         try {
@@ -3553,6 +3553,101 @@ export const submitReturningPreCheckIn = createServerFn({ method: "POST" })
 
     return { ok: true as const, preCheckIn: result.preCheckIn, student: buildStudentPreview(student) };
   });
+
+/**
+ * Public: remembered-device recognition for the early head count page.
+ *
+ * Mirrors getRememberedStudent but keyed on the marketing pre_check_in_token.
+ * One round trip returns the masked preview AND this attendee's state for THIS
+ * event so the page never flashes the blank form:
+ *
+ *   eventState "none"           → "Welcome back" + Save My Spot
+ *   eventState "pre_registered" → "You're already saved" + saved-at time
+ *   eventState "checked_in"     → "You're already checked in" + check-in time
+ *
+ * Recognition alone NEVER writes a pre_check_ins row — the head count only
+ * counts people who explicitly tap Save My Spot.
+ */
+export const getRememberedPreCheckInStudent = createServerFn({ method: "POST" })
+  .inputValidator(rememberedPreCheckInSchema)
+  .handler(withCheckInLog("getRememberedPreCheckInStudent", async ({ data }) => {
+    await rateLimit("fast", data.preToken);
+    const resolved = await getEventForPreCheckIn(data.preToken);
+    if (!resolved.ok) {
+      return { ok: false as const, state: resolved.state as PreCheckInBlockedState };
+    }
+
+    const device = await resolveDeviceSession(data.deviceToken);
+    if (!device.ok) return { ok: false as const, state: "student_not_found" as const };
+
+    const existingAttendance = await getExistingAttendance(resolved.event.id, device.session.student_id);
+    if (existingAttendance) {
+      return {
+        ok: true as const,
+        student: buildStudentPreview(device.student),
+        eventState: "checked_in" as const,
+        checkedInAt: existingAttendance.checked_in_at,
+      };
+    }
+
+    const { data: preCheckIn } = await (await getSupabaseAdmin())
+      .from("pre_check_ins")
+      .select("checked_in_at")
+      .eq("event_id", resolved.event.id)
+      .eq("student_id", device.session.student_id)
+      .maybeSingle();
+
+    if (preCheckIn) {
+      return {
+        ok: true as const,
+        student: buildStudentPreview(device.student),
+        eventState: "pre_registered" as const,
+        preRegisteredAt: preCheckIn.checked_in_at,
+      };
+    }
+
+    return { ok: true as const, student: buildStudentPreview(device.student), eventState: "none" as const };
+  }));
+
+/**
+ * Public: one-tap "Save My Spot" for a recognized device. The server resolves
+ * the attendee from the device session only — the client never says who it is.
+ * Reuses the duplicate-safe insertPreCheckIn, so double taps, refreshes and
+ * retries all resolve to the same single row.
+ */
+export const fastPreCheckIn = createServerFn({ method: "POST" })
+  .inputValidator(rememberedPreCheckInSchema)
+  .handler(withCheckInLog("fastPreCheckIn", async ({ data }) => {
+    await rateLimit("register", data.preToken);
+    const resolved = await getEventForPreCheckIn(data.preToken);
+    if (!resolved.ok) {
+      return { ok: false as const, state: resolved.state as PreCheckInBlockedState };
+    }
+
+    const device = await resolveDeviceSession(data.deviceToken);
+    if (!device.ok) return { ok: false as const, state: "student_not_found" as const };
+
+    const result = await insertPreCheckIn({
+      eventId: resolved.event.id,
+      studentId: device.session.student_id,
+      method: "remembered_device",
+    });
+
+    await (await getSupabaseAdmin())
+      .from("student_device_sessions")
+      .update({ last_used_at: new Date().toISOString() })
+      .eq("id", device.session.id);
+
+    if (!result.ok) {
+      return { ok: false as const, state: result.state, checkedInAt: result.checkedInAt };
+    }
+
+    return {
+      ok: true as const,
+      preCheckIn: result.preCheckIn,
+      student: buildStudentPreview(device.student),
+    };
+  }));
 
 /** Host: read the early head count roster for an event. */
 export const getEventPreCheckIns = createServerFn({ method: "GET" })
