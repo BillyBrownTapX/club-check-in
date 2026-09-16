@@ -158,7 +158,7 @@ function logCheckInError(op: PublicCheckInOp, qrToken: string | undefined | null
 // The same catch also records a PII-free telemetry row so the Owner Admin
 // system-health view reflects real failures. Telemetry is fire-and-forget and
 // can never change the check-in outcome.
-function withCheckInLog<A extends { data: { qrToken?: string } }, R>(
+function withCheckInLog<A extends { data: { qrToken?: string; preToken?: string } }, R>(
   op: PublicCheckInOp,
   fn: (args: A) => Promise<R>,
 ): (args: A) => Promise<R> {
@@ -166,7 +166,7 @@ function withCheckInLog<A extends { data: { qrToken?: string } }, R>(
     try {
       return await fn(args);
     } catch (err) {
-      logCheckInError(op, args?.data?.qrToken, err);
+      logCheckInError(op, args?.data?.qrToken ?? args?.data?.preToken, err);
       const code = (err as { code?: string } | null)?.code;
       void (async () => {
         try {
