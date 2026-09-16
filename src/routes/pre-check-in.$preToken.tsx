@@ -314,7 +314,7 @@ function PreCheckInRoute() {
             </div>
             <div className="min-w-0 space-y-1">
               <p className="text-base font-bold text-foreground">
-                Welcome back, {remembered.firstName} {remembered.lastInitial}.
+                Welcome back, {formatDisplayFirstName(remembered.firstName)} {remembered.lastInitial}.
               </p>
               <p className="text-sm text-muted-foreground">
                 {rememberedState === "checked_in"
@@ -339,12 +339,12 @@ function PreCheckInRoute() {
               disabled={savingSpot || !isOnline}
               onClick={() => void handleSaveMySpot()}
             >
-              {savingSpot ? "Saving…" : "Save My Spot"}
+              {savingSpot ? "Saving…" : "Check-In"}
             </PrimaryButton>
           ) : null}
 
           <SecondaryTextButton type="button" className="mt-2 w-full" onClick={handleForgetDevice}>
-            Not {remembered.firstName}?
+            Not {formatDisplayFirstName(remembered.firstName)}?
           </SecondaryTextButton>
         </div>
       ) : screen === "success" ? (

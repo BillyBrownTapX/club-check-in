@@ -485,7 +485,7 @@ function CheckInRouteComponent() {
                   <CheckCircle2 className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 space-y-1">
-                  <p className="text-sm font-semibold text-foreground">Welcome back, {rememberedStudent.firstName} {rememberedStudent.lastInitial}.</p>
+                  <p className="text-sm font-semibold text-foreground">Welcome back, {formatDisplayFirstName(rememberedStudent.firstName)} {rememberedStudent.lastInitial}.</p>
                   <p className="text-sm text-muted-foreground">
                     {rememberedPreRegistered
                       ? "You already saved your spot — tap below to confirm you're here."
@@ -502,7 +502,7 @@ function CheckInRouteComponent() {
                   setScreen("confirm");
                 }}
               >
-                {rememberedLoading ? "Checking this device..." : `Check in as ${rememberedStudent.firstName}`}
+                {rememberedLoading ? "Checking this device..." : `Check in as ${formatDisplayFirstName(rememberedStudent.firstName)}`}
               </PrimaryButton>
             </div>
           </CheckInFormCard>
