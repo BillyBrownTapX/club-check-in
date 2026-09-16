@@ -218,6 +218,17 @@ export const rememberedDeviceInputSchema = z.object({
   deviceToken: z.string().trim().min(24).max(255),
 });
 
+// Attendee-initiated profile update, authorized purely by the device token.
+// The 900 number is the identity key and is deliberately NOT editable here.
+export const rememberedProfileUpdateSchema = z.object({
+  qrToken: qrTokenSchema,
+  deviceToken: z.string().trim().min(24).max(255),
+  firstName: z.string().trim().min(1, "Enter first name").max(80, "Too long"),
+  lastName: z.string().trim().min(1, "Enter last name").max(80, "Too long"),
+  studentEmail: emailSchema,
+});
+
+
 export const fastCheckInSchema = z.object({
   qrToken: qrTokenSchema,
   deviceToken: z.string().trim().min(24).max(255),
