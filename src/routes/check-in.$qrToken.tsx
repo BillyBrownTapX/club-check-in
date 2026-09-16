@@ -240,10 +240,6 @@ function CheckInRouteComponent() {
     resolveRememberedStudent({ data: { qrToken, deviceToken: storedDeviceToken } })
       .then((result) => {
         if (!result.ok) {
-          if (result.state === "already_checked_in") {
-            openBlockedState(result.state);
-            return;
-          }
           // student_not_found here means the session row is gone (server
           // deleted it because it was expired/idle, or it never existed).
           // Clear the stale token so we don't keep offering the fast path,
@@ -253,8 +249,17 @@ function CheckInRouteComponent() {
           }
           return;
         }
+        // Already attended this event: show the friendly confirmation with the
+        // recorded time instead of offering another check-in.
+        if (result.eventState === "checked_in") {
+          setRememberedStudent(result.student);
+          setSuccessAt(result.checkedInAt);
+          setScreen("success");
+          return;
+        }
         setRememberedDeviceToken(storedDeviceToken);
         setRememberedStudent(result.student);
+        setRememberedPreRegistered(result.eventState === "pre_registered");
       })
       .catch(() => undefined)
       .finally(() => setRememberedLoading(false));
