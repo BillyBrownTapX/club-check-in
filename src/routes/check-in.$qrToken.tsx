@@ -366,6 +366,7 @@ function CheckInRouteComponent() {
     setLastFailureWasNetwork(false);
     try {
       const result = await submitStudentCheckIn({ data: { ...values, qrToken } });
+      storeDeviceToken(result);
       if (!result.ok) {
         if (result.state === "student_exists") {
           setPendingStudent(result.student);
@@ -380,9 +381,6 @@ function CheckInRouteComponent() {
         return;
       }
 
-      if (typeof window !== "undefined" && result.deviceToken) {
-        window.localStorage.setItem(DEVICE_TOKEN_KEY, result.deviceToken);
-      }
       // Successful commit — clear any saved draft for this QR.
       clearDraft(REGISTRATION_DRAFT_KEY(qrToken));
       clearDraft(RETURNING_DRAFT_KEY(qrToken));
