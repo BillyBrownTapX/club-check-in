@@ -147,6 +147,8 @@ function CheckInRouteComponent() {
   const [successAt, setSuccessAt] = useState<string | null>(null);
   const [rememberedStudent, setRememberedStudent] = useState<PublicStudentPreview | null>(null);
   const [rememberedLoading, setRememberedLoading] = useState(false);
+  // True when the recognized attendee already saved their spot for this event.
+  const [rememberedPreRegistered, setRememberedPreRegistered] = useState(false);
   const [globalError, setGlobalError] = useState<string | null>(null);
   // Distinguish "no network path" from "server said no". The offline banner
   // is driven off `useOnlineStatus()` OR a sticky flag set when the last
@@ -240,10 +242,6 @@ function CheckInRouteComponent() {
     resolveRememberedStudent({ data: { qrToken, deviceToken: storedDeviceToken } })
       .then((result) => {
         if (!result.ok) {
-          if (result.state === "already_checked_in") {
-            openBlockedState(result.state);
-            return;
-          }
           // student_not_found here means the session row is gone (server
           // deleted it because it was expired/idle, or it never existed).
           // Clear the stale token so we don't keep offering the fast path,
@@ -253,8 +251,17 @@ function CheckInRouteComponent() {
           }
           return;
         }
+        // Already attended this event: show the friendly confirmation with the
+        // recorded time instead of offering another check-in.
+        if (result.eventState === "checked_in") {
+          setRememberedStudent(result.student);
+          setSuccessAt(result.checkedInAt);
+          setScreen("success");
+          return;
+        }
         setRememberedDeviceToken(storedDeviceToken);
         setRememberedStudent(result.student);
+        setRememberedPreRegistered(result.eventState === "pre_registered");
       })
       .catch(() => undefined)
       .finally(() => setRememberedLoading(false));
@@ -465,7 +472,11 @@ function CheckInRouteComponent() {
                 </div>
                 <div className="min-w-0 space-y-1">
                   <p className="text-sm font-semibold text-foreground">Welcome back, {rememberedStudent.firstName} {rememberedStudent.lastInitial}.</p>
-                  <p className="text-sm text-muted-foreground">Use the fast path on this device or complete the form below.</p>
+                  <p className="text-sm text-muted-foreground">
+                    {rememberedPreRegistered
+                      ? "You already saved your spot — tap below to confirm you're here."
+                      : "Use the fast path on this device or complete the form below."}
+                  </p>
                 </div>
               </div>
               <PrimaryButton
